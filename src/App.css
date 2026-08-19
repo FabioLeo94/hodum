@@ -1,0 +1,9 @@
+.mainContainer {
+  background-color: rgba(255, 255, 255, 0);
+  position: absolute;
+  inset: 0;
+  margin: var(--m-md);
+  border-radius: var(--radious-md);
+  overflow: hidden;
+  padding: var(--p-md);
+}

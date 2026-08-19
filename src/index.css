@@ -1,0 +1,45 @@
+:root {
+  /*BACKGROUND COLOR*/
+  --bg-main: #0a143f;
+  --bg-primary: #fbff00;
+
+  /*TEXT COLOR*/
+  --text-on-primary: #585858;
+
+  /*PADDING*/
+  --p-xs: 2px;
+  --p-sm: 4px;
+  --p-md: 8px;
+  --p-lg: 16px;
+  --p-xl: 24px;
+
+  /*MARGIN*/
+  --m-xs: 2px;
+  --m-sm: 4px;
+  --m-md: 8px;
+  --m-lg: 16px;
+  --m-xl: 24px;
+
+  /*RADIOUS*/
+  --radious-xs: 2px;
+  --radious-sm: 4px;
+  --radious-md: 8px;
+  --radious-lg: 16px;
+  --radious-xl: 24px;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+  appearance: none;
+  border: 0;
+  background-color: transparent;
+  outline: none;
+  box-shadow: none;
+}
+
+html,
+body {
+  background-color: var(--bg-main);
+}

@@ -1,0 +1,12 @@
+.buttonBase {
+  background-color: var(--bg-primary);
+  color: var(--text-on-primary);
+  cursor: pointer;
+  padding: var(--p-sm) var(--p-md) var(--p-sm) var(--p-md);
+  border-radius: var(--radious-sm);
+  font-weight: 600;
+  font-family:
+    "Lucida Sans", "Lucida Sans Regular", "Lucida Grande",
+    "Lucida Sans Unicode", Geneva, Verdana, sans-serif;
+  font-size: 0.9rem;
+}
