@@ -1,0 +1,37 @@
+.authForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-md);
+  width: 100%;
+  max-width: 360px;
+  padding: var(--p-xl);
+  border-radius: var(--radious-lg);
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.authRememberMe {
+  display: flex;
+  align-items: center;
+  gap: var(--m-sm);
+  color: white;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.authCheckbox {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  border: 1px solid white;
+  border-radius: var(--radious-xs);
+  cursor: pointer;
+}
+
+.authCheckbox:checked {
+  background-color: var(--bg-primary);
+}
+
+.authError {
+  color: #ff6b6b;
+  font-size: 0.85rem;
+}

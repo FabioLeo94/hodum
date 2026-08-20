@@ -1,13 +1,38 @@
-import type { HTMLInputTypeAttribute } from "react";
+import type { ChangeEventHandler, HTMLInputTypeAttribute } from "react";
 import "./inputComponent.css";
 
 interface Prop {
   key?: string;
   type: HTMLInputTypeAttribute;
+  value?: string;
+  onChange?: ChangeEventHandler<HTMLInputElement>;
+  placeholder?: string;
+  name?: string;
+  required?: boolean;
+  autoComplete?: string;
 }
-function InputComponent({ key, type }: Prop) {
+function InputComponent({
+  key = crypto.randomUUID(),
+  type,
+  value,
+  onChange,
+  placeholder,
+  name,
+  required,
+  autoComplete,
+}: Prop) {
   return (
-    <input key={key ?? crypto.randomUUID()} className="inputBase" type={type} />
+    <input
+      key={key}
+      className="inputBase"
+      type={type}
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      name={name}
+      required={required}
+      autoComplete={autoComplete}
+    />
   );
 }
 
