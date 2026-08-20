@@ -1,4 +1,21 @@
+.inputWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-xs);
+}
+
 .inputBase {
   background-color: white;
   padding: var(--p-sm);
+  border: 2px solid transparent;
+  border-radius: var(--radious-xs);
+}
+
+.inputBaseError {
+  border-color: #ff6b6b;
+}
+
+.inputErrorMessage {
+  color: #ff6b6b;
+  font-size: 0.85rem;
 }

@@ -10,9 +10,9 @@ interface Prop {
   name?: string;
   required?: boolean;
   autoComplete?: string;
+  error?: string;
 }
 function InputComponent({
-  key = crypto.randomUUID(),
   type,
   value,
   onChange,
@@ -20,19 +20,22 @@ function InputComponent({
   name,
   required,
   autoComplete,
+  error,
 }: Prop) {
   return (
-    <input
-      key={key}
-      className="inputBase"
-      type={type}
-      value={value}
-      onChange={onChange}
-      placeholder={placeholder}
-      name={name}
-      required={required}
-      autoComplete={autoComplete}
-    />
+    <div className="inputWrapper">
+      <input
+        className={error ? "inputBase inputBaseError" : "inputBase"}
+        type={type}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        name={name}
+        required={required}
+        autoComplete={autoComplete}
+      />
+      {error && <p className="inputErrorMessage">{error}</p>}
+    </div>
   );
 }
 

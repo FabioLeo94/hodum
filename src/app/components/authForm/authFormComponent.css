@@ -30,8 +30,3 @@
 .authCheckbox:checked {
   background-color: var(--bg-primary);
 }
-
-.authError {
-  color: #ff6b6b;
-  font-size: 0.85rem;
-}

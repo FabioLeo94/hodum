@@ -9,20 +9,26 @@ function AuthFormComponent() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
-  const [error, setError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+
+  const emailError =
+    (submitAttempted || email !== "") && !validateEmail(email)
+      ? "Inserire una email valida."
+      : "";
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError("");
+    setPasswordError("");
+    setSubmitAttempted(true);
 
     if (!validateEmail(email)) {
-      setError("Inserisci un indirizzo email valido.");
       return;
     }
 
     const success = await login(email, password);
     if (!success) {
-      setError("Email o password non corretti.");
+      setPasswordError("Email o password non corretti.");
       return;
     }
 
@@ -39,15 +45,20 @@ function AuthFormComponent() {
         onChange={(event) => setEmail(event.target.value)}
         autoComplete="email"
         required
+        error={emailError}
       />
       <InputComponent
         type="password"
         name="password"
         placeholder="Password"
         value={password}
-        onChange={(event) => setPassword(event.target.value)}
+        onChange={(event) => {
+          setPassword(event.target.value);
+          setPasswordError("");
+        }}
         autoComplete="current-password"
         required
+        error={passwordError}
       />
       <label className="authRememberMe">
         <input
@@ -58,7 +69,6 @@ function AuthFormComponent() {
         />
         Resta connesso
       </label>
-      {error && <p className="authError">{error}</p>}
       <ButtonComponent onClick={() => {}}>Accedi</ButtonComponent>
     </form>
   );
