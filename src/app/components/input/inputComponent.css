@@ -5,17 +5,18 @@
 }
 
 .inputBase {
-  background-color: white;
+  background-color: var(--bg-field);
+  color: var(--text-primary);
   padding: var(--p-sm);
   border: 2px solid transparent;
   border-radius: var(--radious-xs);
 }
 
 .inputBaseError {
-  border-color: #ff6b6b;
+  border-color: var(--color-danger);
 }
 
 .inputErrorMessage {
-  color: #ff6b6b;
+  color: var(--color-danger);
   font-size: 0.85rem;
 }

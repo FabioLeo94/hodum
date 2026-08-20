@@ -1,10 +1,19 @@
 :root {
   /*BACKGROUND COLOR*/
-  --bg-main: #0a143f;
-  --bg-primary: #fbff00;
+  --bg-main: #12181c;
+  --bg-surface: #1c2429;
+  --bg-field: #263039;
+  --bg-primary: #3fc1b0;
 
   /*TEXT COLOR*/
-  --text-on-primary: #585858;
+  --text-on-primary: #06211d;
+  --text-primary: #eaf0ee;
+  --text-muted: #8fa39c;
+
+  /*STATE COLOR*/
+  --color-success: #63d68b;
+  --color-warning: #f0b429;
+  --color-danger: #f0576b;
 
   /*PADDING*/
   --p-xs: 2px;
