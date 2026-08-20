@@ -8,5 +8,5 @@ interface Routes {
 }
 
 export const ROUTES: Routes[] = [
-  { name: "auth", element: Auth(), hidden: false },
+  { name: "auth", element: <Auth />, hidden: false },
 ];

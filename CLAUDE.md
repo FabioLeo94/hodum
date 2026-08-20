@@ -26,7 +26,7 @@ There is no `format` script yet.
 
 ## Intentional patterns (do not "fix" these)
 
-- In `src/shared/routes.ts`, page components are invoked directly as functions (e.g. `Auth()`) rather than rendered as JSX (`<Auth />`) when building the `ROUTES` array. This is deliberate, not a bug.
+- In `src/shared/routes.ts` (note: `.tsx`, needed for JSX syntax), page components are rendered as JSX (e.g. `<Auth />`) when building the `ROUTES` array. Always use JSX here, never invoke a page as a plain function (`Auth()`) — that runs the component body at import time, outside React's render cycle, and crashes any hook used inside the page.
 - Components accept an optional `key` prop with a `crypto.randomUUID()` default (see `buttonComponent.tsx`). This is deliberate, not a bug — keep this pattern when adding similar components.
 
 ## Testing
