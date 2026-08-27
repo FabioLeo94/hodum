@@ -10,6 +10,7 @@ interface Prop {
   name?: string;
   required?: boolean;
   autoComplete?: string;
+  autoFocus?: boolean;
   error?: string;
 }
 function InputComponent({
@@ -20,6 +21,7 @@ function InputComponent({
   name,
   required,
   autoComplete,
+  autoFocus,
   error,
 }: Prop) {
   return (
@@ -37,6 +39,7 @@ function InputComponent({
         name={name}
         required={required}
         autoComplete={autoComplete}
+        autoFocus={autoFocus}
       />
       {error && <p className={styles.inputErrorMessage}>{error}</p>}
     </div>

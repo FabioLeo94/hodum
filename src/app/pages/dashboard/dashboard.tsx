@@ -1,9 +1,21 @@
+import { useState } from "react";
 import ProjectComponent from "../../components/project/projectComponent";
+import CreateProjectModalComponent from "../../components/createProjectModal/createProjectModalComponent";
 import { getAllProjects } from "../../services/project/projectService";
+import type { Project } from "../../../shared/types/project";
 import styles from "./dashboard.module.css";
 
 function Dashboard() {
-  const projects = getAllProjects();
+  const [projects, setProjects] = useState<Project[]>(() => getAllProjects());
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  function handleCreateProject(name: string) {
+    setProjects((current) => [
+      ...current,
+      { id: crypto.randomUUID(), name, tasks: [] },
+    ]);
+    setIsCreateModalOpen(false);
+  }
 
   return (
     <div className={styles.dashboardContainer}>
@@ -31,6 +43,33 @@ function Dashboard() {
           ))}
         </div>
       )}
+
+      <button
+        type="button"
+        className={styles.fabButton}
+        aria-label="Crea nuovo progetto"
+        onClick={() => setIsCreateModalOpen(true)}
+      >
+        <svg
+          className={styles.fabIcon}
+          viewBox="0 0 24 24"
+          width="24"
+          height="24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          aria-hidden="true"
+        >
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+      </button>
+
+      <CreateProjectModalComponent
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onCreate={handleCreateProject}
+      />
     </div>
   );
 }
