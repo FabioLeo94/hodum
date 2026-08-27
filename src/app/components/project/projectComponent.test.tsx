@@ -31,9 +31,9 @@ describe("ProjectComponent", () => {
   it("renders name and task counts", () => {
     render(<ProjectComponent {...mockProject} />);
     expect(screen.getByText("Progetto Demo")).toBeInTheDocument();
-    expect(screen.getByText("Completati: 2")).toBeInTheDocument();
-    expect(screen.getByText("In corso: 2")).toBeInTheDocument();
-    expect(screen.getByText("In review: 2")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "2 Completati" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "2 In corso" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "2 In review" })).toBeInTheDocument();
   });
 
   it("is not rendered as a button", () => {

@@ -18,6 +18,30 @@ function ProjectComponent({ id, name, tasks }: Project) {
     totalTasks === 0 ? 0 : (progressCount / totalTasks) * 100;
   const reviewPercent = totalTasks === 0 ? 0 : (reviewCount / totalTasks) * 100;
 
+  const segments = [
+    {
+      key: "completed",
+      label: "Completati",
+      count: completedCount,
+      percent: completedPercent,
+      className: styles.progressCompleted,
+    },
+    {
+      key: "progress",
+      label: "In corso",
+      count: progressCount,
+      percent: inProgressPercent,
+      className: styles.progressInProgress,
+    },
+    {
+      key: "review",
+      label: "In review",
+      count: reviewCount,
+      percent: reviewPercent,
+      className: styles.progressReview,
+    },
+  ].filter((segment) => segment.percent > 0);
+
   function handleActivate() {
     if (hasNavigatedRef.current) return;
     hasNavigatedRef.current = true;
@@ -39,29 +63,23 @@ function ProjectComponent({ id, name, tasks }: Project) {
       onClick={handleActivate}
       onKeyDown={handleKeyDown}
     >
-      <span className={styles.projectName}>{name}</span>
-      <div className={styles.counts}>
-        <span className={styles.countCompleted}>
-          Completati: {completedCount}
+      <div className={styles.cardHeader}>
+        <span className={styles.projectName} title={name}>
+          {name}
         </span>
-        <span className={styles.countInProgress}>
-          In corso: {progressCount}
-        </span>
-        <span className={styles.countReview}>In review: {reviewCount}</span>
+        <span className={styles.taskTotal}>{totalTasks} task</span>
       </div>
       <div className={styles.progressBar}>
-        <div
-          className={styles.progressCompleted}
-          style={{ width: `${completedPercent}%` }}
-        />
-        <div
-          className={styles.progressInProgress}
-          style={{ width: `${inProgressPercent}%` }}
-        />
-        <div
-          className={styles.progressReview}
-          style={{ width: `${reviewPercent}%` }}
-        />
+        {segments.map((segment) => (
+          <div
+            key={segment.key}
+            className={`${styles.progressSegment} ${segment.className}`}
+            style={{ width: `${segment.percent}%` }}
+            role="img"
+            aria-label={`${segment.count} ${segment.label}`}
+            data-tooltip={`${segment.count} ${segment.label}`}
+          />
+        ))}
       </div>
     </div>
   );

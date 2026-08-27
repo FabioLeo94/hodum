@@ -1,8 +1,7 @@
 .projectCard {
-  aspect-ratio: 1 / 1;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  gap: var(--m-md);
   background-color: var(--bg-surface);
   border-radius: var(--radious-lg);
   padding: var(--p-lg);
@@ -37,44 +36,125 @@
   .projectCard:active {
     transform: none;
   }
+
+  .progressSegment,
+  .progressSegment::after,
+  .progressSegment::before {
+    transition: none;
+  }
+}
+
+.cardHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--m-sm);
 }
 
 .projectName {
+  min-width: 0;
+  overflow: hidden;
   color: var(--text-primary);
   font-weight: 600;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-.counts {
-  display: flex;
-  flex-direction: column;
-  gap: var(--m-xs);
+.taskTotal {
+  flex-shrink: 0;
   color: var(--text-muted);
-  font-size: 0.85rem;
-}
-
-.countCompleted {
-  color: var(--color-success);
-}
-
-.countInProgress {
-  color: var(--color-info);
-}
-
-.countReview {
-  color: var(--color-warning);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .progressBar {
   display: flex;
+  align-items: flex-end;
   width: 100%;
   height: 8px;
   border-radius: var(--radious-xs);
-  overflow: hidden;
   background-color: var(--bg-field);
 }
 
+.progressSegment {
+  position: relative;
+  height: 100%;
+  min-width: 2px;
+  cursor: default;
+  transition: opacity 200ms ease;
+}
+
+.progressSegment:first-child {
+  border-top-left-radius: var(--radious-xs);
+  border-bottom-left-radius: var(--radious-xs);
+}
+
+.progressSegment:last-child {
+  border-top-right-radius: var(--radious-xs);
+  border-bottom-right-radius: var(--radious-xs);
+}
+
+.progressBar:has(.progressSegment:hover) .progressSegment:not(:hover) {
+  opacity: 0.5;
+}
+
+.progressSegment:hover {
+  z-index: 3;
+}
+
+.progressSegment::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: calc(100% + var(--m-md) + 5px);
+  left: 50%;
+  transform: translate(-50%, -4px);
+  padding: var(--p-sm) var(--p-md);
+  border-radius: var(--radious-sm);
+  background-color: var(--bg-field);
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 150ms ease;
+  z-index: 2;
+}
+
+.progressSegment::before {
+  content: "";
+  position: absolute;
+  top: calc(100% + var(--m-md) + 1px);
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  background-color: var(--bg-field);
+  transform: translate(-50%, -4px) rotate(45deg);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 150ms ease;
+  z-index: 1;
+}
+
+.progressSegment:hover::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.progressSegment:hover::before {
+  opacity: 1;
+  transform: translate(-50%, 0) rotate(45deg);
+}
+
 .progressCompleted {
+  background-color: var(--color-success);
+}
+
+.progressCompleted::before {
   background-color: var(--color-success);
 }
 
@@ -82,6 +162,14 @@
   background-color: var(--color-info);
 }
 
+.progressInProgress::before {
+  background-color: var(--color-info);
+}
+
 .progressReview {
+  background-color: var(--color-warning);
+}
+
+.progressReview::before {
   background-color: var(--color-warning);
 }
