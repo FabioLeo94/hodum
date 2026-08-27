@@ -1,14 +1,15 @@
 import "./App.css";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router";
-import { ROUTES } from "./shared/routes";
+import Auth from "./app/pages/auth/auth";
+import Dashboard from "./app/pages/dashboard/dashboard";
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="" element={<Navigate to={"auth"} />} />
-        {ROUTES.map((r) => (
-          <Route path={r.name} element={r.element} />
-        ))}
+        <Route path="" element={<Navigate to={"/auth"} />} />
+        <Route path="auth" element={<Auth />} />
+        <Route path="dashboard" element={<Dashboard />} />
+        <Route path="*" element={<Navigate to={"/auth"} />} />
       </Routes>
     </BrowserRouter>
   );

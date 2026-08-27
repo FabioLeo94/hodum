@@ -1,23 +1,26 @@
-import { useState, type FormEvent } from "react";
-import "./authFormComponent.css";
+import { useState } from "react";
+import styles from "./authFormComponent.module.css";
 import InputComponent from "../input/inputComponent";
 import ButtonComponent from "../button/buttonComponent";
 import { login, persistSession } from "../../services/auth/authService";
 import { validateEmail } from "../../services/validation/validationService";
+import { useNavigate } from "react-router";
 
 function AuthFormComponent() {
+  let navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [passwordError, setPasswordError] = useState("");
   const [submitAttempted, setSubmitAttempted] = useState(false);
+  console.log("AuthFormComponetn");
 
   const emailError =
     (submitAttempted || email !== "") && !validateEmail(email)
       ? "Inserire una email valida."
       : "";
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.SubmitEvent) {
     event.preventDefault();
     setPasswordError("");
     setSubmitAttempted(true);
@@ -33,10 +36,11 @@ function AuthFormComponent() {
     }
 
     persistSession(rememberMe);
+    navigate("/dashboard");
   }
 
   return (
-    <form className="authForm" onSubmit={handleSubmit} noValidate>
+    <form className={styles.authForm} onSubmit={handleSubmit} noValidate>
       <InputComponent
         type="email"
         name="email"
@@ -60,9 +64,9 @@ function AuthFormComponent() {
         required
         error={passwordError}
       />
-      <label className="authRememberMe">
+      <label className={styles.authRememberMe}>
         <input
-          className="authCheckbox"
+          className={styles.authCheckbox}
           type="checkbox"
           checked={rememberMe}
           onChange={(event) => setRememberMe(event.target.checked)}

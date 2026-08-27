@@ -24,11 +24,6 @@ There is no `format` script yet.
 - `src/shared/routes.ts` — central `ROUTES` array (`{ name, element, childrens?, hidden }`) consumed by `App.tsx` to build `<Route>` entries. New pages are registered here.
 - New components/pages should follow this folder + co-located-CSS + naming pattern.
 
-## Intentional patterns (do not "fix" these)
-
-- In `src/shared/routes.ts` (note: `.tsx`, needed for JSX syntax), page components are rendered as JSX (e.g. `<Auth />`) when building the `ROUTES` array. Always use JSX here, never invoke a page as a plain function (`Auth()`) — that runs the component body at import time, outside React's render cycle, and crashes any hook used inside the page.
-- Components accept an optional `key` prop with a `crypto.randomUUID()` default (see `buttonComponent.tsx`). This is deliberate, not a bug — keep this pattern when adding similar components.
-
 ## Testing
 
 Vitest is configured in `vite.config.ts` (`environment: 'jsdom'`, setup file `src/setupTests.ts`). Test files live next to the code they cover (e.g. `buttonComponent.test.tsx` beside `buttonComponent.tsx`). Import `describe`/`it`/`expect`/`vi` explicitly from `"vitest"` — globals are not enabled. `src/setupTests.ts` registers `@testing-library/jest-dom` matchers and calls `cleanup()` after each test (required since globals are off, so React Testing Library's automatic cleanup doesn't kick in on its own).

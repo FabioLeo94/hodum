@@ -1,18 +1,18 @@
 import type { PropsWithChildren } from "react";
-import "./buttonComponent.css";
+import styles from "./buttonComponent.module.css";
 
 interface Prop {
   key?: string;
   onClick: () => void;
 }
-function ButtonComponent({
-  key = crypto.randomUUID(),
-  children,
-  onClick,
-}: PropsWithChildren<Prop>) {
+function ButtonComponent({ children, onClick, key }: PropsWithChildren<Prop>) {
   return (
     <>
-      <button className={"buttonBase"} key={key} onClick={onClick}>
+      <button
+        key={key || undefined}
+        className={styles.buttonBase}
+        onClick={onClick}
+      >
         {children}
       </button>
     </>

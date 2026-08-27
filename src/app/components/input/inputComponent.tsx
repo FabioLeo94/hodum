@@ -1,5 +1,5 @@
 import type { ChangeEventHandler, HTMLInputTypeAttribute } from "react";
-import "./inputComponent.css";
+import styles from "./inputComponent.module.css";
 
 interface Prop {
   key?: string;
@@ -23,9 +23,13 @@ function InputComponent({
   error,
 }: Prop) {
   return (
-    <div className="inputWrapper">
+    <div className={styles.inputWrapper}>
       <input
-        className={error ? "inputBase inputBaseError" : "inputBase"}
+        className={
+          error
+            ? `${styles.inputBase} ${styles.inputBaseError}`
+            : styles.inputBase
+        }
         type={type}
         value={value}
         onChange={onChange}
@@ -34,7 +38,7 @@ function InputComponent({
         required={required}
         autoComplete={autoComplete}
       />
-      {error && <p className="inputErrorMessage">{error}</p>}
+      {error && <p className={styles.inputErrorMessage}>{error}</p>}
     </div>
   );
 }

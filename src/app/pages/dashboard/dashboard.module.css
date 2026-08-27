@@ -1,0 +1,10 @@
+.projectsGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--m-lg);
+  padding: var(--p-xl);
+}
+
+.projectsGrid > * {
+  width: 220px;
+}
