@@ -10,13 +10,40 @@
   padding: var(--p-sm);
   border: 2px solid transparent;
   border-radius: var(--radious-xs);
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.inputBase::placeholder {
+  color: var(--text-muted);
+}
+
+.inputBase:hover {
+  background-color: color-mix(in srgb, var(--bg-field) 85%, white 15%);
+}
+
+.inputBase:focus {
+  border-color: var(--bg-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--bg-primary) 25%, transparent);
 }
 
 .inputBaseError {
   border-color: var(--color-danger);
 }
 
+.inputBaseError:focus {
+  border-color: var(--color-danger);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-danger) 25%, transparent);
+}
+
 .inputErrorMessage {
   color: var(--color-danger);
   font-size: 0.85rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inputBase {
+    transition: none;
+  }
 }

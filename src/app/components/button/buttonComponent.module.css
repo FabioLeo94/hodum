@@ -9,4 +9,30 @@
     "Lucida Sans", "Lucida Sans Regular", "Lucida Grande",
     "Lucida Sans Unicode", Geneva, Verdana, sans-serif;
   font-size: 0.9rem;
+  transition:
+    background-color 150ms ease,
+    transform 100ms ease;
+}
+
+.buttonBase:hover {
+  background-color: color-mix(in srgb, var(--bg-primary) 88%, white 12%);
+}
+
+.buttonBase:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+.buttonBase:active {
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .buttonBase {
+    transition: none;
+  }
+
+  .buttonBase:active {
+    transform: none;
+  }
 }

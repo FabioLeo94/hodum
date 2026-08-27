@@ -1,0 +1,54 @@
+.authContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--m-xl);
+  min-height: 100vh;
+  padding: var(--p-xl) var(--p-lg);
+  background:
+    radial-gradient(
+      circle at 50% 0%,
+      color-mix(in srgb, var(--bg-primary) 14%, transparent),
+      transparent 60%
+    ),
+    var(--bg-main);
+}
+
+.authHero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--m-sm);
+  max-width: 360px;
+  text-align: center;
+}
+
+.authEyebrow {
+  color: var(--bg-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.authTitle {
+  color: var(--text-primary);
+  font-size: 1.75rem;
+  font-weight: 700;
+  font-family:
+    "Lucida Sans", "Lucida Sans Regular", "Lucida Grande",
+    "Lucida Sans Unicode", Geneva, Verdana, sans-serif;
+}
+
+.authSubtitle {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 400px) {
+  .authTitle {
+    font-size: 1.5rem;
+  }
+}

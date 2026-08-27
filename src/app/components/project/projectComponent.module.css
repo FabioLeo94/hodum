@@ -8,12 +8,35 @@
   padding: var(--p-lg);
   box-shadow: 0 0 16px rgba(0, 0, 0, 0.35);
   cursor: pointer;
-  transition: transform 250ms;
+  transition:
+    transform 250ms ease,
+    box-shadow 250ms ease;
   user-select: none;
 }
 
 .projectCard:hover {
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.45);
   transform: scale(1.03);
+}
+
+.projectCard:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+.projectCard:active {
+  transform: scale(0.99);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .projectCard {
+    transition: none;
+  }
+
+  .projectCard:hover,
+  .projectCard:active {
+    transform: none;
+  }
 }
 
 .projectName {

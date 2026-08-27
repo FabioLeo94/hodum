@@ -39,10 +39,15 @@ function TaskList() {
   if (!project) {
     return (
       <div className={styles.taskListContainer}>
-        <p className={styles.errorMessage}>Progetto non trovato.</p>
         <Link className={styles.backLink} to="/dashboard">
           Torna alla dashboard
         </Link>
+        <div className={styles.notFoundState}>
+          <p className={styles.errorMessage}>Progetto non trovato.</p>
+          <p className={styles.notFoundText}>
+            Il progetto richiesto non esiste o è stato rimosso.
+          </p>
+        </div>
       </div>
     );
   }
@@ -51,46 +56,74 @@ function TaskList() {
 
   return (
     <div className={styles.taskListContainer}>
-      <h1>{project.name}</h1>
-      <table className={styles.taskTable}>
-        <thead>
-          <tr>
-            <th>Titolo</th>
-            <th>Descrizione</th>
-            <th>Tag</th>
-          </tr>
-        </thead>
-        <tbody>
-          {STATUS_ORDER.flatMap((status) => {
-            const tasks = groupedTasks[status];
-            const rows = [
-              <tr key={`${status}-header`}>
-                <th className={STATUS_STYLES[status]} colSpan={3}>
-                  {STATUS_LABELS[status]} ({tasks.length})
-                </th>
-              </tr>,
-            ];
-            if (tasks.length === 0) {
-              rows.push(
-                <tr key={`${status}-empty`}>
-                  <td colSpan={3}>Nessun task</td>
+      <Link className={styles.backLink} to="/dashboard">
+        Torna alla dashboard
+      </Link>
+      <header className={styles.taskListHeader}>
+        <span className={styles.taskListEyebrow}>Progetto</span>
+        <h1 className={styles.taskListTitle}>{project.name}</h1>
+      </header>
+      <div className={styles.taskTableCard}>
+        <table className={styles.taskTable}>
+          <thead>
+            <tr>
+              <th>Titolo</th>
+              <th>Descrizione</th>
+              <th>Tag</th>
+            </tr>
+          </thead>
+          <tbody>
+            {STATUS_ORDER.flatMap((status) => {
+              const tasks = groupedTasks[status];
+              const rows = [
+                <tr key={`${status}-header`}>
+                  <th
+                    className={`${styles.groupHeaderCell} ${STATUS_STYLES[status]}`}
+                    colSpan={3}
+                  >
+                    {STATUS_LABELS[status]} ({tasks.length})
+                  </th>
                 </tr>,
-              );
-            } else {
-              tasks.forEach((task, index) => {
+              ];
+              if (tasks.length === 0) {
                 rows.push(
-                  <tr key={`${status}-${index}`}>
-                    <td>{task.title}</td>
-                    <td>{task.description}</td>
-                    <td>{task.tags.join(", ")}</td>
+                  <tr key={`${status}-empty`}>
+                    <td className={styles.emptyRow} colSpan={3}>
+                      Nessun task
+                    </td>
                   </tr>,
                 );
-              });
-            }
-            return rows;
-          })}
-        </tbody>
-      </table>
+              } else {
+                tasks.forEach((task, index) => {
+                  rows.push(
+                    <tr key={`${status}-${index}`} className={styles.taskRow}>
+                      <td>{task.title}</td>
+                      <td>{task.description}</td>
+                      <td>
+                        {task.tags.length === 0 ? (
+                          <span className={styles.noTags}>—</span>
+                        ) : (
+                          <div className={styles.tagList}>
+                            {task.tags.map((tag, tagIndex) => (
+                              <span
+                                key={`${tag}-${tagIndex}`}
+                                className={styles.tagPill}
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                    </tr>,
+                  );
+                });
+              }
+              return rows;
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
