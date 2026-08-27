@@ -9,10 +9,11 @@
   box-shadow: 0 0 16px rgba(0, 0, 0, 0.35);
   cursor: pointer;
   transition: transform 250ms;
+  user-select: none;
 }
 
 .projectCard:hover {
-  transform: scale(1.1);
+  transform: scale(1.03);
 }
 
 .projectName {

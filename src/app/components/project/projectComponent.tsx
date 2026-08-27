@@ -1,21 +1,27 @@
 import type { KeyboardEvent } from "react";
+import { useRef } from "react";
+import { useNavigate } from "react-router";
 import type { Project } from "../../../shared/types/project";
 import styles from "./projectComponent.module.css";
 
-function ProjectComponent({
-  id,
-  name,
-  completedTasks,
-  inProgressTasks,
-  reviewTasks,
-}: Project) {
-  const totalTasks = completedTasks + inProgressTasks + reviewTasks;
-  const completedPercent = totalTasks === 0 ? 0 : (completedTasks / totalTasks) * 100;
-  const inProgressPercent = totalTasks === 0 ? 0 : (inProgressTasks / totalTasks) * 100;
-  const reviewPercent = totalTasks === 0 ? 0 : (reviewTasks / totalTasks) * 100;
+function ProjectComponent({ id, name, tasks }: Project) {
+  const navigate = useNavigate();
+  const hasNavigatedRef = useRef(false);
+
+  const totalTasks = tasks.length;
+  const completedCount = tasks.filter((t) => t.status === "completed").length;
+  const progressCount = tasks.filter((t) => t.status === "progress").length;
+  const reviewCount = tasks.filter((t) => t.status === "review").length;
+  const completedPercent =
+    totalTasks === 0 ? 0 : (completedCount / totalTasks) * 100;
+  const inProgressPercent =
+    totalTasks === 0 ? 0 : (progressCount / totalTasks) * 100;
+  const reviewPercent = totalTasks === 0 ? 0 : (reviewCount / totalTasks) * 100;
 
   function handleActivate() {
-    console.debug(`Progetto cliccato: ${name} (id: ${id})`);
+    if (hasNavigatedRef.current) return;
+    hasNavigatedRef.current = true;
+    navigate(`/dashboard/${id}/task-list`);
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
@@ -36,12 +42,12 @@ function ProjectComponent({
       <span className={styles.projectName}>{name}</span>
       <div className={styles.counts}>
         <span className={styles.countCompleted}>
-          Completati: {completedTasks}
+          Completati: {completedCount}
         </span>
         <span className={styles.countInProgress}>
-          In corso: {inProgressTasks}
+          In corso: {progressCount}
         </span>
-        <span className={styles.countReview}>In review: {reviewTasks}</span>
+        <span className={styles.countReview}>In review: {reviewCount}</span>
       </div>
       <div className={styles.progressBar}>
         <div

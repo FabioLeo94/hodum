@@ -1,0 +1,49 @@
+.taskListContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-lg);
+  padding: var(--p-xl);
+  color: var(--text-primary);
+}
+
+.taskTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.taskTable th,
+.taskTable td {
+  text-align: left;
+  padding: var(--p-md);
+  border-bottom: 1px solid var(--bg-field);
+}
+
+.groupHeaderProgress {
+  background-color: var(--bg-field);
+  color: var(--color-info);
+}
+
+.groupHeaderReview {
+  background-color: var(--bg-field);
+  color: var(--color-warning);
+}
+
+.groupHeaderCompleted {
+  background-color: var(--bg-field);
+  color: var(--color-success);
+}
+
+.groupHeaderRejected {
+  background-color: var(--bg-field);
+  color: var(--color-danger);
+}
+
+.errorMessage {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+.backLink {
+  color: var(--color-info);
+  width: fit-content;
+}
