@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { pool } from '../db/pool';
 import type { Project } from '../models/project';
 
@@ -43,13 +42,12 @@ export interface CreateProjectInput {
 }
 
 export async function createProject(input: CreateProjectInput): Promise<Project> {
-  // id generato qui: la colonna non ha un DEFAULT gen_random_uuid() nello
-  // schema attuale (vedi migration baseline).
-  const id = randomUUID();
+  // id generato dal database: projects.id ha DEFAULT gen_random_uuid() dalla
+  // migration 0005_projects_id_default_gen_random_uuid.sql.
   const isActive = input.isActive ?? true;
   const result = await pool.query<ProjectRow>(
-    'INSERT INTO projects (id, name, is_active) VALUES ($1, $2, $3) RETURNING id, name, is_active',
-    [id, input.name, isActive],
+    'INSERT INTO projects (name, is_active) VALUES ($1, $2) RETURNING id, name, is_active',
+    [input.name, isActive],
   );
   return toProject(result.rows[0]);
 }
