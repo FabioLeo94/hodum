@@ -1,27 +1,44 @@
 import styles from "./auth.module.css";
 import AuthFormComponent from "../../components/authForm/authFormComponent";
-import { useEffect } from "react";
+import RegisterFormComponent from "../../components/registerForm/registerFormComponent";
+import { useEffect, useState } from "react";
 import { AUTH_STORAGE_KEY } from "../../services/auth/authService";
 import { useNavigate } from "react-router";
 
+type AuthMode = "login" | "register";
+
 function Auth() {
-  let navigate = useNavigate();
+  const navigate = useNavigate();
+  const [mode, setMode] = useState<AuthMode>("login");
   useEffect(() => {
     if (localStorage.getItem(AUTH_STORAGE_KEY) === "true") {
       navigate("/dashboard");
     }
   }, []);
 
+  const isLogin = mode === "login";
+
   return (
     <div className={styles.authContainer}>
       <div className={styles.authHero}>
         <span className={styles.authEyebrow}>Task Manager</span>
-        <h1 className={styles.authTitle}>Bentornato</h1>
+        <h1 className={styles.authTitle}>
+          {isLogin ? "Bentornato" : "Crea il tuo account"}
+        </h1>
         <p className={styles.authSubtitle}>
-          Accedi per continuare a gestire i tuoi progetti e le tue attività.
+          {isLogin
+            ? "Accedi per continuare a gestire i tuoi progetti e le tue attività."
+            : "Registrati per iniziare a gestire i tuoi progetti e le tue attività."}
         </p>
       </div>
-      <AuthFormComponent />
+      {isLogin ? <AuthFormComponent /> : <RegisterFormComponent />}
+      <button
+        type="button"
+        className={styles.authToggle}
+        onClick={() => setMode(isLogin ? "register" : "login")}
+      >
+        {isLogin ? "Non hai un account? Registrati" : "Hai già un account? Accedi"}
+      </button>
     </div>
   );
 }
