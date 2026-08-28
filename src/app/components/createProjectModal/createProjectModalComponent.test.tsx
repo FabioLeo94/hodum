@@ -28,7 +28,7 @@ describe("CreateProjectModalComponent", () => {
 
     expect(screen.getByText("Nuovo progetto")).toBeInTheDocument();
     expect(
-      screen.getByPlaceholderText("Nome del progetto"),
+      screen.getByPlaceholderText("Es. Redesign sito web"),
     ).toBeInTheDocument();
   });
 
@@ -60,7 +60,7 @@ describe("CreateProjectModalComponent", () => {
       />,
     );
 
-    fireEvent.change(screen.getByPlaceholderText("Nome del progetto"), {
+    fireEvent.change(screen.getByPlaceholderText("Es. Redesign sito web"), {
       target: { value: "  Progetto Nuovo  " },
     });
     fireEvent.click(screen.getByText("Crea progetto"));

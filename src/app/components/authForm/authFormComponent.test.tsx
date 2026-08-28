@@ -1,7 +1,16 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router";
 import AuthFormComponent from "./authFormComponent";
 import { AUTH_STORAGE_KEY } from "../../services/auth/authService";
+
+function renderAuthForm() {
+  return render(
+    <MemoryRouter>
+      <AuthFormComponent />
+    </MemoryRouter>,
+  );
+}
 
 describe("AuthFormComponent", () => {
   beforeEach(() => {
@@ -9,14 +18,14 @@ describe("AuthFormComponent", () => {
   });
 
   it("renders email above password, with the remember-me checkbox below", () => {
-    render(<AuthFormComponent />);
+    renderAuthForm();
     expect(screen.getByPlaceholderText("Email")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Password")).toBeInTheDocument();
     expect(screen.getByText("Resta connesso")).toBeInTheDocument();
   });
 
   it("shows a red border and an error message under the email field for an invalid email", () => {
-    render(<AuthFormComponent />);
+    renderAuthForm();
     const emailInput = screen.getByPlaceholderText("Email");
 
     fireEvent.change(emailInput, { target: { value: "not-an-email" } });
@@ -26,7 +35,7 @@ describe("AuthFormComponent", () => {
   });
 
   it("shows an email error when submitting with an empty email field", async () => {
-    render(<AuthFormComponent />);
+    renderAuthForm();
 
     fireEvent.click(screen.getByText("Accedi"));
 
@@ -36,7 +45,7 @@ describe("AuthFormComponent", () => {
   });
 
   it("does not persist the session and shows a password error for a mismatched login", async () => {
-    render(<AuthFormComponent />);
+    renderAuthForm();
     fireEvent.change(screen.getByPlaceholderText("Email"), {
       target: { value: "demo@taskmanager.dev" },
     });
@@ -52,7 +61,7 @@ describe("AuthFormComponent", () => {
   });
 
   it("persists the session on successful login when remember-me is checked", async () => {
-    render(<AuthFormComponent />);
+    renderAuthForm();
     fireEvent.change(screen.getByPlaceholderText("Email"), {
       target: { value: "demo@taskmanager.dev" },
     });
