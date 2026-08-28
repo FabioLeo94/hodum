@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    // TypeScript 7 ha rimosso "node"/"node10": con "Node16" e nessun "type":"module"
+    // in package.json, i file .ts sono comunque trattati come CommonJS in emissione,
+    // ma la risoluzione segue le regole reali di Node (import relativi senza
+    // estensione restano validi finché il pacchetto resta CJS).
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "outDir": "dist",
+    "rootDir": "src",
+
+    // TSOA legge i decorator (@Route, @Get, ...) via analisi statica dell'AST.
+    // experimentalDecorators serve perché tsc accetti la sintassi; emitDecoratorMetadata
+    // è la convenzione raccomandata da tsoa anche se i decorator sono no-op a runtime.
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+
+    "strict": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "declaration": false,
+    "sourceMap": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

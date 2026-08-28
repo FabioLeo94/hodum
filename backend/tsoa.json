@@ -1,0 +1,15 @@
+{
+  "entryFile": "src/app.ts",
+  "noImplicitAdditionalProperties": "throw-on-extras",
+  "controllerPathGlobs": ["src/controllers/**/*Controller.ts"],
+  "spec": {
+    "outputDirectory": "build",
+    "specVersion": 3,
+    "name": "Task Manager API",
+    "description": "API backend del task manager",
+    "version": "1.0.0"
+  },
+  "routes": {
+    "routesDir": "src/routes"
+  }
+}

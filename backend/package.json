@@ -1,0 +1,31 @@
+{
+  "name": "backend",
+  "description": "Task manager backend",
+  "authors": "fabio leo",
+  "version": "1.0.0",
+  "main": "dist/server.js",
+  "private": "true",
+  "scripts": {
+    "tsoa:gen": "tsoa spec-and-routes",
+    "dev": "npm run tsoa:gen && tsx watch src/server.ts",
+    "build": "npm run tsoa:gen && tsc -b",
+    "start": "node dist/server.js",
+    "migrate:up": "tsx src/db/migrate.ts",
+    "migrate:create": "tsx src/db/createMigration.ts",
+    "db:check": "tsx src/db/check.ts"
+  },
+  "dependencies": {
+    "@scalar/express-api-reference": "^0.10.16",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "pg": "^8.23.0",
+    "tsoa": "6.6.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.4.0",
+    "@types/pg": "^8.23.1",
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2"
+  }
+}

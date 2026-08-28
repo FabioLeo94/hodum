@@ -1,0 +1,14 @@
+# Dipendenze
+node_modules
+
+# Output di build TypeScript
+dist
+*.tsbuildinfo
+
+# File generati da tsoa (routes Express + spec OpenAPI): si rigenerano con
+# `npm run tsoa:gen`, non vanno committati né modificati a mano.
+src/routes
+build
+
+*.log
+.env
