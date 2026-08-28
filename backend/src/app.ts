@@ -1,3 +1,4 @@
+import cors from 'cors';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -19,6 +20,11 @@ export async function createApp(): Promise<Express> {
 
   // Limite esplicito: senza, un body enorme è un DoS a costo zero per il client.
   app.use(express.json({ limit: '1mb' }));
+
+  // Origine esplicita (mai '*' con credenziali) letta da env con lo stesso
+  // pattern di PORT in server.ts: fallback alla porta di default di Vite per
+  // non richiedere configurazione in sviluppo locale.
+  app.use(cors({ origin: process.env.FRONTEND_ORIGIN ?? 'http://localhost:5173' }));
 
   // La spec viene generata da `npm run tsoa:gen` in build/swagger.json (gitignored).
   // Letta ad ogni richiesta (file piccolo, nessuna cache) così riflette l'ultima
