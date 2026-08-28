@@ -4,7 +4,7 @@ description: Scaffolds a new component or page in this project following its fol
 disable-model-invocation: true
 ---
 
-Create a new component or page for this task-manager project, following the conventions documented in CLAUDE.md.
+Create a new component or page for this Hodum project, following the conventions documented in CLAUDE.md.
 
 `$ARGUMENTS` gives the kind (`component` or `page`) and the name, e.g. `component input` or `page dashboard`. If the kind is omitted, ask the user whether they want a component or a page.
 

@@ -1,6 +1,6 @@
 {
-  "name": "backend",
-  "description": "Task manager backend",
+  "name": "hodum-backend",
+  "description": "Hodum backend",
   "authors": "fabio leo",
   "version": "1.0.0",
   "main": "dist/server.js",

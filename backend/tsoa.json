@@ -5,8 +5,8 @@
   "spec": {
     "outputDirectory": "build",
     "specVersion": 3,
-    "name": "Task Manager API",
-    "description": "API backend del task manager",
+    "name": "Hodum API",
+    "description": "API backend di Hodum",
     "version": "1.0.0"
   },
   "routes": {

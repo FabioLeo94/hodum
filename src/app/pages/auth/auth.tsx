@@ -21,7 +21,7 @@ function Auth() {
   return (
     <div className={styles.authContainer}>
       <div className={styles.authHero}>
-        <span className={styles.authEyebrow}>Task Manager</span>
+        <span className={styles.authEyebrow}>Hodum</span>
         <h1 className={styles.authTitle}>
           {isLogin ? "Bentornato" : "Crea il tuo account"}
         </h1>

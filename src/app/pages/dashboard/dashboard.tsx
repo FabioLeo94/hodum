@@ -20,7 +20,7 @@ function Dashboard() {
   return (
     <div className={styles.dashboardContainer}>
       <header className={styles.dashboardHeader}>
-        <span className={styles.dashboardEyebrow}>Task Manager</span>
+        <span className={styles.dashboardEyebrow}>Hodum</span>
         <h1 className={styles.dashboardTitle}>I tuoi progetti</h1>
         <p className={styles.dashboardSubtitle}>
           {projects.length === 0
