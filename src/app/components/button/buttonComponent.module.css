@@ -27,6 +27,15 @@
   transform: scale(0.97);
 }
 
+.buttonBase:disabled,
+.buttonBase:disabled:hover,
+.buttonBase:disabled:active {
+  background-color: var(--bg-field);
+  color: var(--text-muted);
+  cursor: not-allowed;
+  transform: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .buttonBase {
     transition: none;

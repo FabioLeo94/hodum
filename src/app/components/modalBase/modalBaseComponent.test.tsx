@@ -117,6 +117,70 @@ describe("ModalBaseComponent", () => {
     expect(primary.parentElement?.lastElementChild).toBe(primary);
   });
 
+  it("does not render a form when onSubmit is not provided", () => {
+    render(
+      <ModalBaseComponent
+        isOpen
+        onClose={() => {}}
+        title="Titolo"
+        primaryAction={<button>Salva</button>}
+      >
+        <p>Contenuto</p>
+      </ModalBaseComponent>,
+    );
+
+    expect(document.querySelector("form")).not.toBeInTheDocument();
+  });
+
+  it("wraps content and actions in a form and calls onSubmit when the primary action is clicked, without navigating away", () => {
+    const onSubmit = vi.fn();
+    render(
+      <ModalBaseComponent
+        isOpen
+        onClose={() => {}}
+        title="Titolo"
+        onSubmit={onSubmit}
+        primaryAction={
+          <button type="submit">Salva</button>
+        }
+      >
+        <p>Contenuto</p>
+      </ModalBaseComponent>,
+    );
+
+    expect(document.querySelector("form")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Salva" }));
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it("places the field inside the real form so a native Enter keypress submits it, and calls onSubmit (preventing navigation) when the form submit event fires", () => {
+    const onSubmit = vi.fn();
+    render(
+      <ModalBaseComponent
+        isOpen
+        onClose={() => {}}
+        title="Titolo"
+        onSubmit={onSubmit}
+        primaryAction={<button type="submit">Salva</button>}
+      >
+        <input aria-label="Nome" />
+      </ModalBaseComponent>,
+    );
+
+    const input = screen.getByLabelText("Nome");
+    const form = input.closest("form");
+    // Un input dentro un <form> con un bottone submit innesca l'invio nativo
+    // del browser alla pressione di Invio: jsdom non simula quel default
+    // browser action su un keydown sintetico, quindi qui si verifica che il
+    // campo sia realmente figlio del form e che il gestore di submit sia
+    // collegato correttamente (stesso evento che il browser scatenerebbe).
+    expect(form).not.toBeNull();
+    expect(form).toContainElement(input);
+
+    fireEvent.submit(form!);
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
   it.each([
     ["generic"],
     ["error"],

@@ -24,6 +24,7 @@
 }
 
 .authCheckbox {
+  position: relative;
   width: 16px;
   height: 16px;
   flex-shrink: 0;
@@ -36,6 +37,18 @@
 .authCheckbox:checked {
   background-color: var(--bg-primary);
   border-color: var(--bg-primary);
+}
+
+.authCheckbox:checked::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 5px;
+  width: 4px;
+  height: 8px;
+  border: solid var(--text-on-primary);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
 }
 
 .authCheckbox:focus-visible {

@@ -10,6 +10,7 @@ interface Prop {
   showCloseButton?: boolean;
   primaryAction: ReactNode;
   secondaryActions?: ReactNode;
+  onSubmit?: () => void;
   children: ReactNode;
 }
 
@@ -21,6 +22,7 @@ function ModalBaseComponent({
   showCloseButton = true,
   primaryAction,
   secondaryActions,
+  onSubmit,
   children,
 }: Prop) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -36,6 +38,16 @@ function ModalBaseComponent({
       dialog.close();
     }
   }, [isOpen]);
+
+  const body = (
+    <>
+      <div className={styles.content}>{children}</div>
+      <div className={styles.bottomBar}>
+        {secondaryActions}
+        {primaryAction}
+      </div>
+    </>
+  );
 
   return (
     <dialog
@@ -67,11 +79,20 @@ function ModalBaseComponent({
           </button>
         )}
       </div>
-      <div className={styles.content}>{children}</div>
-      <div className={styles.bottomBar}>
-        {secondaryActions}
-        {primaryAction}
-      </div>
+      {onSubmit ? (
+        <form
+          className={styles.form}
+          noValidate
+          onSubmit={(event) => {
+            event.preventDefault();
+            onSubmit();
+          }}
+        >
+          {body}
+        </form>
+      ) : (
+        body
+      )}
     </dialog>
   );
 }

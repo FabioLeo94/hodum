@@ -28,12 +28,14 @@ describe("ProjectComponent", () => {
     mockNavigate.mockReset();
   });
 
-  it("renders name and task counts", () => {
+  it("renders name and task counts, with an accessible summary on the card", () => {
     render(<ProjectComponent {...mockProject} />);
     expect(screen.getByText("Progetto Demo")).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "2 Completati" })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "2 In corso" })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "2 In review" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: "Progetto Demo, 6 task: 2 completati, 2 in corso, 2 in review",
+      }),
+    ).toBeInTheDocument();
   });
 
   it("is not rendered as a button", () => {

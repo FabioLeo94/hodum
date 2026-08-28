@@ -15,21 +15,11 @@
   gap: var(--m-sm);
 }
 
-.dashboardEyebrow {
-  color: var(--bg-primary);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
 .dashboardTitle {
   color: var(--text-primary);
   font-size: 1.75rem;
   font-weight: 700;
-  font-family:
-    "Lucida Sans", "Lucida Sans Regular", "Lucida Grande",
-    "Lucida Sans Unicode", Geneva, Verdana, sans-serif;
+  font-family: var(--font-display);
 }
 
 .dashboardSubtitle {
@@ -54,15 +44,24 @@
   gap: var(--m-sm);
   max-width: 360px;
   padding: var(--p-xl);
+  border-left: 3px solid transparent;
   border-radius: var(--radious-lg);
   background-color: var(--bg-surface);
   box-shadow: 0 0 16px rgba(0, 0, 0, 0.35);
+}
+
+.emptyState[data-variant="error"] {
+  border-left-color: var(--color-danger);
 }
 
 .emptyStateTitle {
   color: var(--text-primary);
   font-weight: 600;
   font-size: 1.1rem;
+}
+
+.emptyState[data-variant="error"] .emptyStateTitle {
+  color: var(--color-danger);
 }
 
 .emptyStateText {

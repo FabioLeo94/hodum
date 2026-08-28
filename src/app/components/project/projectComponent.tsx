@@ -12,11 +12,14 @@ function ProjectComponent({ id, name, tasks }: Project) {
   const completedCount = tasks.filter((t) => t.status === "completed").length;
   const progressCount = tasks.filter((t) => t.status === "progress").length;
   const reviewCount = tasks.filter((t) => t.status === "review").length;
+  const rejectedCount = tasks.filter((t) => t.status === "rejected").length;
   const completedPercent =
     totalTasks === 0 ? 0 : (completedCount / totalTasks) * 100;
   const inProgressPercent =
     totalTasks === 0 ? 0 : (progressCount / totalTasks) * 100;
   const reviewPercent = totalTasks === 0 ? 0 : (reviewCount / totalTasks) * 100;
+  const rejectedPercent =
+    totalTasks === 0 ? 0 : (rejectedCount / totalTasks) * 100;
 
   const segments = [
     {
@@ -40,6 +43,13 @@ function ProjectComponent({ id, name, tasks }: Project) {
       percent: reviewPercent,
       className: styles.progressReview,
     },
+    {
+      key: "rejected",
+      label: "Rifiutati",
+      count: rejectedCount,
+      percent: rejectedPercent,
+      className: styles.progressRejected,
+    },
   ].filter((segment) => segment.percent > 0);
 
   function handleActivate() {
@@ -55,28 +65,34 @@ function ProjectComponent({ id, name, tasks }: Project) {
     }
   }
 
+  const cardLabel =
+    segments.length === 0
+      ? `${name}, ${totalTasks} task`
+      : `${name}, ${totalTasks} task: ${segments
+          .map((segment) => `${segment.count} ${segment.label.toLowerCase()}`)
+          .join(", ")}`;
+
   return (
     <div
       className={styles.projectCard}
       role="button"
       tabIndex={0}
+      aria-label={cardLabel}
       onClick={handleActivate}
       onKeyDown={handleKeyDown}
     >
-      <div className={styles.cardHeader}>
+      <div className={styles.cardHeader} aria-hidden="true">
         <span className={styles.projectName} title={name}>
           {name}
         </span>
         <span className={styles.taskTotal}>{totalTasks} task</span>
       </div>
-      <div className={styles.progressBar}>
+      <div className={styles.progressBar} aria-hidden="true">
         {segments.map((segment) => (
           <div
             key={segment.key}
             className={`${styles.progressSegment} ${segment.className}`}
             style={{ width: `${segment.percent}%` }}
-            role="img"
-            aria-label={`${segment.count} ${segment.label}`}
             data-tooltip={`${segment.count} ${segment.label}`}
           />
         ))}

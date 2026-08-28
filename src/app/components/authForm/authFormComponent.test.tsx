@@ -76,6 +76,50 @@ describe("AuthFormComponent", () => {
     expect(localStorage.getItem(AUTH_STORAGE_KEY)).toBeNull();
   });
 
+  it("disables the submit button and shows a loading label while the login request is in flight", async () => {
+    let resolveFetch: (response: Response) => void = () => {};
+    vi.mocked(fetch).mockReturnValue(
+      new Promise<Response>((resolve) => {
+        resolveFetch = resolve;
+      }),
+    );
+    renderAuthForm();
+    fireEvent.change(screen.getByPlaceholderText("Email"), {
+      target: { value: "demo@taskmanager.dev" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Password"), {
+      target: { value: "demo1234" },
+    });
+    fireEvent.click(screen.getByText("Accedi"));
+
+    const submitButton = await screen.findByRole("button", {
+      name: "Accesso in corso...",
+    });
+    expect(submitButton).toBeDisabled();
+
+    resolveFetch(jsonResponse(200, {}));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Accedi" })).not.toBeDisabled(),
+    );
+  });
+
+  it("re-enables the submit button after a failed login so the user can retry", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse(401, { message: "Email o password non corretti" }),
+    );
+    renderAuthForm();
+    fireEvent.change(screen.getByPlaceholderText("Email"), {
+      target: { value: "demo@taskmanager.dev" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Password"), {
+      target: { value: "wrong-password" },
+    });
+    fireEvent.click(screen.getByText("Accedi"));
+
+    await screen.findByText("Email o password non corretti.");
+    expect(screen.getByRole("button", { name: "Accedi" })).not.toBeDisabled();
+  });
+
   it("persists the session on successful login when remember-me is checked", async () => {
     vi.mocked(fetch).mockResolvedValue(
       jsonResponse(200, { id: "1", username: "demo", email: "demo@taskmanager.dev" }),

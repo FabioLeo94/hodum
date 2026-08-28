@@ -6,10 +6,12 @@ import TopbarComponent from "../../components/topbar/topbarComponent";
 import { createProject, getAllProjects } from "../../services/project/projectService";
 import { logout } from "../../services/auth/authService";
 import type { Project } from "../../../shared/types/project";
+import { usePageMeta } from "../../../shared/hooks/usePageMeta";
 import styles from "./dashboard.module.css";
 
 function Dashboard() {
   const navigate = useNavigate();
+  usePageMeta({ title: "Dashboard", robots: "noindex, nofollow" });
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -75,9 +77,8 @@ function Dashboard() {
       <TopbarComponent onLogout={handleLogout} />
       <div className={styles.dashboardContainer}>
         <header className={styles.dashboardHeader}>
-          <span className={styles.dashboardEyebrow}>Hodum</span>
           <h1 className={styles.dashboardTitle}>I tuoi progetti</h1>
-          <p className={styles.dashboardSubtitle}>
+          <p className={styles.dashboardSubtitle} role="status">
             {isLoading
               ? "Caricamento dei progetti..."
               : projects.length === 0
@@ -87,7 +88,7 @@ function Dashboard() {
         </header>
 
         {loadError ? (
-          <div className={styles.emptyState}>
+          <div className={styles.emptyState} data-variant="error" role="alert">
             <p className={styles.emptyStateTitle}>Errore di caricamento</p>
             <p className={styles.emptyStateText}>{loadError}</p>
           </div>

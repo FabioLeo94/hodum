@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+
+# Aggiungere qui la riga "Sitemap: https://<dominio-produzione>/sitemap.xml"
+# una volta confermato il dominio di produzione definitivo.

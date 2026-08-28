@@ -36,6 +36,11 @@
   --radious-md: 8px;
   --radious-lg: 16px;
   --radious-xl: 24px;
+
+  /*TYPOGRAPHY*/
+  --font-display:
+    "Lucida Sans", "Lucida Sans Regular", "Lucida Grande",
+    "Lucida Sans Unicode", Geneva, Verdana, sans-serif;
 }
 
 * {

@@ -6,9 +6,22 @@
   color: var(--text-primary);
 }
 
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .backLink {
   width: fit-content;
-  color: var(--color-info);
+  color: var(--text-muted);
+  font-family: var(--font-display);
   font-size: 0.85rem;
   font-weight: 600;
   text-decoration: none;
@@ -16,12 +29,12 @@
 }
 
 .backLink:hover {
-  color: color-mix(in srgb, var(--color-info) 80%, white 20%);
+  color: var(--text-primary);
   text-decoration: underline;
 }
 
 .backLink:focus-visible {
-  outline: 2px solid var(--color-info);
+  outline: 2px solid var(--bg-primary);
   outline-offset: 2px;
   border-radius: var(--radious-xs);
 }
@@ -32,21 +45,11 @@
   gap: var(--m-sm);
 }
 
-.taskListEyebrow {
-  color: var(--bg-primary);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
 .taskListTitle {
   color: var(--text-primary);
   font-size: 1.75rem;
   font-weight: 700;
-  font-family:
-    "Lucida Sans", "Lucida Sans Regular", "Lucida Grande",
-    "Lucida Sans Unicode", Geneva, Verdana, sans-serif;
+  font-family: var(--font-display);
 }
 
 .taskTableCard {
@@ -100,7 +103,12 @@
 }
 
 .groupHeaderRejected {
-  color: var(--color-danger);
+  /* --color-danger su --bg-field da' un contrasto di ~4.02:1, sotto la soglia
+     AA 4.5:1 per testo normale (0.8rem bold non e' "testo grande" per WCAG).
+     Schiarito solo qui, in modo derivato dal token, per raggiungere ~4.71:1.
+     Il token globale --color-danger resta invariato: su --bg-surface (4.71:1)
+     e --bg-main (5.35:1) e' gia' conforme. */
+  color: color-mix(in srgb, var(--color-danger) 86%, white);
 }
 
 .taskRow {
@@ -123,14 +131,23 @@
   gap: var(--m-sm);
   max-width: 360px;
   padding: var(--p-xl);
+  border-left: 3px solid transparent;
   border-radius: var(--radious-lg);
   background-color: var(--bg-surface);
   box-shadow: 0 0 16px rgba(0, 0, 0, 0.35);
 }
 
+.notFoundState[data-variant="error"] {
+  border-left-color: var(--color-danger);
+}
+
 .errorMessage {
-  color: var(--color-danger);
+  color: var(--text-primary);
   font-weight: 600;
+}
+
+.notFoundState[data-variant="error"] .errorMessage {
+  color: var(--color-danger);
 }
 
 .notFoundText {

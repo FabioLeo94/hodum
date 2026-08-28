@@ -4,6 +4,7 @@ import type { Project, Task, TaskStatus } from "../../../shared/types/project";
 import { getProjectById } from "../../services/project/projectService";
 import { logout } from "../../services/auth/authService";
 import TopbarComponent from "../../components/topbar/topbarComponent";
+import { usePageMeta } from "../../../shared/hooks/usePageMeta";
 import styles from "./taskList.module.css";
 
 const STATUS_ORDER: TaskStatus[] = ["progress", "review", "completed", "rejected"];
@@ -56,6 +57,11 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
+  usePageMeta({
+    title: project ? project.name : "Progetto",
+    robots: "noindex, nofollow",
+  });
+
   useEffect(() => {
     let cancelled = false;
 
@@ -89,7 +95,9 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
           <Link className={styles.backLink} to="/dashboard">
             Torna alla dashboard
           </Link>
-          <p className={styles.notFoundText}>Caricamento in corso...</p>
+          <p className={styles.notFoundText} role="status">
+            Caricamento in corso...
+          </p>
         </div>
       </Fragment>
     );
@@ -103,7 +111,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
           <Link className={styles.backLink} to="/dashboard">
             Torna alla dashboard
           </Link>
-          <div className={styles.notFoundState}>
+          <div className={styles.notFoundState} data-variant="error" role="alert">
             <p className={styles.errorMessage}>Errore di caricamento.</p>
             <p className={styles.notFoundText}>{loadError}</p>
           </div>
@@ -120,7 +128,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
           <Link className={styles.backLink} to="/dashboard">
             Torna alla dashboard
           </Link>
-          <div className={styles.notFoundState}>
+          <div className={styles.notFoundState} role="alert">
             <p className={styles.errorMessage}>Progetto non trovato.</p>
             <p className={styles.notFoundText}>
               Il progetto richiesto non esiste o è stato rimosso.
@@ -141,15 +149,17 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
           Torna alla dashboard
         </Link>
         <header className={styles.taskListHeader}>
-          <span className={styles.taskListEyebrow}>Progetto</span>
           <h1 className={styles.taskListTitle}>{project.name}</h1>
         </header>
         <div className={styles.taskTableCard}>
           <table className={styles.taskTable}>
+            <caption className={styles.srOnly}>
+              Task del progetto {project.name}, raggruppati per stato
+            </caption>
             <thead>
               <tr>
-                <th>Titolo</th>
-                <th>Descrizione</th>
+                <th scope="col">Titolo</th>
+                <th scope="col">Descrizione</th>
               </tr>
             </thead>
             <tbody>
@@ -160,6 +170,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
                     <th
                       className={`${styles.groupHeaderCell} ${STATUS_STYLES[status]}`}
                       colSpan={2}
+                      scope="colgroup"
                     >
                       {STATUS_LABELS[status]} ({tasks.length})
                     </th>
@@ -193,27 +204,37 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
   );
 }
 
-function TaskList() {
+// Componente separato per lo stesso motivo di TaskListContent: il title/meta va
+// impostato solo quando questo ramo è effettivamente montato, non ad ogni render
+// di TaskList (che altrimenti sovrascriverebbe il title impostato da TaskListContent).
+function TaskListMissingProject() {
   const handleLogout = useLogoutHandler();
+
+  usePageMeta({ title: "Progetto non trovato", robots: "noindex, nofollow" });
+
+  return (
+    <Fragment>
+      <TopbarComponent onLogout={handleLogout} />
+      <div className={styles.taskListContainer}>
+        <Link className={styles.backLink} to="/dashboard">
+          Torna alla dashboard
+        </Link>
+        <div className={styles.notFoundState} role="alert">
+          <p className={styles.errorMessage}>Progetto non trovato.</p>
+          <p className={styles.notFoundText}>
+            Il progetto richiesto non esiste o è stato rimosso.
+          </p>
+        </div>
+      </div>
+    </Fragment>
+  );
+}
+
+function TaskList() {
   const { progettoId } = useParams<{ progettoId: string }>();
 
   if (!progettoId) {
-    return (
-      <Fragment>
-        <TopbarComponent onLogout={handleLogout} />
-        <div className={styles.taskListContainer}>
-          <Link className={styles.backLink} to="/dashboard">
-            Torna alla dashboard
-          </Link>
-          <div className={styles.notFoundState}>
-            <p className={styles.errorMessage}>Progetto non trovato.</p>
-            <p className={styles.notFoundText}>
-              Il progetto richiesto non esiste o è stato rimosso.
-            </p>
-          </div>
-        </div>
-      </Fragment>
-    );
+    return <TaskListMissingProject />;
   }
 
   return <TaskListContent key={progettoId} progettoId={progettoId} />;

@@ -8,6 +8,7 @@ function ControlledWrapper() {
   return (
     <InputComponent
       type="text"
+      label="Nome"
       placeholder="Nome"
       value={value}
       onChange={(event) => setValue(event.target.value)}

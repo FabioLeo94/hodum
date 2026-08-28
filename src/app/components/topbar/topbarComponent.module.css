@@ -19,13 +19,13 @@
 .logo {
   justify-self: center;
   color: var(--text-primary);
-  font-family:
-    "Lucida Sans", "Lucida Sans Regular", "Lucida Grande",
-    "Lucida Sans Unicode", Geneva, Verdana, sans-serif;
+  font-family: var(--font-display);
   font-size: 1.05rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   white-space: nowrap;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .logoMark {

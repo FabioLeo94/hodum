@@ -7,7 +7,7 @@ import styles from "./createProjectModalComponent.module.css";
 interface Prop {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (name: string) => void;
+  onCreate: (name: string) => void | Promise<void>;
   submitError?: string;
 }
 
@@ -19,6 +19,7 @@ function CreateProjectModalComponent({
 }: Prop) {
   const [name, setName] = useState("");
   const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const nameError =
     submitAttempted && name.trim() === ""
@@ -31,14 +32,23 @@ function CreateProjectModalComponent({
     onClose();
   }
 
-  function handleCreate() {
+  async function handleCreate() {
+    if (isSubmitting) return;
     setSubmitAttempted(true);
     const trimmedName = name.trim();
     if (trimmedName === "") return;
 
-    onCreate(trimmedName);
-    setName("");
-    setSubmitAttempted(false);
+    setIsSubmitting(true);
+    try {
+      await onCreate(trimmedName);
+      setName("");
+      setSubmitAttempted(false);
+    } catch {
+      // onCreate è responsabile di segnalare l'errore tramite submitError;
+      // qui si intercetta solo per evitare una unhandled rejection e permettere il retry.
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -46,9 +56,10 @@ function CreateProjectModalComponent({
       isOpen={isOpen}
       onClose={handleClose}
       title="Nuovo progetto"
+      onSubmit={handleCreate}
       primaryAction={
-        <ButtonComponent onClick={handleCreate}>
-          Crea progetto
+        <ButtonComponent onClick={() => {}} disabled={isSubmitting}>
+          {isSubmitting ? "Creazione in corso..." : "Crea progetto"}
         </ButtonComponent>
       }
       secondaryActions={
@@ -68,6 +79,7 @@ function CreateProjectModalComponent({
       <InputComponent
         type="text"
         name="projectName"
+        label="Nome del progetto"
         placeholder="Es. Redesign sito web"
         value={name}
         onChange={(event) => setName(event.target.value)}

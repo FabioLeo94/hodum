@@ -4,6 +4,7 @@ import RegisterFormComponent from "../../components/registerForm/registerFormCom
 import { useEffect, useState } from "react";
 import { isAuthenticated } from "../../services/auth/authService";
 import { useNavigate } from "react-router";
+import { usePageMeta } from "../../../shared/hooks/usePageMeta";
 
 type AuthMode = "login" | "register";
 
@@ -18,6 +19,13 @@ function Auth() {
 
   const isLogin = mode === "login";
 
+  usePageMeta({
+    title: isLogin ? "Accedi" : "Registrati",
+    description: isLogin
+      ? "Accedi a Hodum per gestire i tuoi progetti e le tue attività."
+      : "Crea un account Hodum per iniziare a gestire progetti e attività in modo semplice.",
+  });
+
   return (
     <div className={styles.authContainer}>
       <div className={styles.authHero}>
@@ -31,7 +39,9 @@ function Auth() {
             : "Registrati per iniziare a gestire i tuoi progetti e le tue attività."}
         </p>
       </div>
-      {isLogin ? <AuthFormComponent /> : <RegisterFormComponent />}
+      <div className={styles.authFormWrapper} key={mode}>
+        {isLogin ? <AuthFormComponent /> : <RegisterFormComponent />}
+      </div>
       <button
         type="button"
         className={styles.authToggle}

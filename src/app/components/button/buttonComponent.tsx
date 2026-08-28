@@ -4,14 +4,21 @@ import styles from "./buttonComponent.module.css";
 interface Prop {
   key?: string;
   onClick: () => void;
+  disabled?: boolean;
 }
-function ButtonComponent({ children, onClick, key }: PropsWithChildren<Prop>) {
+function ButtonComponent({
+  children,
+  onClick,
+  key,
+  disabled = false,
+}: PropsWithChildren<Prop>) {
   return (
     <>
       <button
         key={key || undefined}
         className={styles.buttonBase}
         onClick={onClick}
+        disabled={disabled}
       >
         {children}
       </button>

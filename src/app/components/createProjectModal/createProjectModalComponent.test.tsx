@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import CreateProjectModalComponent from "./createProjectModalComponent";
 
 describe("CreateProjectModalComponent", () => {
@@ -32,7 +32,7 @@ describe("CreateProjectModalComponent", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows an error and does not call onCreate when submitting an empty name", () => {
+  it("shows an error and does not call onCreate when submitting an empty name", async () => {
     const onCreate = vi.fn();
     render(
       <CreateProjectModalComponent
@@ -45,12 +45,12 @@ describe("CreateProjectModalComponent", () => {
     fireEvent.click(screen.getByText("Crea progetto"));
 
     expect(
-      screen.getByText("Inserisci un nome per il progetto."),
+      await screen.findByText("Inserisci un nome per il progetto."),
     ).toBeInTheDocument();
     expect(onCreate).not.toHaveBeenCalled();
   });
 
-  it("calls onCreate with the trimmed name when submitting a valid name", () => {
+  it("calls onCreate with the trimmed name when submitting a valid name", async () => {
     const onCreate = vi.fn();
     render(
       <CreateProjectModalComponent
@@ -65,8 +65,26 @@ describe("CreateProjectModalComponent", () => {
     });
     fireEvent.click(screen.getByText("Crea progetto"));
 
-    expect(onCreate).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(onCreate).toHaveBeenCalledTimes(1));
     expect(onCreate).toHaveBeenCalledWith("Progetto Nuovo");
+  });
+
+  it("calls onCreate when the form is submitted (e.g. pressing Enter in the name field), not only on button click", async () => {
+    const onCreate = vi.fn();
+    render(
+      <CreateProjectModalComponent
+        isOpen
+        onClose={() => {}}
+        onCreate={onCreate}
+      />,
+    );
+
+    const input = screen.getByPlaceholderText("Es. Redesign sito web");
+    fireEvent.change(input, { target: { value: "Progetto da tastiera" } });
+    fireEvent.submit(input.closest("form")!);
+
+    await waitFor(() => expect(onCreate).toHaveBeenCalledTimes(1));
+    expect(onCreate).toHaveBeenCalledWith("Progetto da tastiera");
   });
 
   it("calls onClose when the cancel button is clicked", () => {
@@ -81,5 +99,62 @@ describe("CreateProjectModalComponent", () => {
 
     fireEvent.click(screen.getByText("Annulla"));
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("disables the confirm button and shows a loading label while onCreate is pending", async () => {
+    let resolveCreate: () => void = () => {};
+    const onCreate = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveCreate = resolve;
+        }),
+    );
+    render(
+      <CreateProjectModalComponent
+        isOpen
+        onClose={() => {}}
+        onCreate={onCreate}
+      />,
+    );
+
+    fireEvent.change(screen.getByPlaceholderText("Es. Redesign sito web"), {
+      target: { value: "Progetto Nuovo" },
+    });
+    fireEvent.click(screen.getByText("Crea progetto"));
+
+    const confirmButton = await screen.findByRole("button", {
+      name: "Creazione in corso...",
+    });
+    expect(confirmButton).toBeDisabled();
+    expect(onCreate).toHaveBeenCalledTimes(1);
+
+    resolveCreate();
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Crea progetto" }),
+      ).not.toBeDisabled(),
+    );
+  });
+
+  it("re-enables the confirm button after onCreate rejects so the user can retry", async () => {
+    const onCreate = vi.fn().mockRejectedValue(new Error("boom"));
+    render(
+      <CreateProjectModalComponent
+        isOpen
+        onClose={() => {}}
+        onCreate={onCreate}
+      />,
+    );
+
+    fireEvent.change(screen.getByPlaceholderText("Es. Redesign sito web"), {
+      target: { value: "Progetto Nuovo" },
+    });
+    fireEvent.click(screen.getByText("Crea progetto"));
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Crea progetto" }),
+      ).not.toBeDisabled(),
+    );
   });
 });

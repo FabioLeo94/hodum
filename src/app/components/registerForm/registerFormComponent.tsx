@@ -78,6 +78,7 @@ function RegisterFormComponent() {
       <InputComponent
         type="text"
         name="username"
+        label="Username"
         placeholder="Username"
         value={username}
         onChange={(event) => setUsername(event.target.value)}
@@ -88,6 +89,7 @@ function RegisterFormComponent() {
       <InputComponent
         type="email"
         name="email"
+        label="Email"
         placeholder="Email"
         value={email}
         onChange={(event) => setEmail(event.target.value)}
@@ -98,6 +100,7 @@ function RegisterFormComponent() {
       <InputComponent
         type="password"
         name="password"
+        label="Password"
         placeholder="Password"
         value={password}
         onChange={(event) => setPassword(event.target.value)}
@@ -108,6 +111,7 @@ function RegisterFormComponent() {
       <InputComponent
         type="password"
         name="confirmPassword"
+        label="Conferma password"
         placeholder="Conferma password"
         value={confirmPassword}
         onChange={(event) => setConfirmPassword(event.target.value)}
@@ -120,7 +124,7 @@ function RegisterFormComponent() {
           {formError}
         </p>
       )}
-      <ButtonComponent onClick={() => {}}>
+      <ButtonComponent onClick={() => {}} disabled={isSubmitting}>
         {isSubmitting ? "Registrazione in corso..." : "Registrati"}
       </ButtonComponent>
     </form>

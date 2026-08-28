@@ -30,6 +30,11 @@ function TopbarComponent({ onLogout }: Prop) {
       if (event.key === "Escape") {
         setIsMenuOpen(false);
         accountButtonRef.current?.focus();
+      } else if (event.key === "Tab") {
+        // Con un solo item il focus è già sull'unica voce: se l'utente esce
+        // con Tab il menu deve chiudersi, altrimenti resta aperto e "orfano"
+        // mentre il focus prosegue altrove nella pagina.
+        setIsMenuOpen(false);
       }
     }
 

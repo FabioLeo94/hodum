@@ -173,3 +173,11 @@
 .progressReview::before {
   background-color: var(--color-warning);
 }
+
+.progressRejected {
+  background-color: var(--color-danger);
+}
+
+.progressRejected::before {
+  background-color: var(--color-danger);
+}

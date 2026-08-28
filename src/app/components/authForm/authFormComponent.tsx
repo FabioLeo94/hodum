@@ -7,13 +7,13 @@ import { validateEmail } from "../../services/validation/validationService";
 import { useNavigate } from "react-router";
 
 function AuthFormComponent() {
-  let navigate = useNavigate();
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [passwordError, setPasswordError] = useState("");
   const [submitAttempted, setSubmitAttempted] = useState(false);
-  console.log("AuthFormComponetn");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const emailError =
     (submitAttempted || email !== "") && !validateEmail(email)
@@ -22,6 +22,9 @@ function AuthFormComponent() {
 
   async function handleSubmit(event: React.SubmitEvent) {
     event.preventDefault();
+    if (isSubmitting) {
+      return;
+    }
     setPasswordError("");
     setSubmitAttempted(true);
 
@@ -29,14 +32,19 @@ function AuthFormComponent() {
       return;
     }
 
-    const success = await login(email, password);
-    if (!success) {
-      setPasswordError("Email o password non corretti.");
-      return;
-    }
+    setIsSubmitting(true);
+    try {
+      const success = await login(email, password);
+      if (!success) {
+        setPasswordError("Email o password non corretti.");
+        return;
+      }
 
-    persistSession(rememberMe);
-    navigate("/dashboard");
+      persistSession(rememberMe);
+      navigate("/dashboard");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -44,6 +52,7 @@ function AuthFormComponent() {
       <InputComponent
         type="email"
         name="email"
+        label="Email"
         placeholder="Email"
         value={email}
         onChange={(event) => setEmail(event.target.value)}
@@ -54,6 +63,7 @@ function AuthFormComponent() {
       <InputComponent
         type="password"
         name="password"
+        label="Password"
         placeholder="Password"
         value={password}
         onChange={(event) => {
@@ -73,7 +83,9 @@ function AuthFormComponent() {
         />
         Resta connesso
       </label>
-      <ButtonComponent onClick={() => {}}>Accedi</ButtonComponent>
+      <ButtonComponent onClick={() => {}} disabled={isSubmitting}>
+        {isSubmitting ? "Accesso in corso..." : "Accedi"}
+      </ButtonComponent>
     </form>
   );
 }

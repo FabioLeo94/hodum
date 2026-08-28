@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import RegisterFormComponent from "./registerFormComponent";
 import { AUTH_STORAGE_KEY } from "../../services/auth/authService";
@@ -73,6 +73,44 @@ describe("RegisterFormComponent", () => {
       await screen.findByText("Le password non coincidono."),
     ).toBeInTheDocument();
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("disables the submit button and shows a loading label while the request is in flight", async () => {
+    let resolveFetch: (response: Response) => void = () => {};
+    vi.mocked(fetch).mockReturnValue(
+      new Promise<Response>((resolve) => {
+        resolveFetch = resolve;
+      }),
+    );
+    renderForm();
+
+    fireEvent.change(screen.getByPlaceholderText("Username"), {
+      target: { value: "mario" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Email"), {
+      target: { value: "mario@example.com" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Password"), {
+      target: { value: "Password1" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Conferma password"), {
+      target: { value: "Password1" },
+    });
+    fireEvent.click(screen.getByText("Registrati"));
+
+    const submitButton = await screen.findByRole("button", {
+      name: "Registrazione in corso...",
+    });
+    expect(submitButton).toBeDisabled();
+
+    resolveFetch(
+      jsonResponse(201, { id: "1", username: "mario", email: "mario@example.com" }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Registrati" }),
+      ).not.toBeDisabled(),
+    );
   });
 
   it("calls createUser, persists the session and navigates on success", async () => {
