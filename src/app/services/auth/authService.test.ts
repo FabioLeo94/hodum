@@ -3,6 +3,7 @@ import {
   login,
   persistSession,
   isAuthenticated,
+  logout,
   AUTH_STORAGE_KEY,
 } from "./authService";
 
@@ -45,6 +46,14 @@ describe("authService", () => {
 
     it("returns false when the session flag is missing", () => {
       expect(isAuthenticated()).toBe(false);
+    });
+  });
+
+  describe("logout", () => {
+    it("removes the session flag from localStorage", () => {
+      localStorage.setItem(AUTH_STORAGE_KEY, "true");
+      logout();
+      expect(localStorage.getItem(AUTH_STORAGE_KEY)).toBeNull();
     });
   });
 });

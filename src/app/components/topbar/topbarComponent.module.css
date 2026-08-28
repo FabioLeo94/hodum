@@ -1,0 +1,146 @@
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  height: 60px;
+  padding: 0 var(--p-lg);
+  background-color: var(--bg-surface);
+  border-bottom: 1px solid var(--bg-field);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+}
+
+.side {
+  min-width: 40px;
+}
+
+.logo {
+  justify-self: center;
+  color: var(--text-primary);
+  font-family:
+    "Lucida Sans", "Lucida Sans Regular", "Lucida Grande",
+    "Lucida Sans Unicode", Geneva, Verdana, sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.logoMark {
+  color: var(--bg-primary);
+}
+
+.accountArea {
+  position: relative;
+  justify-self: end;
+}
+
+.accountButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: var(--bg-field);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    transform 100ms ease;
+}
+
+.accountButton:hover {
+  background-color: color-mix(in srgb, var(--bg-field) 80%, white 20%);
+  color: var(--text-primary);
+}
+
+.accountButton:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+.accountButton:active {
+  transform: scale(0.95);
+}
+
+.accountButton[aria-expanded="true"] {
+  background-color: var(--bg-primary);
+  color: var(--text-on-primary);
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + var(--m-sm));
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 168px;
+  padding: var(--p-sm);
+  border-radius: var(--radious-md);
+  background-color: var(--bg-surface);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  animation: menuPopIn 140ms ease both;
+}
+
+.menuItem {
+  padding: var(--p-sm) var(--p-md);
+  border-radius: var(--radious-sm);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.menuItem:hover {
+  background-color: var(--bg-field);
+}
+
+.menuItem:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: -2px;
+}
+
+@keyframes menuPopIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .accountButton {
+    transition: none;
+  }
+
+  .accountButton:active {
+    transform: none;
+  }
+
+  .menuItem {
+    transition: none;
+  }
+
+  .menu {
+    animation: none;
+  }
+}
+
+@media (max-width: 400px) {
+  .topbar {
+    padding: 0 var(--p-md);
+  }
+
+  .logo {
+    font-size: 0.95rem;
+  }
+}

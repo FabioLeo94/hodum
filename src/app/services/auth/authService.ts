@@ -25,3 +25,7 @@ export function persistSession(rememberMe: boolean): void {
 export function isAuthenticated(): boolean {
   return localStorage.getItem(AUTH_STORAGE_KEY) === "true";
 }
+
+export function logout(): void {
+  localStorage.removeItem(AUTH_STORAGE_KEY);
+}
