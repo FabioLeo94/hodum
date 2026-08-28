@@ -117,25 +117,6 @@
   text-align: center;
 }
 
-.tagList {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--m-xs);
-}
-
-.tagPill {
-  background-color: var(--bg-field);
-  color: var(--text-muted);
-  padding: var(--p-xs) var(--p-sm);
-  border-radius: var(--radious-xs);
-  font-size: 0.75rem;
-  white-space: nowrap;
-}
-
-.noTags {
-  color: var(--text-muted);
-}
-
 .notFoundState {
   display: flex;
   flex-direction: column;

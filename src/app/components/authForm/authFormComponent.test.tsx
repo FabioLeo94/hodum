@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import AuthFormComponent from "./authFormComponent";
@@ -12,9 +12,22 @@ function renderAuthForm() {
   );
 }
 
+function jsonResponse(status: number, body: unknown = {}): Response {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: () => Promise.resolve(body),
+  } as Response;
+}
+
 describe("AuthFormComponent", () => {
   beforeEach(() => {
     localStorage.clear();
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("renders email above password, with the remember-me checkbox below", () => {
@@ -45,6 +58,9 @@ describe("AuthFormComponent", () => {
   });
 
   it("does not persist the session and shows a password error for a mismatched login", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse(401, { message: "Email o password non corretti" }),
+    );
     renderAuthForm();
     fireEvent.change(screen.getByPlaceholderText("Email"), {
       target: { value: "demo@taskmanager.dev" },
@@ -61,6 +77,9 @@ describe("AuthFormComponent", () => {
   });
 
   it("persists the session on successful login when remember-me is checked", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse(200, { id: "1", username: "demo", email: "demo@taskmanager.dev" }),
+    );
     renderAuthForm();
     fireEvent.change(screen.getByPlaceholderText("Email"), {
       target: { value: "demo@taskmanager.dev" },

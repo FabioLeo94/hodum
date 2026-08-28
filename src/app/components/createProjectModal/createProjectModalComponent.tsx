@@ -8,9 +8,15 @@ interface Prop {
   isOpen: boolean;
   onClose: () => void;
   onCreate: (name: string) => void;
+  submitError?: string;
 }
 
-function CreateProjectModalComponent({ isOpen, onClose, onCreate }: Prop) {
+function CreateProjectModalComponent({
+  isOpen,
+  onClose,
+  onCreate,
+  submitError,
+}: Prop) {
   const [name, setName] = useState("");
   const [submitAttempted, setSubmitAttempted] = useState(false);
 
@@ -69,6 +75,11 @@ function CreateProjectModalComponent({ isOpen, onClose, onCreate }: Prop) {
         autoFocus
         error={nameError}
       />
+      {submitError && (
+        <p role="alert" className={styles.submitError}>
+          {submitError}
+        </p>
+      )}
     </ModalBaseComponent>
   );
 }

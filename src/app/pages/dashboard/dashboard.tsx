@@ -1,29 +1,73 @@
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import ProjectComponent from "../../components/project/projectComponent";
 import CreateProjectModalComponent from "../../components/createProjectModal/createProjectModalComponent";
 import TopbarComponent from "../../components/topbar/topbarComponent";
-import { getAllProjects } from "../../services/project/projectService";
+import { createProject, getAllProjects } from "../../services/project/projectService";
 import { logout } from "../../services/auth/authService";
 import type { Project } from "../../../shared/types/project";
 import styles from "./dashboard.module.css";
 
 function Dashboard() {
   const navigate = useNavigate();
-  const [projects, setProjects] = useState<Project[]>(() => getAllProjects());
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [createError, setCreateError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getAllProjects()
+      .then((data) => {
+        if (!cancelled) setProjects(data);
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setLoadError(
+            error instanceof Error
+              ? error.message
+              : "Impossibile caricare i progetti.",
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function handleLogout() {
     logout();
     navigate("/auth");
   }
 
-  function handleCreateProject(name: string) {
-    setProjects((current) => [
-      ...current,
-      { id: crypto.randomUUID(), name, tasks: [] },
-    ]);
+  function openCreateModal() {
+    setCreateError("");
+    setIsCreateModalOpen(true);
+  }
+
+  function closeCreateModal() {
+    setCreateError("");
     setIsCreateModalOpen(false);
+  }
+
+  async function handleCreateProject(name: string) {
+    try {
+      const project = await createProject(name);
+      setProjects((current) => [...current, project]);
+      closeCreateModal();
+    } catch (error) {
+      setCreateError(
+        error instanceof Error
+          ? error.message
+          : "Impossibile creare il progetto.",
+      );
+    }
   }
 
   return (
@@ -34,32 +78,39 @@ function Dashboard() {
           <span className={styles.dashboardEyebrow}>Hodum</span>
           <h1 className={styles.dashboardTitle}>I tuoi progetti</h1>
           <p className={styles.dashboardSubtitle}>
-            {projects.length === 0
-              ? "Nessun progetto attivo al momento."
-              : `${projects.length} progett${projects.length === 1 ? "o" : "i"} attiv${projects.length === 1 ? "o" : "i"}.`}
+            {isLoading
+              ? "Caricamento dei progetti..."
+              : projects.length === 0
+                ? "Nessun progetto attivo al momento."
+                : `${projects.length} progett${projects.length === 1 ? "o" : "i"} attiv${projects.length === 1 ? "o" : "i"}.`}
           </p>
         </header>
 
-        {projects.length === 0 ? (
+        {loadError ? (
+          <div className={styles.emptyState}>
+            <p className={styles.emptyStateTitle}>Errore di caricamento</p>
+            <p className={styles.emptyStateText}>{loadError}</p>
+          </div>
+        ) : !isLoading && projects.length === 0 ? (
           <div className={styles.emptyState}>
             <p className={styles.emptyStateTitle}>Nessun progetto ancora</p>
             <p className={styles.emptyStateText}>
               I progetti che crei compariranno qui, pronti da aprire.
             </p>
           </div>
-        ) : (
+        ) : !isLoading ? (
           <div className={styles.projectsGrid}>
             {projects.map((project) => (
               <ProjectComponent key={project.id} {...project} />
             ))}
           </div>
-        )}
+        ) : null}
 
         <button
           type="button"
           className={styles.fabButton}
           aria-label="Crea nuovo progetto"
-          onClick={() => setIsCreateModalOpen(true)}
+          onClick={openCreateModal}
         >
           <svg
             className={styles.fabIcon}
@@ -78,8 +129,9 @@ function Dashboard() {
 
         <CreateProjectModalComponent
           isOpen={isCreateModalOpen}
-          onClose={() => setIsCreateModalOpen(false)}
+          onClose={closeCreateModal}
           onCreate={handleCreateProject}
+          submitError={createError}
         />
       </div>
     </Fragment>

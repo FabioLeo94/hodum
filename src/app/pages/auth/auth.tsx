@@ -2,7 +2,7 @@ import styles from "./auth.module.css";
 import AuthFormComponent from "../../components/authForm/authFormComponent";
 import RegisterFormComponent from "../../components/registerForm/registerFormComponent";
 import { useEffect, useState } from "react";
-import { AUTH_STORAGE_KEY } from "../../services/auth/authService";
+import { isAuthenticated } from "../../services/auth/authService";
 import { useNavigate } from "react-router";
 
 type AuthMode = "login" | "register";
@@ -11,7 +11,7 @@ function Auth() {
   const navigate = useNavigate();
   const [mode, setMode] = useState<AuthMode>("login");
   useEffect(() => {
-    if (localStorage.getItem(AUTH_STORAGE_KEY) === "true") {
+    if (isAuthenticated()) {
       navigate("/dashboard");
     }
   }, []);

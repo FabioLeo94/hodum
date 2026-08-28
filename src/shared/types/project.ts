@@ -9,5 +9,4 @@ export interface Task {
   title: string;
   description: string;
   status: TaskStatus;
-  tags: string[];
 }

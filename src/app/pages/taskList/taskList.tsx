@@ -1,6 +1,6 @@
-import { Fragment } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import type { Task, TaskStatus } from "../../../shared/types/project";
+import type { Project, Task, TaskStatus } from "../../../shared/types/project";
 import { getProjectById } from "../../services/project/projectService";
 import { logout } from "../../services/auth/authService";
 import TopbarComponent from "../../components/topbar/topbarComponent";
@@ -35,14 +35,81 @@ function groupTasksByStatus(tasks: Task[]): Record<TaskStatus, Task[]> {
   return groups;
 }
 
-function TaskList() {
+function useLogoutHandler() {
   const navigate = useNavigate();
-  const { progettoId } = useParams<{ progettoId: string }>();
-  const project = progettoId ? getProjectById(progettoId) : undefined;
-
-  function handleLogout() {
+  return function handleLogout() {
     logout();
     navigate("/auth");
+  };
+}
+
+interface TaskListContentProps {
+  progettoId: string;
+}
+
+// Componente separato, montato con key={progettoId}: un cambio di progetto
+// rimonta l'albero invece di richiedere un reset manuale di isLoading/loadError
+// nell'effect (pattern richiesto da react-hooks/set-state-in-effect).
+function TaskListContent({ progettoId }: TaskListContentProps) {
+  const handleLogout = useLogoutHandler();
+  const [project, setProject] = useState<Project | undefined>(undefined);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getProjectById(progettoId)
+      .then((data) => {
+        if (!cancelled) setProject(data);
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setLoadError(
+            error instanceof Error
+              ? error.message
+              : "Impossibile caricare il progetto.",
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [progettoId]);
+
+  if (isLoading) {
+    return (
+      <Fragment>
+        <TopbarComponent onLogout={handleLogout} />
+        <div className={styles.taskListContainer}>
+          <Link className={styles.backLink} to="/dashboard">
+            Torna alla dashboard
+          </Link>
+          <p className={styles.notFoundText}>Caricamento in corso...</p>
+        </div>
+      </Fragment>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <Fragment>
+        <TopbarComponent onLogout={handleLogout} />
+        <div className={styles.taskListContainer}>
+          <Link className={styles.backLink} to="/dashboard">
+            Torna alla dashboard
+          </Link>
+          <div className={styles.notFoundState}>
+            <p className={styles.errorMessage}>Errore di caricamento.</p>
+            <p className={styles.notFoundText}>{loadError}</p>
+          </div>
+        </div>
+      </Fragment>
+    );
   }
 
   if (!project) {
@@ -83,7 +150,6 @@ function TaskList() {
               <tr>
                 <th>Titolo</th>
                 <th>Descrizione</th>
-                <th>Tag</th>
               </tr>
             </thead>
             <tbody>
@@ -93,7 +159,7 @@ function TaskList() {
                   <tr key={`${status}-header`}>
                     <th
                       className={`${styles.groupHeaderCell} ${STATUS_STYLES[status]}`}
-                      colSpan={3}
+                      colSpan={2}
                     >
                       {STATUS_LABELS[status]} ({tasks.length})
                     </th>
@@ -102,7 +168,7 @@ function TaskList() {
                 if (tasks.length === 0) {
                   rows.push(
                     <tr key={`${status}-empty`}>
-                      <td className={styles.emptyRow} colSpan={3}>
+                      <td className={styles.emptyRow} colSpan={2}>
                         Nessun task
                       </td>
                     </tr>,
@@ -113,22 +179,6 @@ function TaskList() {
                       <tr key={`${status}-${index}`} className={styles.taskRow}>
                         <td>{task.title}</td>
                         <td>{task.description}</td>
-                        <td>
-                          {task.tags.length === 0 ? (
-                            <span className={styles.noTags}>—</span>
-                          ) : (
-                            <div className={styles.tagList}>
-                              {task.tags.map((tag, tagIndex) => (
-                                <span
-                                  key={`${tag}-${tagIndex}`}
-                                  className={styles.tagPill}
-                                >
-                                  {tag}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </td>
                       </tr>,
                     );
                   });
@@ -141,6 +191,32 @@ function TaskList() {
       </div>
     </Fragment>
   );
+}
+
+function TaskList() {
+  const handleLogout = useLogoutHandler();
+  const { progettoId } = useParams<{ progettoId: string }>();
+
+  if (!progettoId) {
+    return (
+      <Fragment>
+        <TopbarComponent onLogout={handleLogout} />
+        <div className={styles.taskListContainer}>
+          <Link className={styles.backLink} to="/dashboard">
+            Torna alla dashboard
+          </Link>
+          <div className={styles.notFoundState}>
+            <p className={styles.errorMessage}>Progetto non trovato.</p>
+            <p className={styles.notFoundText}>
+              Il progetto richiesto non esiste o è stato rimosso.
+            </p>
+          </div>
+        </div>
+      </Fragment>
+    );
+  }
+
+  return <TaskListContent key={progettoId} progettoId={progettoId} />;
 }
 
 export default TaskList;

@@ -1,38 +1,79 @@
-import type { Project } from "../../../shared/types/project";
+import type { Project, Task, TaskStatus } from "../../../shared/types/project";
+import { API_BASE_URL, readErrorMessage } from "../httpClient";
 
-const MOCK_PROJECTS: Project[] = [
-  {
-    id: "1",
-    name: "Progetto Demo",
-    tasks: [
-      {
-        title: "FIX: rendering auth form",
-        description:
-          "Il form di auth non renderizza correttamente e risulta spostato troppo a destra invece di essere centrato",
-        status: "progress",
-        tags: ["auth"],
-      },
-      {
-        title: "FEAT: creazione form clienti",
-        description: "Inserire un form per la registrazione dei clienti",
-        status: "progress",
-        tags: ["auth"],
-      },
-      {
-        title: "FIX: colore primario mancante",
-        description:
-          "Il bottone della pagina di login non ha il primary come sfondo",
-        status: "review",
-        tags: ["auth"],
-      },
-    ],
-  },
-];
-
-export function getAllProjects(): Project[] {
-  return MOCK_PROJECTS;
+interface ProjectDto {
+  id: string;
+  name: string;
+  isActive: boolean;
 }
 
-export function getProjectById(id: string): Project | undefined {
-  return MOCK_PROJECTS.find((project) => project.id === id);
+interface TaskDto {
+  id: string;
+  projectId: string;
+  title: string;
+  description: string | null;
+  status: TaskStatus;
+}
+
+function toTask(dto: TaskDto): Task {
+  return {
+    title: dto.title,
+    description: dto.description ?? "",
+    status: dto.status,
+  };
+}
+
+async function fetchProjectTasks(projectId: string): Promise<Task[]> {
+  const response = await fetch(`${API_BASE_URL}/projects/${projectId}/tasks`);
+  if (!response.ok) {
+    const message = await readErrorMessage(response);
+    throw new Error(message ?? "Impossibile caricare i task del progetto.");
+  }
+  const tasks = (await response.json()) as TaskDto[];
+  return tasks.map(toTask);
+}
+
+export async function getAllProjects(): Promise<Project[]> {
+  const response = await fetch(`${API_BASE_URL}/projects`);
+  if (!response.ok) {
+    const message = await readErrorMessage(response);
+    throw new Error(message ?? "Impossibile caricare i progetti.");
+  }
+  const projects = (await response.json()) as ProjectDto[];
+
+  return Promise.all(
+    projects.map(async (project) => ({
+      id: project.id,
+      name: project.name,
+      tasks: await fetchProjectTasks(project.id),
+    })),
+  );
+}
+
+export async function getProjectById(id: string): Promise<Project | undefined> {
+  const response = await fetch(`${API_BASE_URL}/projects/${id}`);
+  if (response.status === 404) {
+    return undefined;
+  }
+  if (!response.ok) {
+    const message = await readErrorMessage(response);
+    throw new Error(message ?? "Impossibile caricare il progetto.");
+  }
+  const project = (await response.json()) as ProjectDto;
+  const tasks = await fetchProjectTasks(id);
+  return { id: project.id, name: project.name, tasks };
+}
+
+export async function createProject(name: string): Promise<Project> {
+  const response = await fetch(`${API_BASE_URL}/projects`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  if (!response.ok) {
+    const message = await readErrorMessage(response);
+    throw new Error(message ?? "Impossibile creare il progetto.");
+  }
+  const project = (await response.json()) as ProjectDto;
+  return { id: project.id, name: project.name, tasks: [] };
 }
