@@ -1,8 +1,11 @@
 .taskListContainer {
+  --fab-size: 56px;
+  --fab-offset: var(--p-xl);
   display: flex;
   flex-direction: column;
   gap: var(--m-lg);
   padding: var(--p-xl);
+  padding-bottom: calc(var(--fab-size) + var(--fab-offset) * 2);
   color: var(--text-primary);
 }
 
@@ -111,6 +114,26 @@
   color: color-mix(in srgb, var(--color-danger) 86%, white);
 }
 
+.taskTitleButton {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.taskTitleButton:hover {
+  text-decoration: underline;
+}
+
+.taskTitleButton:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+  border-radius: var(--radious-xs);
+}
+
 .taskRow {
   transition: background-color 150ms ease;
 }
@@ -119,10 +142,24 @@
   background-color: color-mix(in srgb, var(--bg-field) 60%, transparent);
 }
 
+.taskRow[draggable="true"] {
+  cursor: grab;
+}
+
+.dragOverGroup {
+  background-color: color-mix(in srgb, var(--bg-primary) 14%, transparent);
+}
+
 .emptyRow {
   color: var(--text-muted);
   font-style: italic;
   text-align: center;
+}
+
+.statusUpdateError {
+  color: var(--color-danger);
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .notFoundState {
@@ -156,15 +193,100 @@
   line-height: 1.5;
 }
 
+.fabButton {
+  position: fixed;
+  right: var(--fab-offset);
+  bottom: var(--fab-offset);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--fab-size);
+  height: var(--fab-size);
+  border-radius: 50%;
+  background-color: var(--bg-primary);
+  color: var(--text-on-primary);
+  cursor: pointer;
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.5),
+    0 8px 24px color-mix(in srgb, var(--bg-primary) 30%, transparent);
+  transition:
+    background-color 150ms ease,
+    box-shadow 200ms ease,
+    transform 150ms ease;
+  animation: fabPopIn 360ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.fabIcon {
+  transition: transform 150ms ease;
+}
+
+.fabButton:hover {
+  background-color: color-mix(in srgb, var(--bg-primary) 88%, white 12%);
+  transform: translateY(-2px);
+  box-shadow:
+    0 6px 18px rgba(0, 0, 0, 0.5),
+    0 10px 28px color-mix(in srgb, var(--bg-primary) 42%, transparent);
+}
+
+.fabButton:hover .fabIcon {
+  transform: scale(1.12);
+}
+
+.fabButton:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+.fabButton:active {
+  transform: scale(0.94);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.5),
+    0 4px 14px color-mix(in srgb, var(--bg-primary) 30%, transparent);
+}
+
+@keyframes fabPopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.5) translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .backLink,
   .taskRow {
     transition: none;
+  }
+
+  .fabButton {
+    transition: none;
+    animation: none;
+  }
+
+  .fabButton:hover,
+  .fabButton:active {
+    transform: none;
+  }
+
+  .fabIcon {
+    transition: none;
+  }
+
+  .fabButton:hover .fabIcon {
+    transform: none;
   }
 }
 
 @media (max-width: 400px) {
   .taskListTitle {
     font-size: 1.5rem;
+  }
+
+  .taskListContainer {
+    --fab-offset: var(--p-lg);
   }
 }

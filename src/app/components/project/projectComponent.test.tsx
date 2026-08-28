@@ -13,12 +13,12 @@ const mockProject: Project = {
   id: "1",
   name: "Progetto Demo",
   tasks: [
-    { title: "Task 1", description: "desc 1", status: "completed" },
-    { title: "Task 2", description: "desc 2", status: "completed" },
-    { title: "Task 3", description: "desc 3", status: "progress" },
-    { title: "Task 4", description: "desc 4", status: "progress" },
-    { title: "Task 5", description: "desc 5", status: "review" },
-    { title: "Task 6", description: "desc 6", status: "review" },
+    { id: "t1", title: "Task 1", description: "desc 1", status: "completed" },
+    { id: "t2", title: "Task 2", description: "desc 2", status: "completed" },
+    { id: "t3", title: "Task 3", description: "desc 3", status: "progress" },
+    { id: "t4", title: "Task 4", description: "desc 4", status: "progress" },
+    { id: "t5", title: "Task 5", description: "desc 5", status: "review" },
+    { id: "t6", title: "Task 6", description: "desc 6", status: "review" },
   ],
 };
 

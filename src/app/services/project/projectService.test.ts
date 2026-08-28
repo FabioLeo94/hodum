@@ -39,7 +39,9 @@ describe("projectService", () => {
         {
           id: "1",
           name: "Progetto Demo",
-          tasks: [{ title: "Task 1", description: "", status: "progress" }],
+          tasks: [
+            { id: "t1", title: "Task 1", description: "", status: "progress" },
+          ],
         },
       ]);
     });

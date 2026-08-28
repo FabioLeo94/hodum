@@ -17,6 +17,7 @@ interface TaskDto {
 
 function toTask(dto: TaskDto): Task {
   return {
+    id: dto.id,
     title: dto.title,
     description: dto.description ?? "",
     status: dto.status,
@@ -76,4 +77,65 @@ export async function createProject(name: string): Promise<Project> {
   }
   const project = (await response.json()) as ProjectDto;
   return { id: project.id, name: project.name, tasks: [] };
+}
+
+export async function createTask(
+  projectId: string,
+  title: string,
+  description?: string,
+): Promise<Task> {
+  const response = await fetch(`${API_BASE_URL}/projects/${projectId}/tasks`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title, description }),
+  });
+  if (!response.ok) {
+    const message = await readErrorMessage(response);
+    throw new Error(message ?? "Impossibile creare il task.");
+  }
+  const task = (await response.json()) as TaskDto;
+  return toTask(task);
+}
+
+export async function updateTask(
+  projectId: string,
+  taskId: string,
+  title: string,
+  description: string,
+): Promise<Task> {
+  const response = await fetch(
+    `${API_BASE_URL}/projects/${projectId}/tasks/${taskId}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, description }),
+    },
+  );
+  if (!response.ok) {
+    const message = await readErrorMessage(response);
+    throw new Error(message ?? "Impossibile aggiornare il task.");
+  }
+  const task = (await response.json()) as TaskDto;
+  return toTask(task);
+}
+
+export async function updateTaskStatus(
+  projectId: string,
+  taskId: string,
+  status: TaskStatus,
+): Promise<Task> {
+  const response = await fetch(
+    `${API_BASE_URL}/projects/${projectId}/tasks/${taskId}/status`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    },
+  );
+  if (!response.ok) {
+    const message = await readErrorMessage(response);
+    throw new Error(message ?? "Impossibile aggiornare lo stato del task.");
+  }
+  const task = (await response.json()) as TaskDto;
+  return toTask(task);
 }

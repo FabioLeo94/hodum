@@ -1,0 +1,80 @@
+.statusSelect {
+  padding: var(--p-xs) var(--p-lg) var(--p-xs) var(--p-md);
+  border: 1px solid transparent;
+  border-radius: var(--radious-xl);
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    calc(100% - 12px) center,
+    calc(100% - 8px) center;
+  background-size:
+    4px 4px,
+    4px 4px;
+  background-repeat: no-repeat;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.statusSelect:hover {
+  border-color: currentColor;
+}
+
+.statusSelect:focus-visible {
+  border-color: var(--bg-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--bg-primary) 25%, transparent);
+}
+
+.statusSelect:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.statusSelect:disabled:hover {
+  border-color: transparent;
+}
+
+.statusSelect option {
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.statusProgress {
+  /* --color-info puro su questo sfondo (tinta 18% su --bg-surface) da' un
+     contrasto di ~4.05:1, sotto la soglia AA 4.5:1 per testo non "large"
+     (0.75rem bold). Schiarito verso il bianco, derivato dal token, per
+     raggiungere ~4.8:1. Il token globale --color-info resta invariato. */
+  color: color-mix(in srgb, var(--color-info) 85%, white);
+  background-color: color-mix(in srgb, var(--color-info) 18%, transparent);
+}
+
+.statusReview {
+  color: var(--color-warning);
+  background-color: color-mix(in srgb, var(--color-warning) 18%, transparent);
+}
+
+.statusCompleted {
+  color: var(--color-success);
+  background-color: color-mix(in srgb, var(--color-success) 18%, transparent);
+}
+
+.statusRejected {
+  /* Qui il testo sta su una pillola tinteggiata (18% su --bg-surface), non
+     su --bg-field solido come in taskList.module.css (.groupHeaderRejected):
+     lo stesso schiarimento all'86% da' solo ~4.44:1, ancora sotto la soglia
+     AA 4.5:1. Serve una tinta piu' chiara, derivata dal token, per ~4.75:1. */
+  color: color-mix(in srgb, var(--color-danger) 80%, white);
+  background-color: color-mix(in srgb, var(--color-danger) 18%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .statusSelect {
+    transition: none;
+  }
+}

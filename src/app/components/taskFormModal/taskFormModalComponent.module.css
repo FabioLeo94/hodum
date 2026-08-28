@@ -1,0 +1,53 @@
+.description {
+  margin-bottom: var(--m-md);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.fieldSpacing {
+  margin-top: var(--m-md);
+}
+
+.submitError {
+  margin-top: var(--m-sm);
+  color: var(--color-danger);
+  font-size: 0.9rem;
+}
+
+.cancelButton {
+  padding: var(--p-sm) var(--p-lg);
+  border-radius: var(--radious-sm);
+  color: var(--text-muted);
+  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.cancelButton:hover {
+  background-color: var(--bg-field);
+  color: var(--text-primary);
+}
+
+.cancelButton:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+.cancelButton:active {
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cancelButton {
+    transition: none;
+  }
+
+  .cancelButton:active {
+    transform: none;
+  }
+}

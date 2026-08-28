@@ -1,13 +1,21 @@
 import { Fragment, useEffect, useState } from "react";
+import type { DragEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import type { Project, Task, TaskStatus } from "../../../shared/types/project";
-import { getProjectById } from "../../services/project/projectService";
+import {
+  createTask,
+  getProjectById,
+  updateTask,
+  updateTaskStatus,
+} from "../../services/project/projectService";
 import { logout } from "../../services/auth/authService";
 import TopbarComponent from "../../components/topbar/topbarComponent";
+import TaskFormModalComponent from "../../components/taskFormModal/taskFormModalComponent";
+import TaskStatusSelectComponent from "../../components/taskStatusSelect/taskStatusSelectComponent";
 import { usePageMeta } from "../../../shared/hooks/usePageMeta";
 import styles from "./taskList.module.css";
 
-const STATUS_ORDER: TaskStatus[] = ["progress", "review", "completed", "rejected"];
+const STATUS_ORDER: readonly TaskStatus[] = ["progress", "review", "completed", "rejected"];
 
 const STATUS_LABELS: Record<TaskStatus, string> = {
   progress: "In corso",
@@ -36,6 +44,17 @@ function groupTasksByStatus(tasks: Task[]): Record<TaskStatus, Task[]> {
   return groups;
 }
 
+// Condivisa tra il salvataggio di una modifica e il cambio di stato: entrambi
+// devono rimpiazzare in place lo stesso task nella lista senza toccare gli altri.
+function replaceTaskInProject(project: Project, updatedTask: Task): Project {
+  return {
+    ...project,
+    tasks: project.tasks.map((task) =>
+      task.id === updatedTask.id ? updatedTask : task,
+    ),
+  };
+}
+
 function useLogoutHandler() {
   const navigate = useNavigate();
   return function handleLogout() {
@@ -48,6 +67,8 @@ interface TaskListContentProps {
   progettoId: string;
 }
 
+type TaskModalState = { mode: "create" } | { mode: "edit"; task: Task } | null;
+
 // Componente separato, montato con key={progettoId}: un cambio di progetto
 // rimonta l'albero invece di richiedere un reset manuale di isLoading/loadError
 // nell'effect (pattern richiesto da react-hooks/set-state-in-effect).
@@ -56,6 +77,10 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
   const [project, setProject] = useState<Project | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const [taskModal, setTaskModal] = useState<TaskModalState>(null);
+  const [taskModalError, setTaskModalError] = useState("");
+  const [statusUpdateError, setStatusUpdateError] = useState("");
+  const [dragOverStatus, setDragOverStatus] = useState<TaskStatus | null>(null);
 
   usePageMeta({
     title: project ? project.name : "Progetto",
@@ -86,6 +111,58 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
       cancelled = true;
     };
   }, [progettoId]);
+
+  function openCreateModal() {
+    setTaskModalError("");
+    setTaskModal({ mode: "create" });
+  }
+
+  function openEditModal(task: Task) {
+    setTaskModalError("");
+    setTaskModal({ mode: "edit", task });
+  }
+
+  function closeTaskModal() {
+    setTaskModalError("");
+    setTaskModal(null);
+  }
+
+  async function handleTaskFormSubmit(title: string, description: string) {
+    try {
+      const editingTask = taskModal?.mode === "edit" ? taskModal.task : null;
+      const savedTask = editingTask
+        ? await updateTask(progettoId, editingTask.id, title, description)
+        : await createTask(progettoId, title, description);
+
+      setProject((current) => {
+        if (!current) return current;
+        return editingTask
+          ? replaceTaskInProject(current, savedTask)
+          : { ...current, tasks: [...current.tasks, savedTask] };
+      });
+      closeTaskModal();
+    } catch (error) {
+      setTaskModalError(
+        error instanceof Error ? error.message : "Impossibile salvare il task.",
+      );
+    }
+  }
+
+  async function handleStatusChange(taskId: string, status: TaskStatus) {
+    try {
+      const updatedTask = await updateTaskStatus(progettoId, taskId, status);
+      setProject((current) =>
+        current ? replaceTaskInProject(current, updatedTask) : current,
+      );
+      setStatusUpdateError("");
+    } catch (error) {
+      setStatusUpdateError(
+        error instanceof Error
+          ? error.message
+          : "Impossibile aggiornare lo stato del task.",
+      );
+    }
+  }
 
   if (isLoading) {
     return (
@@ -139,7 +216,44 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
     );
   }
 
-  const groupedTasks = groupTasksByStatus(project.tasks);
+  // Copia locale con tipo già ristretto a Project: essendo hoisted, le function
+  // declaration definite più sotto sono considerate chiamabili da qualunque punto
+  // del flusso, quindi TS non propaga al loro interno il narrowing di `if (!project) return`.
+  const currentProject = project;
+  const groupedTasks = groupTasksByStatus(currentProject.tasks);
+  const editingTask = taskModal?.mode === "edit" ? taskModal.task : null;
+  const taskModalKey =
+    taskModal === null ? "closed" : editingTask ? `edit-${editingTask.id}` : "create";
+
+  function handleDragStart(event: DragEvent<HTMLTableRowElement>, taskId: string) {
+    event.dataTransfer.setData("text/plain", taskId);
+    event.dataTransfer.effectAllowed = "move";
+  }
+
+  function handleGroupDragOver(
+    event: DragEvent<HTMLTableSectionElement>,
+    status: TaskStatus,
+  ) {
+    event.preventDefault();
+    setDragOverStatus(status);
+  }
+
+  function handleGroupDragLeave() {
+    setDragOverStatus(null);
+  }
+
+  function handleGroupDrop(
+    event: DragEvent<HTMLTableSectionElement>,
+    status: TaskStatus,
+  ) {
+    event.preventDefault();
+    setDragOverStatus(null);
+    const taskId = event.dataTransfer.getData("text/plain");
+    const task = currentProject.tasks.find((candidate) => candidate.id === taskId);
+    if (task && task.status !== status) {
+      handleStatusChange(taskId, status);
+    }
+  }
 
   return (
     <Fragment>
@@ -160,45 +274,113 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
               <tr>
                 <th scope="col">Titolo</th>
                 <th scope="col">Descrizione</th>
+                <th scope="col">Stato</th>
               </tr>
             </thead>
-            <tbody>
-              {STATUS_ORDER.flatMap((status) => {
-                const tasks = groupedTasks[status];
-                const rows = [
-                  <tr key={`${status}-header`}>
+            {STATUS_ORDER.map((status) => {
+              const tasks = groupedTasks[status];
+              return (
+                <tbody
+                  key={status}
+                  className={
+                    dragOverStatus === status ? styles.dragOverGroup : undefined
+                  }
+                  onDragOver={(event) => handleGroupDragOver(event, status)}
+                  onDragLeave={handleGroupDragLeave}
+                  onDrop={(event) => handleGroupDrop(event, status)}
+                >
+                  <tr>
                     <th
                       className={`${styles.groupHeaderCell} ${STATUS_STYLES[status]}`}
-                      colSpan={2}
+                      colSpan={3}
                       scope="colgroup"
                     >
                       {STATUS_LABELS[status]} ({tasks.length})
                     </th>
-                  </tr>,
-                ];
-                if (tasks.length === 0) {
-                  rows.push(
-                    <tr key={`${status}-empty`}>
-                      <td className={styles.emptyRow} colSpan={2}>
+                  </tr>
+                  {tasks.length === 0 ? (
+                    <tr>
+                      <td className={styles.emptyRow} colSpan={3}>
                         Nessun task
                       </td>
-                    </tr>,
-                  );
-                } else {
-                  tasks.forEach((task, index) => {
-                    rows.push(
-                      <tr key={`${status}-${index}`} className={styles.taskRow}>
-                        <td>{task.title}</td>
+                    </tr>
+                  ) : (
+                    tasks.map((task) => (
+                      <tr
+                        key={task.id}
+                        className={styles.taskRow}
+                        draggable
+                        onDragStart={(event) => handleDragStart(event, task.id)}
+                        onDragEnd={handleGroupDragLeave}
+                      >
+                        <td>
+                          <button
+                            type="button"
+                            className={styles.taskTitleButton}
+                            onClick={() => openEditModal(task)}
+                          >
+                            {task.title}
+                          </button>
+                        </td>
                         <td>{task.description}</td>
-                      </tr>,
-                    );
-                  });
-                }
-                return rows;
-              })}
-            </tbody>
+                        <td>
+                          <TaskStatusSelectComponent
+                            status={task.status}
+                            taskTitle={task.title}
+                            onChange={(newStatus) =>
+                              handleStatusChange(task.id, newStatus)
+                            }
+                          />
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              );
+            })}
           </table>
         </div>
+        {statusUpdateError && (
+          <p role="alert" className={styles.statusUpdateError}>
+            {statusUpdateError}
+          </p>
+        )}
+
+        <button
+          type="button"
+          className={styles.fabButton}
+          aria-label="Crea nuovo task"
+          onClick={openCreateModal}
+        >
+          <svg
+            className={styles.fabIcon}
+            viewBox="0 0 24 24"
+            width="24"
+            height="24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+        </button>
+
+        <TaskFormModalComponent
+          // Rimonta ad ogni apertura (chiusa -> creazione -> modifica di un
+          // task specifico): TaskFormModalComponent legge initialTitle/
+          // initialDescription solo al mount, quindi serve un'istanza nuova
+          // per precompilare correttamente i campi in edit.
+          key={taskModalKey}
+          isOpen={taskModal !== null}
+          mode={taskModal?.mode ?? "create"}
+          initialTitle={editingTask?.title}
+          initialDescription={editingTask?.description}
+          onClose={closeTaskModal}
+          onSubmit={handleTaskFormSubmit}
+          submitError={taskModalError}
+        />
       </div>
     </Fragment>
   );
