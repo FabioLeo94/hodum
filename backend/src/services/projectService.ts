@@ -1,5 +1,7 @@
 import { pool } from '../db/pool';
 import type { Project } from '../models/project';
+import { isValidUuid } from '../utils/uuid';
+import { emitProjectCreated, emitProjectDeleted, emitProjectUpdated } from '../realtime/io';
 
 // Segnala "0 righe trovate/modificate" al chiamante senza che il service
 // conosca HTTP: il controller la intercetta e decide lo status (404).
@@ -28,6 +30,16 @@ export async function listProjects(): Promise<Project[]> {
 }
 
 export async function getProjectById(id: string): Promise<Project> {
+  // Un id sintatticamente non valido (es. un nome passato per errore invece
+  // dell'uuid, come può capitare all'assistente LLM) non può comunque
+  // combaciare con nessuna riga: intercettarlo qui evita che la colonna uuid
+  // lo rifiuti con un errore del driver ("invalid input syntax for type
+  // uuid"), che altrimenti uscirebbe come eccezione non gestita invece del
+  // consueto ProjectNotFoundError già previsto da chi chiama questa funzione.
+  if (!isValidUuid(id)) {
+    throw new ProjectNotFoundError(id);
+  }
+
   const result = await pool.query<ProjectRow>('SELECT id, name, is_active FROM projects WHERE id = $1', [id]);
   const row = result.rows[0];
   if (!row) {
@@ -49,7 +61,9 @@ export async function createProject(input: CreateProjectInput): Promise<Project>
     'INSERT INTO projects (name, is_active) VALUES ($1, $2) RETURNING id, name, is_active',
     [input.name, isActive],
   );
-  return toProject(result.rows[0]);
+  const project = toProject(result.rows[0]);
+  emitProjectCreated(project);
+  return project;
 }
 
 export interface UpdateProjectInput {
@@ -58,6 +72,12 @@ export interface UpdateProjectInput {
 }
 
 export async function updateProject(id: string, input: UpdateProjectInput): Promise<Project> {
+  // Stesso guard di getProjectById: un id sintatticamente non valido non può
+  // combaciare con nessuna riga, intercettarlo qui evita l'errore del driver.
+  if (!isValidUuid(id)) {
+    throw new ProjectNotFoundError(id);
+  }
+
   // COALESCE applica solo i campi effettivamente forniti (undefined -> null
   // -> valore colonna invariato), senza costruire la SET clause a mano
   // concatenando stringhe in base ai campi presenti.
@@ -72,12 +92,21 @@ export async function updateProject(id: string, input: UpdateProjectInput): Prom
   if (!row) {
     throw new ProjectNotFoundError(id);
   }
-  return toProject(row);
+  const project = toProject(row);
+  emitProjectUpdated(project);
+  return project;
 }
 
 export async function deleteProject(id: string): Promise<void> {
+  // Stesso guard di getProjectById: un id sintatticamente non valido non può
+  // combaciare con nessuna riga, intercettarlo qui evita l'errore del driver.
+  if (!isValidUuid(id)) {
+    throw new ProjectNotFoundError(id);
+  }
+
   const result = await pool.query('DELETE FROM projects WHERE id = $1', [id]);
   if (result.rowCount === 0) {
     throw new ProjectNotFoundError(id);
   }
+  emitProjectDeleted(id);
 }

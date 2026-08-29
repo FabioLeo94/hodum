@@ -1,6 +1,8 @@
 import { pool } from '../db/pool';
 import type { Task, TaskStatus } from '../models/task';
 import { getProjectById } from './projectService';
+import { isValidUuid } from '../utils/uuid';
+import { emitTaskCreated, emitTaskDeleted, emitTaskUpdated } from '../realtime/io';
 
 export { ProjectNotFoundError } from './projectService';
 
@@ -105,7 +107,9 @@ export async function createTask(projectId: string, input: CreateTaskInput): Pro
     'INSERT INTO tasks (project_id, title, description) VALUES ($1, $2, $3) RETURNING id',
     [projectId, input.title, input.description ?? null],
   );
-  return getTaskById(result.rows[0].id);
+  const task = await getTaskById(result.rows[0].id);
+  emitTaskCreated(task);
+  return task;
 }
 
 export interface UpdateTaskInput {
@@ -114,6 +118,16 @@ export interface UpdateTaskInput {
 }
 
 export async function updateTask(projectId: string, taskId: string, input: UpdateTaskInput): Promise<Task> {
+  // Un projectId o taskId sintatticamente non validi (es. un titolo passato
+  // per errore invece dell'uuid, come può capitare all'assistente LLM) non
+  // possono comunque combaciare con nessuna riga: intercettarli qui evita che
+  // le colonne uuid li rifiutino con un errore del driver ("invalid input
+  // syntax for type uuid"), che altrimenti uscirebbe come eccezione non
+  // gestita invece del consueto TaskNotFoundError già previsto dal chiamante.
+  if (!isValidUuid(projectId) || !isValidUuid(taskId)) {
+    throw new TaskNotFoundError(taskId);
+  }
+
   // Stesso pattern COALESCE di updateProject in projectService.ts: applica
   // solo i campi effettivamente forniti (undefined -> null -> valore colonna
   // invariato) senza concatenare a mano la SET clause in base ai campi
@@ -129,10 +143,18 @@ export async function updateTask(projectId: string, taskId: string, input: Updat
   if (result.rowCount === 0) {
     throw new TaskNotFoundError(taskId);
   }
-  return getTaskById(taskId);
+  const task = await getTaskById(taskId);
+  emitTaskUpdated(task);
+  return task;
 }
 
 export async function updateTaskStatus(projectId: string, taskId: string, status: TaskStatus): Promise<Task> {
+  // Stesso guard di updateTask: evita l'errore del driver su un id
+  // sintatticamente non valido.
+  if (!isValidUuid(projectId) || !isValidUuid(taskId)) {
+    throw new TaskNotFoundError(taskId);
+  }
+
   const statusName = SLUG_TO_STATUS_NAME[status];
   // Il filtro su project_id impedisce di spostare un task passando l'id del
   // progetto sbagliato nell'URL (project_id non combacia -> 0 righe -> 404,
@@ -146,5 +168,24 @@ export async function updateTaskStatus(projectId: string, taskId: string, status
   if (result.rowCount === 0) {
     throw new TaskNotFoundError(taskId);
   }
-  return getTaskById(taskId);
+  const task = await getTaskById(taskId);
+  emitTaskUpdated(task);
+  return task;
+}
+
+export async function deleteTask(projectId: string, taskId: string): Promise<void> {
+  // Stesso guard di updateTask: evita l'errore del driver su un id
+  // sintatticamente non valido.
+  if (!isValidUuid(projectId) || !isValidUuid(taskId)) {
+    throw new TaskNotFoundError(taskId);
+  }
+
+  // Stesso filtro su project_id di updateTaskStatus: evita che un id di
+  // progetto sbagliato nell'URL elimini un task che appartiene a un altro
+  // progetto.
+  const result = await pool.query('DELETE FROM tasks WHERE id = $1 AND project_id = $2', [taskId, projectId]);
+  if (result.rowCount === 0) {
+    throw new TaskNotFoundError(taskId);
+  }
+  emitTaskDeleted(projectId, taskId);
 }

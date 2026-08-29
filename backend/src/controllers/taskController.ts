@@ -1,7 +1,8 @@
-import { Body, Controller, Get, Patch, Path, Post, Put, Response, Route, SuccessResponse } from 'tsoa';
+import { Body, Controller, Delete, Get, Patch, Path, Post, Put, Response, Route, SuccessResponse } from 'tsoa';
 import type { Task, TaskStatus } from '../models/task';
 import {
   createTask,
+  deleteTask,
   listTasksByProject,
   ProjectNotFoundError,
   TaskNotFoundError,
@@ -115,6 +116,22 @@ export class TaskController extends Controller {
       if (err instanceof TaskNotFoundError) {
         this.setStatus(404);
         return { message: err.message };
+      }
+      throw err;
+    }
+  }
+
+  @Delete('{projectId}/tasks/{taskId}')
+  @SuccessResponse(204, 'Task eliminato')
+  @Response<TaskErrorResponse>(404, 'Task non trovato')
+  public async deleteTask(@Path() projectId: string, @Path() taskId: string): Promise<void> {
+    try {
+      await deleteTask(projectId, taskId);
+      this.setStatus(204);
+    } catch (err) {
+      if (err instanceof TaskNotFoundError) {
+        this.setStatus(404);
+        return;
       }
       throw err;
     }

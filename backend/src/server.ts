@@ -4,6 +4,7 @@
 import 'dotenv/config';
 
 import { createApp } from './app';
+import { initRealtime } from './realtime/io';
 
 const port = Number(process.env.PORT) || 3000;
 
@@ -14,6 +15,10 @@ async function main(): Promise<void> {
     console.log(`Server in ascolto su http://localhost:${port}`);
     console.log(`Documentazione su http://localhost:${port}/docs`);
   });
+
+  // Sopra lo stesso http.Server di Express: stesso host:porta dell'API REST,
+  // nessuna configurazione aggiuntiva richiesta al client.
+  initRealtime(server);
 
   // Spegnimento ordinato: smettiamo di accettare nuove connessioni e usciamo
   // solo quando quelle in corso sono state chiuse. Se in futuro si aggiungono
