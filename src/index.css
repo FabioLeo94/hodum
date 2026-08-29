@@ -52,9 +52,11 @@
   background-color: transparent;
   outline: none;
   box-shadow: none;
+  font-family: inherit;
 }
 
 html,
 body {
   background-color: var(--bg-main);
+  font-family: var(--font-display);
 }
