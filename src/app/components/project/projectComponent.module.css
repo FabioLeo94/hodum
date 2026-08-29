@@ -1,4 +1,5 @@
 .projectCard {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--m-md);
@@ -6,7 +7,6 @@
   border-radius: var(--radious-lg);
   padding: var(--p-lg);
   box-shadow: 0 0 16px rgba(0, 0, 0, 0.35);
-  cursor: pointer;
   transition:
     transform 250ms ease,
     box-shadow 250ms ease;
@@ -18,13 +18,21 @@
   transform: scale(1.03);
 }
 
-.projectCard:focus-visible {
-  outline: 2px solid var(--bg-primary);
-  outline-offset: 2px;
-}
-
 .projectCard:active {
   transform: scale(0.99);
+}
+
+.cardLink {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  cursor: pointer;
+}
+
+.cardLink:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -46,9 +54,8 @@
 
 .cardHeader {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--m-sm);
+  flex-direction: column;
+  gap: var(--m-xs);
 }
 
 .projectName {
@@ -56,16 +63,17 @@
   overflow: hidden;
   color: var(--text-primary);
   font-weight: 600;
-  font-size: 1.05rem;
+  font-size: 1.2rem;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
 .taskTotal {
-  flex-shrink: 0;
   color: var(--text-muted);
   font-size: 0.75rem;
   font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
   white-space: nowrap;
 }
 
@@ -180,4 +188,170 @@
 
 .progressRejected::before {
   background-color: var(--color-danger);
+}
+
+.hoverActions {
+  position: absolute;
+  top: var(--p-md);
+  right: var(--p-md);
+  z-index: 2;
+  display: none;
+}
+
+.iconButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: var(--bg-field);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    transform 100ms ease;
+}
+
+.iconButton:hover {
+  background-color: color-mix(in srgb, var(--bg-field) 80%, white 20%);
+}
+
+.iconButton:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+.iconButton:active {
+  transform: scale(0.94);
+}
+
+.iconButtonDanger:hover {
+  background-color: var(--color-danger);
+  color: var(--text-on-primary);
+}
+
+.kebabArea {
+  position: absolute;
+  top: var(--p-md);
+  right: var(--p-md);
+  z-index: 2;
+}
+
+.kebabButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: var(--bg-field);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    transform 100ms ease;
+}
+
+.kebabButton:hover {
+  background-color: color-mix(in srgb, var(--bg-field) 80%, white 20%);
+}
+
+.kebabButton:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+.kebabButton:active {
+  transform: scale(0.94);
+}
+
+.kebabButton[aria-expanded="true"] {
+  background-color: var(--bg-primary);
+  color: var(--text-on-primary);
+}
+
+.popoverMenu {
+  position: absolute;
+  top: calc(100% + var(--m-sm));
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+  padding: var(--p-sm);
+  border-radius: var(--radious-md);
+  background-color: var(--bg-field);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  animation: popoverPopIn 140ms ease both;
+}
+
+.popoverItem {
+  padding: var(--p-sm) var(--p-md);
+  border-radius: var(--radious-sm);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.popoverItem:hover {
+  background-color: var(--bg-surface);
+}
+
+.popoverItem:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: -2px;
+}
+
+@keyframes popoverPopIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hoverActions {
+    display: flex;
+    gap: var(--m-sm);
+    opacity: 0;
+    transition: opacity 150ms ease;
+  }
+
+  .projectCard:hover .hoverActions,
+  .projectCard:focus-within .hoverActions {
+    opacity: 1;
+  }
+
+  .kebabArea {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hoverActions {
+    transition: none;
+  }
+
+  .iconButton,
+  .kebabButton {
+    transition: none;
+  }
+
+  .iconButton:active,
+  .kebabButton:active {
+    transform: none;
+  }
+
+  .popoverMenu {
+    animation: none;
+  }
 }

@@ -5,9 +5,6 @@
   padding: var(--p-sm) var(--p-md) var(--p-sm) var(--p-md);
   border-radius: var(--radious-sm);
   font-weight: 600;
-  font-family:
-    "Lucida Sans", "Lucida Sans Regular", "Lucida Grande",
-    "Lucida Sans Unicode", Geneva, Verdana, sans-serif;
   font-size: 0.9rem;
   transition:
     background-color 150ms ease,
@@ -34,6 +31,18 @@
   color: var(--text-muted);
   cursor: not-allowed;
   transform: none;
+}
+
+.buttonDanger {
+  background-color: var(--color-danger);
+}
+
+.buttonDanger:hover {
+  background-color: color-mix(in srgb, var(--color-danger) 88%, white 12%);
+}
+
+.buttonDanger:focus-visible {
+  outline-color: var(--color-danger);
 }
 
 @media (prefers-reduced-motion: reduce) {

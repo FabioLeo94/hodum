@@ -79,6 +79,33 @@ export async function createProject(name: string): Promise<Project> {
   return { id: project.id, name: project.name, tasks: [] };
 }
 
+export async function updateProject(
+  id: string,
+  name: string,
+): Promise<Pick<Project, "id" | "name">> {
+  const response = await fetch(`${API_BASE_URL}/projects/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  if (!response.ok) {
+    const message = await readErrorMessage(response);
+    throw new Error(message ?? "Impossibile aggiornare il progetto.");
+  }
+  const project = (await response.json()) as ProjectDto;
+  return { id: project.id, name: project.name };
+}
+
+export async function deleteProject(id: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/projects/${id}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    const message = await readErrorMessage(response);
+    throw new Error(message ?? "Impossibile eliminare il progetto.");
+  }
+}
+
 export async function createTask(
   projectId: string,
   title: string,

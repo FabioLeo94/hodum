@@ -3,7 +3,12 @@ import { useNavigate } from "react-router";
 import ProjectComponent from "../../components/project/projectComponent";
 import CreateProjectModalComponent from "../../components/createProjectModal/createProjectModalComponent";
 import TopbarComponent from "../../components/topbar/topbarComponent";
-import { createProject, getAllProjects } from "../../services/project/projectService";
+import {
+  createProject,
+  deleteProject,
+  getAllProjects,
+  updateProject,
+} from "../../services/project/projectService";
 import { logout } from "../../services/auth/authService";
 import type { Project } from "../../../shared/types/project";
 import { usePageMeta } from "../../../shared/hooks/usePageMeta";
@@ -72,6 +77,20 @@ function Dashboard() {
     }
   }
 
+  async function handleRenameProject(id: string, name: string) {
+    const updated = await updateProject(id, name);
+    setProjects((current) =>
+      current.map((project) =>
+        project.id === id ? { ...project, name: updated.name } : project,
+      ),
+    );
+  }
+
+  async function handleDeleteProject(id: string) {
+    await deleteProject(id);
+    setProjects((current) => current.filter((project) => project.id !== id));
+  }
+
   return (
     <Fragment>
       <TopbarComponent onLogout={handleLogout} />
@@ -102,7 +121,12 @@ function Dashboard() {
         ) : !isLoading ? (
           <div className={styles.projectsGrid}>
             {projects.map((project) => (
-              <ProjectComponent key={project.id} {...project} />
+              <ProjectComponent
+                key={project.id}
+                {...project}
+                onRenameProject={handleRenameProject}
+                onDeleteProject={handleDeleteProject}
+              />
             ))}
           </div>
         ) : null}
