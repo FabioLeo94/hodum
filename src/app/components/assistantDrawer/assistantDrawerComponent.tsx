@@ -1,0 +1,268 @@
+import { useEffect, useId, useRef, useState } from "react";
+import type { FormEvent } from "react";
+import { useNavigate } from "react-router";
+import { sendAssistantMessage } from "../../services/assistant/assistantService";
+import type { AssistantMessage } from "../../services/assistant/assistantService";
+import styles from "./assistantDrawerComponent.module.css";
+
+// Id locale solo per la key di React: non fa parte del contratto con il
+// backend (vedi AssistantMessage in assistantService.ts), che riceve la
+// cronologia come { role, content } puri.
+interface ChatEntry extends AssistantMessage {
+  id: string;
+}
+
+interface Prop {
+  isOpen: boolean;
+  onToggle: () => void;
+}
+
+// Sotto questa distanza (in px) dal fondo si considera l'utente "in fondo
+// alla chat": nuovi messaggi possono continuare a scrollare in automatico.
+const BOTTOM_THRESHOLD_PX = 24;
+
+// Montato una sola volta da ProtectedLayoutComponent, fuori dall'Outlet: la
+// conversazione (messages, input) sopravvive alla navigazione tra pagine,
+// che invece rimonta solo il contenuto dell'Outlet.
+function AssistantDrawerComponent({ isOpen, onToggle }: Prop) {
+  const panelId = useId();
+  const navigate = useNavigate();
+  const [messages, setMessages] = useState<ChatEntry[]>([]);
+  const [input, setInput] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const [error, setError] = useState("");
+
+  const messageListRef = useRef<HTMLDivElement>(null);
+  // Rispecchia se l'utente è già in fondo alla chat: letto (non come dep)
+  // dall'effetto di autoscroll per decidere se seguire i nuovi messaggi.
+  const isAtBottomRef = useRef(true);
+  // Forza lo scroll al fondo al prossimo effetto, a prescindere dalla
+  // posizione corrente: usato solo quando è l'utente stesso a inviare.
+  const forceScrollRef = useRef(false);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+
+  function handleClearHistory() {
+    setMessages([]);
+    setError("");
+  }
+
+  function handleScroll() {
+    const el = messageListRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const atBottom = distanceFromBottom < BOTTOM_THRESHOLD_PX;
+    isAtBottomRef.current = atBottom;
+    setShowScrollButton(!atBottom);
+  }
+
+  function handleScrollToBottom() {
+    const el = messageListRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    isAtBottomRef.current = true;
+    setShowScrollButton(false);
+  }
+
+  // L'arrivo di nuovi messaggi segue automaticamente lo scroll solo se
+  // l'utente era già in fondo (o se il messaggio è appena stato inviato da
+  // lui); se sta leggendo più in alto, la posizione non viene toccata.
+  useEffect(() => {
+    const el = messageListRef.current;
+    if (!el) return;
+    if (forceScrollRef.current || isAtBottomRef.current) {
+      el.scrollTo({
+        top: el.scrollHeight,
+        behavior: forceScrollRef.current ? "auto" : "smooth",
+      });
+      forceScrollRef.current = false;
+      isAtBottomRef.current = true;
+      setShowScrollButton(false);
+    }
+  }, [messages]);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const trimmed = input.trim();
+    if (!trimmed || isSending) return;
+
+    const history = messages.map(({ role, content }) => ({ role, content }));
+    const userEntry: ChatEntry = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: trimmed,
+    };
+    forceScrollRef.current = true;
+    setMessages((current) => [...current, userEntry]);
+    setInput("");
+    setError("");
+    setIsSending(true);
+
+    try {
+      const result = await sendAssistantMessage(trimmed, history);
+      setMessages((current) => [
+        ...current,
+        { id: crypto.randomUUID(), role: "assistant", content: result.reply },
+      ]);
+      if (result.navigateTo) {
+        navigate(result.navigateTo);
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Impossibile contattare l'assistente.",
+      );
+    } finally {
+      setIsSending(false);
+    }
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        className={styles.toggleButton}
+        aria-label={isOpen ? "Chiudi l'assistente" : "Apri l'assistente"}
+        aria-haspopup="dialog"
+        aria-expanded={isOpen}
+        aria-controls={panelId}
+        onClick={onToggle}
+      >
+        <svg
+          className={styles.toggleIcon}
+          viewBox="0 0 24 24"
+          width="24"
+          height="24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4.5V16H6.5A2.5 2.5 0 0 1 4 13.5v-8Z" />
+        </svg>
+      </button>
+
+      {/* inert quando chiuso: fuori schermo (transform), non focalizzabile né
+          annunciato dallo screen reader finché non viene riaperto. */}
+      <aside
+        id={panelId}
+        className={styles.panel}
+        data-open={isOpen}
+        inert={!isOpen}
+        role="dialog"
+        aria-label="Assistente"
+      >
+        <header className={styles.header}>
+          <div className={styles.headerRow}>
+            <h2 className={styles.title}>Assistente</h2>
+            <button
+              type="button"
+              className={styles.clearButton}
+              onClick={handleClearHistory}
+              disabled={messages.length === 0 || isSending}
+            >
+              Ripulisci cronologia
+            </button>
+          </div>
+          <p className={styles.subtitle}>
+            Chiedi informazioni sui tuoi progetti e sui task.
+          </p>
+        </header>
+
+        <div className={styles.messageListWrapper}>
+          <div
+            className={styles.messageList}
+            data-empty={messages.length === 0}
+            role="log"
+            aria-live="polite"
+            ref={messageListRef}
+            onScroll={handleScroll}
+          >
+            {messages.length === 0 ? (
+              <p className={styles.emptyState}>
+                Fai una domanda per iniziare, ad esempio "Quali progetti sono
+                attivi?".
+              </p>
+            ) : (
+              messages.map((entry) => (
+                <div
+                  key={entry.id}
+                  className={`${styles.messageBubble} ${
+                    entry.role === "user"
+                      ? styles.messageUser
+                      : styles.messageAssistant
+                  }`}
+                >
+                  {entry.content}
+                </div>
+              ))
+            )}
+            {isSending && (
+              <div
+                className={`${styles.messageBubble} ${styles.messageAssistant} ${styles.messageTyping}`}
+                role="status"
+              >
+                <span className={styles.typingLabel}>Sto scrivendo</span>
+                <span className={styles.typingDots} aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
+                </span>
+              </div>
+            )}
+          </div>
+
+          {showScrollButton && (
+            <button
+              type="button"
+              className={styles.scrollToBottomButton}
+              onClick={handleScrollToBottom}
+              aria-label="Torna al messaggio più recente"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="16"
+                height="16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M12 4v16M6 14l6 6 6-6" />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        {error && (
+          <p role="alert" className={styles.errorBanner}>
+            {error}
+          </p>
+        )}
+
+        <form className={styles.composer} onSubmit={handleSubmit}>
+          <input
+            className={styles.composerInput}
+            type="text"
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            placeholder="Scrivi un messaggio..."
+            aria-label="Messaggio per l'assistente"
+            disabled={isSending}
+          />
+          <button
+            type="submit"
+            className={styles.sendButton}
+            disabled={isSending || input.trim().length === 0}
+          >
+            Invia
+          </button>
+        </form>
+      </aside>
+    </>
+  );
+}
+
+export default AssistantDrawerComponent;

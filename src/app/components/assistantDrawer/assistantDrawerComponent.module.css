@@ -1,0 +1,378 @@
+/* Bottone sempre visibile, accanto al FAB locale della pagina ("+"): quando
+   il pannello si apre scivola verso sinistra fino al bordo del pannello,
+   restando sempre cliccabile per richiuderlo. */
+.toggleButton {
+  position: fixed;
+  right: calc(var(--p-xl) + var(--fab-size) + var(--m-lg));
+  bottom: var(--p-xl);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--fab-size);
+  height: var(--fab-size);
+  border-radius: 50%;
+  background-color: var(--bg-field);
+  color: var(--text-primary);
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+  transition:
+    right 260ms ease,
+    background-color 150ms ease,
+    transform 150ms ease;
+}
+
+.toggleButton[aria-expanded="true"] {
+  right: calc(var(--assistant-panel-width) + var(--p-xl));
+  background-color: var(--bg-primary);
+  color: var(--text-on-primary);
+}
+
+.toggleButton:hover {
+  transform: translateY(-2px);
+}
+
+.toggleIcon {
+  transition: transform 150ms ease;
+}
+
+.toggleButton:hover .toggleIcon {
+  transform: scale(1.12);
+}
+
+.toggleButton:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+.toggleButton:active {
+  transform: scale(0.94);
+}
+
+.panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-lg);
+  width: var(--assistant-panel-width);
+  height: 100vh;
+  padding: var(--p-xl);
+  background-color: var(--bg-surface);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.4);
+  transform: translateX(100%);
+  transition: transform 260ms ease;
+}
+
+.panel[data-open="true"] {
+  transform: translateX(0);
+}
+
+.header {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: var(--m-sm);
+}
+
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--m-sm);
+}
+
+.title {
+  color: var(--text-primary);
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.clearButton {
+  flex-shrink: 0;
+  min-height: 28px;
+  padding: var(--p-sm) var(--p-md);
+  border-radius: var(--radious-sm);
+  background-color: transparent;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.clearButton:hover:not(:disabled) {
+  background-color: var(--bg-field);
+  color: var(--text-primary);
+}
+
+.clearButton:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+.clearButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.subtitle {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.messageListWrapper {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.messageList {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--m-md);
+  min-height: 0;
+  padding: var(--p-lg);
+  border-radius: var(--radious-lg);
+  background-color: var(--bg-field);
+  overflow-y: auto;
+}
+
+/* Ancorato al fondo del wrapper (non dello scroll interno): resta visibile
+   mentre l'utente legge più in alto, senza coprire l'ultimo messaggio. */
+.scrollToBottomButton {
+  position: absolute;
+  bottom: var(--p-md);
+  left: 50%;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background-color: var(--bg-primary);
+  color: var(--text-on-primary);
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+  transform: translate(-50%, 0);
+  animation: scrollButtonPopIn 200ms ease both;
+  transition:
+    background-color 150ms ease,
+    transform 150ms ease;
+}
+
+.scrollToBottomButton:hover {
+  background-color: color-mix(in srgb, var(--bg-primary) 88%, white 12%);
+  transform: translate(-50%, -2px);
+}
+
+.scrollToBottomButton:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+.scrollToBottomButton:active {
+  transform: translate(-50%, 0) scale(0.92);
+}
+
+@keyframes scrollButtonPopIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+/* Conversazione vuota: il prompt di esempio si legge meglio centrato nel
+   pannello piuttosto che ancorato in alto a sinistra come i messaggi reali. */
+.messageList[data-empty="true"] {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.emptyState {
+  max-width: 30ch;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.messageBubble {
+  max-width: 90%;
+  padding: var(--p-sm) var(--p-md);
+  border-radius: var(--radious-md);
+  font-size: 0.85rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.messageUser {
+  align-self: flex-end;
+  background-color: var(--bg-primary);
+  color: var(--text-on-primary);
+  border-bottom-right-radius: var(--radious-xs);
+}
+
+.messageAssistant {
+  align-self: flex-start;
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  border-bottom-left-radius: var(--radious-xs);
+}
+
+.messageTyping {
+  display: flex;
+  align-items: center;
+  gap: var(--m-sm);
+  color: var(--text-muted);
+}
+
+.typingLabel {
+  font-size: 0.8rem;
+}
+
+.typingDots {
+  display: flex;
+  gap: 3px;
+}
+
+.typingDots span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: var(--text-muted);
+  animation: typingBounce 1s ease-in-out infinite;
+}
+
+.typingDots span:nth-child(2) {
+  animation-delay: 150ms;
+}
+
+.typingDots span:nth-child(3) {
+  animation-delay: 300ms;
+}
+
+@keyframes typingBounce {
+  0%,
+  60%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+.errorBanner {
+  flex-shrink: 0;
+  padding: var(--p-sm) var(--p-md);
+  border-left: 3px solid var(--color-danger);
+  border-radius: var(--radious-sm);
+  background-color: var(--bg-field);
+  color: var(--color-danger);
+  font-size: 0.8rem;
+}
+
+.composer {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--m-sm);
+  padding-top: var(--p-md);
+  border-top: 1px solid var(--bg-field);
+}
+
+.composerInput {
+  flex: 1;
+  padding: var(--p-sm) var(--p-md);
+  border-radius: var(--radious-md);
+  background-color: var(--bg-field);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+}
+
+.composerInput::placeholder {
+  color: var(--text-muted);
+}
+
+.composerInput:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+.composerInput:disabled {
+  opacity: 0.6;
+}
+
+.sendButton {
+  padding: var(--p-sm) var(--p-lg);
+  border-radius: var(--radious-md);
+  background-color: var(--bg-primary);
+  color: var(--text-on-primary);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    opacity 150ms ease;
+}
+
+.sendButton:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--bg-primary) 88%, white 12%);
+}
+
+.sendButton:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+.sendButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toggleButton,
+  .panel,
+  .toggleIcon,
+  .scrollToBottomButton {
+    transition: none;
+  }
+
+  .toggleButton:hover,
+  .toggleButton:active {
+    transform: none;
+  }
+
+  .toggleButton:hover .toggleIcon {
+    transform: none;
+  }
+
+  .scrollToBottomButton {
+    animation: none;
+  }
+
+  .scrollToBottomButton:hover,
+  .scrollToBottomButton:active {
+    transform: translate(-50%, 0);
+  }
+
+  .typingDots span {
+    animation: none;
+    opacity: 1;
+  }
+}
+

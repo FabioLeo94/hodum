@@ -2,9 +2,13 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import TopbarComponent from "./topbarComponent";
 
+function renderTopbar(onLogout: () => void = () => {}) {
+  render(<TopbarComponent onLogout={onLogout} />);
+}
+
 describe("TopbarComponent", () => {
   it("renders the logo and the account button, with the menu closed", () => {
-    render(<TopbarComponent onLogout={() => {}} />);
+    renderTopbar();
 
     expect(
       screen.getByText(
@@ -20,7 +24,7 @@ describe("TopbarComponent", () => {
   });
 
   it("opens the menu with the Disconnetti option when the account button is clicked", () => {
-    render(<TopbarComponent onLogout={() => {}} />);
+    renderTopbar();
 
     fireEvent.click(screen.getByRole("button", { name: "Menu account" }));
 
@@ -31,7 +35,7 @@ describe("TopbarComponent", () => {
   });
 
   it("toggles the menu closed when the account button is clicked again", () => {
-    render(<TopbarComponent onLogout={() => {}} />);
+    renderTopbar();
     const accountButton = screen.getByRole("button", { name: "Menu account" });
 
     fireEvent.click(accountButton);
@@ -43,7 +47,7 @@ describe("TopbarComponent", () => {
 
   it("calls onLogout and closes the menu when Disconnetti is clicked", () => {
     const onLogout = vi.fn();
-    render(<TopbarComponent onLogout={onLogout} />);
+    renderTopbar(onLogout);
 
     fireEvent.click(screen.getByRole("button", { name: "Menu account" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "Disconnetti" }));
@@ -53,7 +57,7 @@ describe("TopbarComponent", () => {
   });
 
   it("closes the menu when Escape is pressed", () => {
-    render(<TopbarComponent onLogout={() => {}} />);
+    renderTopbar();
 
     fireEvent.click(screen.getByRole("button", { name: "Menu account" }));
     expect(screen.getByRole("menu")).toBeInTheDocument();
@@ -64,10 +68,10 @@ describe("TopbarComponent", () => {
 
   it("closes the menu when clicking outside of it", () => {
     render(
-      <div>
+      <>
         <TopbarComponent onLogout={() => {}} />
         <button>Fuori</button>
-      </div>,
+      </>,
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Menu account" }));

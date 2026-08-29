@@ -1,0 +1,16 @@
+/* L'area principale si restringe quando l'assistente è aperto, invece di
+   lasciare che il pannello copra il contenuto sottostante. */
+.mainArea {
+  min-height: 100vh;
+  transition: margin-right 260ms ease;
+}
+
+.mainArea[data-assistant-open="true"] {
+  margin-right: var(--assistant-panel-width);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mainArea {
+    transition: none;
+  }
+}

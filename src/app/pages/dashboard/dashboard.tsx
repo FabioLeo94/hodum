@@ -1,14 +1,16 @@
 import { Fragment, useEffect, useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useOutletContext } from "react-router";
 import ProjectComponent from "../../components/project/projectComponent";
 import CreateProjectModalComponent from "../../components/createProjectModal/createProjectModalComponent";
 import TopbarComponent from "../../components/topbar/topbarComponent";
+import type { AssistantLayoutContext } from "../../components/protectedLayout/protectedLayoutComponent";
 import {
   createProject,
   deleteProject,
   getAllProjects,
   updateProject,
 } from "../../services/project/projectService";
+import { subscribeToProjects } from "../../services/realtime/socketService";
 import { logout } from "../../services/auth/authService";
 import type { Project } from "../../../shared/types/project";
 import { usePageMeta } from "../../../shared/hooks/usePageMeta";
@@ -16,6 +18,11 @@ import styles from "./dashboard.module.css";
 
 function Dashboard() {
   const navigate = useNavigate();
+  // Assente (undefined) quando il componente è renderizzato fuori dal layout
+  // protetto (es. nei test): in quel caso il FAB resta nella posizione base.
+  const isAssistantOpen =
+    useOutletContext<AssistantLayoutContext | undefined>()?.isAssistantOpen ??
+    false;
   usePageMeta({ title: "Dashboard", robots: "noindex, nofollow" });
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,6 +53,34 @@ function Dashboard() {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  // Riflette in tempo reale progetti creati/rinominati/eliminati altrove
+  // (un'altra tab/utente): i progetti sono pochi e le mutazioni infrequenti,
+  // quindi qui basta applicare il delta senza rifare un fetch completo.
+  useEffect(() => {
+    const unsubscribe = subscribeToProjects({
+      onProjectCreated: (project) => {
+        setProjects((current) => {
+          if (current.some((existing) => existing.id === project.id)) {
+            return current;
+          }
+          return [...current, { id: project.id, name: project.name, tasks: [] }];
+        });
+      },
+      onProjectUpdated: (project) => {
+        setProjects((current) =>
+          current.map((existing) =>
+            existing.id === project.id ? { ...existing, name: project.name } : existing,
+          ),
+        );
+      },
+      onProjectDeleted: (projectId) => {
+        setProjects((current) => current.filter((project) => project.id !== projectId));
+      },
+    });
+
+    return unsubscribe;
   }, []);
 
   function handleLogout() {
@@ -134,6 +169,7 @@ function Dashboard() {
         <button
           type="button"
           className={styles.fabButton}
+          data-assistant-open={isAssistantOpen}
           aria-label="Crea nuovo progetto"
           onClick={openCreateModal}
         >

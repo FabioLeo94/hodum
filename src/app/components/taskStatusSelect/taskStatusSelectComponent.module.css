@@ -1,11 +1,15 @@
 .statusSelect {
+  max-width: 100%;
   padding: var(--p-xs) var(--p-lg) var(--p-xs) var(--p-md);
   border: 1px solid transparent;
   border-radius: var(--radious-xl);
+  overflow: hidden;
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.04em;
+  text-overflow: ellipsis;
   text-transform: uppercase;
+  white-space: nowrap;
   cursor: pointer;
   background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
     linear-gradient(135deg, currentColor 50%, transparent 50%);

@@ -1,5 +1,4 @@
 .taskListContainer {
-  --fab-size: 56px;
   --fab-offset: var(--p-xl);
   display: flex;
   flex-direction: column;
@@ -63,6 +62,7 @@
 
 .taskTable {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
 }
 
@@ -79,6 +79,22 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+/* Pesi di colonna intenzionali: titolo e stato sono le due informazioni
+   azionabili (apri il task, cambia stato) e restano compatte e stabili;
+   la descrizione è di supporto e assorbe lo spazio restante, troncata
+   riga per riga (vedi .descriptionCell) invece di dettare l'altezza riga. */
+.colTitle {
+  width: 34%;
+}
+
+.colDescription {
+  width: 46%;
+}
+
+.colStatus {
+  width: 20%;
 }
 
 .groupHeaderCell {
@@ -112,13 +128,40 @@
   color: color-mix(in srgb, var(--color-danger) 86%, white);
 }
 
+.titleCell {
+  display: flex;
+  align-items: center;
+  gap: var(--m-sm);
+  min-width: 0;
+}
+
+/* Indizio visivo di trascinabilità, discreto finché la riga non è a fuoco:
+   senza questo la sola cursor:grab (visibile solo in hover) non basta a far
+   scoprire il drag & drop come alternativa al select di stato. */
+.dragHandle {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  color: var(--text-muted);
+  opacity: 0.5;
+  transition: opacity 150ms ease;
+}
+
+.taskRow:hover .dragHandle {
+  opacity: 1;
+}
+
 .taskTitleButton {
+  min-width: 0;
+  overflow: hidden;
   background: none;
   border: none;
   padding: 0;
   color: inherit;
   font: inherit;
   text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -130,6 +173,13 @@
   outline: 2px solid var(--bg-primary);
   outline-offset: 2px;
   border-radius: var(--radious-xs);
+}
+
+.descriptionCell {
+  overflow: hidden;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .taskRow {
@@ -144,14 +194,28 @@
   cursor: grab;
 }
 
+/* Zona di drop inequivocabile: tinta più marcata (20% vs il 14% iniziale)
+   più un contorno tratteggiato, così il gruppo target si riconosce anche a
+   colpo d'occhio e non solo come una sfumatura di sfondo. */
 .dragOverGroup {
-  background-color: color-mix(in srgb, var(--bg-primary) 14%, transparent);
+  background-color: color-mix(in srgb, var(--bg-primary) 20%, transparent);
+  outline: 2px dashed var(--bg-primary);
+  outline-offset: -2px;
 }
 
 .emptyRow {
   color: var(--text-muted);
   font-style: italic;
   text-align: center;
+  transition:
+    color 150ms ease,
+    font-style 150ms ease;
+}
+
+.emptyRow[data-drop-target="true"] {
+  color: var(--bg-primary);
+  font-style: normal;
+  font-weight: 600;
 }
 
 .statusUpdateError {
@@ -191,91 +255,23 @@
   line-height: 1.5;
 }
 
+/* Stile condiviso con dashboard.module.css (stesso FAB "+" nelle due pagine):
+   vedi src/shared/styles/fabButton.module.css per proprietà, stati e
+   riduzione del movimento. */
 .fabButton {
-  position: fixed;
-  right: var(--fab-offset);
-  bottom: var(--fab-offset);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--fab-size);
-  height: var(--fab-size);
-  border-radius: 50%;
-  background-color: var(--bg-primary);
-  color: var(--text-on-primary);
-  cursor: pointer;
-  box-shadow:
-    0 4px 14px rgba(0, 0, 0, 0.5),
-    0 8px 24px color-mix(in srgb, var(--bg-primary) 30%, transparent);
-  transition:
-    background-color 150ms ease,
-    box-shadow 200ms ease,
-    transform 150ms ease;
-  animation: fabPopIn 360ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  composes: fabButton from "../../../shared/styles/fabButton.module.css";
 }
 
 .fabIcon {
-  transition: transform 150ms ease;
-}
-
-.fabButton:hover {
-  background-color: color-mix(in srgb, var(--bg-primary) 88%, white 12%);
-  transform: translateY(-2px);
-  box-shadow:
-    0 6px 18px rgba(0, 0, 0, 0.5),
-    0 10px 28px color-mix(in srgb, var(--bg-primary) 42%, transparent);
-}
-
-.fabButton:hover .fabIcon {
-  transform: scale(1.12);
-}
-
-.fabButton:focus-visible {
-  outline: 2px solid var(--bg-primary);
-  outline-offset: 2px;
-}
-
-.fabButton:active {
-  transform: scale(0.94);
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.5),
-    0 4px 14px color-mix(in srgb, var(--bg-primary) 30%, transparent);
-}
-
-@keyframes fabPopIn {
-  from {
-    opacity: 0;
-    transform: scale(0.5) translateY(12px);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
+  composes: fabIcon from "../../../shared/styles/fabButton.module.css";
 }
 
 @media (prefers-reduced-motion: reduce) {
   .backLink,
-  .taskRow {
+  .taskRow,
+  .dragHandle,
+  .emptyRow {
     transition: none;
-  }
-
-  .fabButton {
-    transition: none;
-    animation: none;
-  }
-
-  .fabButton:hover,
-  .fabButton:active {
-    transform: none;
-  }
-
-  .fabIcon {
-    transition: none;
-  }
-
-  .fabButton:hover .fabIcon {
-    transform: none;
   }
 }
 

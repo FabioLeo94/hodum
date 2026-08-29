@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useState } from "react";
 import type { DragEvent } from "react";
-import { Link, useNavigate, useParams } from "react-router";
+import { Link, useNavigate, useOutletContext, useParams } from "react-router";
 import type { Project, Task, TaskStatus } from "../../../shared/types/project";
 import {
   createTask,
@@ -8,10 +8,12 @@ import {
   updateTask,
   updateTaskStatus,
 } from "../../services/project/projectService";
+import { subscribeToProjectTasks } from "../../services/realtime/socketService";
 import { logout } from "../../services/auth/authService";
 import TopbarComponent from "../../components/topbar/topbarComponent";
 import TaskFormModalComponent from "../../components/taskFormModal/taskFormModalComponent";
 import TaskStatusSelectComponent from "../../components/taskStatusSelect/taskStatusSelectComponent";
+import type { AssistantLayoutContext } from "../../components/protectedLayout/protectedLayoutComponent";
 import { usePageMeta } from "../../../shared/hooks/usePageMeta";
 import styles from "./taskList.module.css";
 
@@ -74,6 +76,11 @@ type TaskModalState = { mode: "create" } | { mode: "edit"; task: Task } | null;
 // nell'effect (pattern richiesto da react-hooks/set-state-in-effect).
 function TaskListContent({ progettoId }: TaskListContentProps) {
   const handleLogout = useLogoutHandler();
+  // Assente (undefined) quando il componente è renderizzato fuori dal layout
+  // protetto (es. nei test): in quel caso il FAB resta nella posizione base.
+  const isAssistantOpen =
+    useOutletContext<AssistantLayoutContext | undefined>()?.isAssistantOpen ??
+    false;
   const [project, setProject] = useState<Project | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -110,6 +117,43 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
     return () => {
       cancelled = true;
     };
+  }, [progettoId]);
+
+  // Riflette in tempo reale le modifiche fatte altrove (assistente, un'altra
+  // tab/utente): il server notifica solo i client iscritti alla room di
+  // questo progetto (vedi subscribeToProjectTasks), quindi qui basta
+  // applicare il delta allo stato locale invece di rifare un fetch completo.
+  useEffect(() => {
+    const unsubscribe = subscribeToProjectTasks(progettoId, {
+      onTaskCreated: (task) => {
+        setProject((current) => {
+          if (!current || current.tasks.some((existing) => existing.id === task.id)) {
+            return current;
+          }
+          return { ...current, tasks: [...current.tasks, task] };
+        });
+      },
+      onTaskUpdated: (task) => {
+        setProject((current) => (current ? replaceTaskInProject(current, task) : current));
+      },
+      onTaskDeleted: (taskId) => {
+        setProject((current) =>
+          current ? { ...current, tasks: current.tasks.filter((task) => task.id !== taskId) } : current,
+        );
+      },
+      onResync: () => {
+        getProjectById(progettoId)
+          .then((data) => {
+            if (data) setProject(data);
+          })
+          .catch(() => {
+            // Un fallimento del resync lascia lo stato precedente: al
+            // prossimo evento in arrivo (o refresh manuale) si riallinea.
+          });
+      },
+    });
+
+    return unsubscribe;
   }, [progettoId]);
 
   function openCreateModal() {
@@ -272,9 +316,15 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
             </caption>
             <thead>
               <tr>
-                <th scope="col">Titolo</th>
-                <th scope="col">Descrizione</th>
-                <th scope="col">Stato</th>
+                <th className={styles.colTitle} scope="col">
+                  Titolo
+                </th>
+                <th className={styles.colDescription} scope="col">
+                  Descrizione
+                </th>
+                <th className={styles.colStatus} scope="col">
+                  Stato
+                </th>
               </tr>
             </thead>
             {STATUS_ORDER.map((status) => {
@@ -300,8 +350,14 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
                   </tr>
                   {tasks.length === 0 ? (
                     <tr>
-                      <td className={styles.emptyRow} colSpan={3}>
-                        Nessun task
+                      <td
+                        className={styles.emptyRow}
+                        data-drop-target={dragOverStatus === status}
+                        colSpan={3}
+                      >
+                        {dragOverStatus === status
+                          ? "Rilascia qui per spostare il task"
+                          : "Nessun task"}
                       </td>
                     </tr>
                   ) : (
@@ -314,15 +370,38 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
                         onDragEnd={handleGroupDragLeave}
                       >
                         <td>
-                          <button
-                            type="button"
-                            className={styles.taskTitleButton}
-                            onClick={() => openEditModal(task)}
-                          >
-                            {task.title}
-                          </button>
+                          <div className={styles.titleCell}>
+                            <span
+                              className={styles.dragHandle}
+                              aria-hidden="true"
+                              title="Trascina per cambiare stato"
+                            >
+                              <svg
+                                width="10"
+                                height="16"
+                                viewBox="0 0 10 16"
+                                fill="currentColor"
+                              >
+                                <circle cx="2" cy="2" r="1.5" />
+                                <circle cx="8" cy="2" r="1.5" />
+                                <circle cx="2" cy="8" r="1.5" />
+                                <circle cx="8" cy="8" r="1.5" />
+                                <circle cx="2" cy="14" r="1.5" />
+                                <circle cx="8" cy="14" r="1.5" />
+                              </svg>
+                            </span>
+                            <button
+                              type="button"
+                              className={styles.taskTitleButton}
+                              onClick={() => openEditModal(task)}
+                            >
+                              {task.title}
+                            </button>
+                          </div>
                         </td>
-                        <td>{task.description}</td>
+                        <td className={styles.descriptionCell} title={task.description}>
+                          {task.description}
+                        </td>
                         <td>
                           <TaskStatusSelectComponent
                             status={task.status}
@@ -349,6 +428,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
         <button
           type="button"
           className={styles.fabButton}
+          data-assistant-open={isAssistantOpen}
           aria-label="Crea nuovo task"
           onClick={openCreateModal}
         >

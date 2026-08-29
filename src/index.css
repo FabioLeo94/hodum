@@ -41,6 +41,23 @@
   --font-display:
     "Lucida Sans", "Lucida Sans Regular", "Lucida Grande",
     "Lucida Sans Unicode", Geneva, Verdana, sans-serif;
+
+  /*LAYOUT*/
+  /* Larghezza del pannello dell'assistente: condivisa tra il layout protetto
+     (che restringe l'area principale) e il pannello stesso, così restano
+     sempre sincronizzati - ridefinirla in un solo punto (qui, anche nella
+     media query sotto) basta ad aggiornare entrambi. */
+  --assistant-panel-width: clamp(300px, 25vw, 420px);
+  /* Lato del pulsante rotondo (FAB): condiviso tra il toggle dell'assistente
+     e i FAB "+" di dashboard/task-list, così restano sempre della stessa
+     dimensione e allineati tra loro. */
+  --fab-size: 56px;
+}
+
+@media (max-width: 700px) {
+  :root {
+    --assistant-panel-width: 100vw;
+  }
 }
 
 * {
