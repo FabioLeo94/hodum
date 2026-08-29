@@ -1,6 +1,6 @@
 import { Body, Controller, Post, Response, Route } from 'tsoa';
 import { askAssistant } from '../services/assistantService';
-import type { AssistantMessage } from '../services/assistantService';
+import type { AssistantMessage, PageContext } from '../services/assistantService';
 import { OllamaError } from '../services/ollamaClient';
 
 // Nome distinto dagli omonimi "ErrorResponse" degli altri controller: tsoa
@@ -16,6 +16,10 @@ export interface AssistantChatRequest {
   // coerente con l'assenza di uno store centralizzato nel frontend): ogni
   // richiesta la invia per intero.
   history?: AssistantMessage[];
+  // Presente solo quando l'utente ha il toggle "contesto pagina" attivo nel
+  // pannello: dice in che pagina/progetto si trova in QUESTO turno. Assente
+  // (contesto generico) se il toggle è disattivo.
+  pageContext?: PageContext;
 }
 
 export interface AssistantChatResponse {
@@ -37,7 +41,7 @@ export class AssistantController extends Controller {
     }
 
     try {
-      return await askAssistant(body.message, body.history ?? []);
+      return await askAssistant(body.message, body.history ?? [], body.pageContext);
     } catch (err) {
       if (err instanceof OllamaError) {
         // 502 (Bad Gateway): il problema è nel servizio a valle (Ollama non

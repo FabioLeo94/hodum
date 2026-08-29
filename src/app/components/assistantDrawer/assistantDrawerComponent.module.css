@@ -124,6 +124,44 @@
   font-size: 0.85rem;
 }
 
+.contextToggle {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: var(--m-sm);
+  padding: var(--p-sm) var(--p-md);
+  border: 1px solid var(--bg-field);
+  border-radius: var(--radious-sm);
+  background-color: transparent;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease;
+}
+
+.contextToggle:hover {
+  border-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.contextToggle:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+.contextToggle[aria-pressed="true"] {
+  border-color: var(--bg-primary);
+  background-color: color-mix(in srgb, var(--bg-primary) 16%, transparent);
+  color: var(--text-primary);
+}
+
+.contextIcon {
+  flex-shrink: 0;
+}
+
 .messageListWrapper {
   position: relative;
   display: flex;

@@ -51,6 +51,22 @@ export async function getAllProjects(): Promise<Project[]> {
   );
 }
 
+// Solo il nome, senza i task: usata dove serve un'etichetta leggibile (es. il
+// toggle "contesto" dell'assistente) senza pagare la fetchProjectTasks di
+// getProjectById.
+export async function getProjectName(id: string): Promise<string | undefined> {
+  const response = await fetch(`${API_BASE_URL}/projects/${id}`);
+  if (response.status === 404) {
+    return undefined;
+  }
+  if (!response.ok) {
+    const message = await readErrorMessage(response);
+    throw new Error(message ?? "Impossibile caricare il progetto.");
+  }
+  const project = (await response.json()) as ProjectDto;
+  return project.name;
+}
+
 export async function getProjectById(id: string): Promise<Project | undefined> {
   const response = await fetch(`${API_BASE_URL}/projects/${id}`);
   if (response.status === 404) {

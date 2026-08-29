@@ -1,6 +1,6 @@
 import { ollamaChat, OllamaError } from './ollamaClient';
 import type { OllamaChatMessage, OllamaToolCall, OllamaToolDefinition } from './ollamaClient';
-import { listProjects } from './projectService';
+import { getProjectById, listProjects } from './projectService';
 import {
   createTask,
   deleteTask,
@@ -18,10 +18,24 @@ export interface AssistantMessage {
   content: string;
 }
 
-// Un solo modello per l'intero processo: cambiarlo (es. per confrontare
-// qwen2.5:7b vs 14b) è un riavvio del server con OLLAMA_MODEL diverso, non una
-// modifica di codice.
-const MODEL = process.env.OLLAMA_MODEL ?? 'qwen2.5:14b';
+// Inviato dal frontend solo quando l'utente ha attivo il toggle "contesto
+// pagina" nel pannello assistente: dice al modello dove si trova l'utente
+// nell'app in QUESTO turno, senza che debba specificarlo a parole (es. "il
+// primo task" mentre è già sulla task-list di un progetto). Niente id di
+// task: la pagina task_list non seleziona un task specifico, solo un progetto.
+export type PageContext = { page: 'dashboard' } | { page: 'task_list'; projectId: string };
+
+// Un solo modello per l'intero processo: cambiarlo è un riavvio del server
+// con OLLAMA_MODEL diverso, non una modifica di codice.
+// 7b invece di 14b: a parità di prompt e strumenti, nei test il 14b ha
+// dichiarato più volte azioni riuscite senza che il tool corrispondente
+// fosse mai stato chiamato (o dopo che aveva restituito un errore), mentre il
+// 7b ha sempre ammesso l'errore o chiesto conferma quando non era certo.
+// Contro-intuitivo ma verificato: qui conta l'aderenza alle istruzioni di
+// tool-calling, non la dimensione del modello. Un 27b è stato scartato prima
+// ancora di poter fare questo confronto: su questo hardware va in timeout
+// già su un semplice saluto.
+const MODEL = process.env.OLLAMA_MODEL ?? 'qwen2.5:7b';
 
 // Stessi slug del dominio applicativo (vedi models/task.ts): dichiarati qui
 // come enum esplicito nello schema del tool, così un modello quantizzato non
@@ -45,14 +59,15 @@ const TOOLS: OllamaToolDefinition[] = [
     type: 'function',
     function: {
       name: 'list_tasks',
-      description: 'Restituisce i task di un progetto specifico, dato il suo id.',
+      description:
+        'Restituisce i task di un progetto specifico (con id, titolo, descrizione e stato attuale di ciascuno). Usalo anche per trovare un task che l\'utente identifica per stato o posizione invece che per titolo, es. "il task in review" o "il primo task": filtra tu stesso il risultato sul campo status o sull\'ordine restituito, invece di passare quella descrizione come se fosse un titolo.',
       parameters: {
         type: 'object',
         properties: {
           projectId: {
             type: 'string',
             description:
-              "Id del progetto (preferibile) oppure il suo nome esatto se non conosci l'id: viene risolto automaticamente.",
+              "Id del progetto (preferibile) oppure il suo nome, anche parziale, se non conosci l'id: viene risolto automaticamente.",
           },
         },
         required: ['projectId'],
@@ -70,7 +85,7 @@ const TOOLS: OllamaToolDefinition[] = [
           projectId: {
             type: 'string',
             description:
-              "Id del progetto (preferibile) oppure il suo nome esatto se non conosci l'id: viene risolto automaticamente.",
+              "Id del progetto (preferibile) oppure il suo nome, anche parziale, se non conosci l'id: viene risolto automaticamente.",
           },
           title: {
             type: 'string',
@@ -96,12 +111,12 @@ const TOOLS: OllamaToolDefinition[] = [
           projectId: {
             type: 'string',
             description:
-              "Id del progetto (preferibile) oppure il suo nome esatto se non conosci l'id: viene risolto automaticamente.",
+              "Id del progetto (preferibile) oppure il suo nome, anche parziale, se non conosci l'id: viene risolto automaticamente.",
           },
           taskId: {
             type: 'string',
             description:
-              "Id del task (preferibile) oppure il suo titolo esatto se non conosci l'id: viene risolto automaticamente.",
+              "Id del task (preferibile) oppure il suo titolo, anche parziale, se non conosci l'id: viene risolto automaticamente.",
           },
           title: {
             type: 'string',
@@ -127,12 +142,12 @@ const TOOLS: OllamaToolDefinition[] = [
           projectId: {
             type: 'string',
             description:
-              "Id del progetto (preferibile) oppure il suo nome esatto se non conosci l'id: viene risolto automaticamente.",
+              "Id del progetto (preferibile) oppure il suo nome, anche parziale, se non conosci l'id: viene risolto automaticamente.",
           },
           taskId: {
             type: 'string',
             description:
-              "Id del task (preferibile) oppure il suo titolo esatto se non conosci l'id: viene risolto automaticamente.",
+              "Id del task (preferibile) oppure il suo titolo, anche parziale, se non conosci l'id: viene risolto automaticamente.",
           },
           status: {
             type: 'string',
@@ -155,12 +170,12 @@ const TOOLS: OllamaToolDefinition[] = [
           projectId: {
             type: 'string',
             description:
-              "Id del progetto (preferibile) oppure il suo nome esatto se non conosci l'id: viene risolto automaticamente.",
+              "Id del progetto (preferibile) oppure il suo nome, anche parziale, se non conosci l'id: viene risolto automaticamente.",
           },
           taskId: {
             type: 'string',
             description:
-              "Id del task (preferibile) oppure il suo titolo esatto se non conosci l'id: viene risolto automaticamente.",
+              "Id del task (preferibile) oppure il suo titolo, anche parziale, se non conosci l'id: viene risolto automaticamente.",
           },
         },
         required: ['projectId', 'taskId'],
@@ -185,7 +200,7 @@ const TOOLS: OllamaToolDefinition[] = [
           projectId: {
             type: 'string',
             description:
-              "Obbligatorio solo con page=task_list. Id del progetto (preferibile) oppure il suo nome esatto se non conosci l'id: viene risolto automaticamente.",
+              "Obbligatorio solo con page=task_list. Id del progetto (preferibile) oppure il suo nome, anche parziale, se non conosci l'id: viene risolto automaticamente.",
           },
         },
         required: ['page'],
@@ -196,10 +211,13 @@ const TOOLS: OllamaToolDefinition[] = [
 
 const SYSTEM_PROMPT = `Sei l'assistente del task manager "Hodum". Rispondi sempre in italiano, in modo breve e concreto.
 Non hai visibilità diretta sui dati dell'applicazione: per rispondere a qualunque domanda su progetti o task, o per crearli/modificarli/eliminarli, DEVI usare gli strumenti disponibili (list_projects, list_tasks, create_task, update_task, update_task_status, delete_task) invece di inventare informazioni o fingere di aver eseguito un'azione.
-I parametri projectId e taskId accettano sia l'id reale sia, se non lo conosci con certezza, il nome del progetto o il titolo esatto del task: vengono risolti automaticamente in id. Preferisci comunque l'id quando lo hai appena ottenuto da list_projects/list_tasks in QUESTO turno; altrimenti usa direttamente il nome/titolo così come te lo ha scritto l'utente, non serve richiamare list_projects/list_tasks "per sicurezza" prima di ogni operazione.
-Se una chiamata restituisce un errore "non trovato" (progetto o task), il messaggio di errore elenca già i nomi/titoli disponibili: usali per capire il problema (es. un refuso) e, se serve, chiedi conferma all'utente invece di ritentare alla cieca con lo stesso valore.
-Prima di chiamare create_task, update_task o update_task_status, se l'utente non ha specificato in modo inequivocabile il progetto o il task su cui operare, chiedi prima di procedere invece di indovinare.
-Prima di chiamare delete_task, che è un'operazione distruttiva e irreversibile, chiedi sempre conferma esplicita all'utente indicando titolo del task e progetto, e procedi solo dopo una conferma chiara nel messaggio successivo: a quel punto richiama delete_task con lo stesso progetto/task già indicati, senza bisogno di altre verifiche preliminari.
+I parametri projectId e taskId accettano sia l'id reale sia, se non lo conosci con certezza, il nome del progetto o il titolo del task anche parziali (es. "Hodum" trova "Progetto Hodum"): vengono risolti automaticamente in id. Preferisci comunque l'id quando lo hai appena ottenuto da list_projects/list_tasks in QUESTO turno; altrimenti usa direttamente il nome/titolo così come te lo ha scritto l'utente, non serve richiamare list_projects/list_tasks "per sicurezza" prima di ogni operazione.
+projectId e taskId devono però essere sempre un id, un nome o un titolo reali: mai la descrizione di un criterio come lo stato ("il task in review"), la posizione ("il primo task") o simili, perché verrebbero cercati alla lettera come se fossero un titolo e fallirebbero. Quando l'utente identifica un task così, chiama prima list_tasks (list_projects se il criterio riguarda un progetto), individua tu stesso l'elemento giusto leggendo i campi restituiti (es. il campo status di ciascun task), e usa il suo id o titolo esatto nella chiamata successiva.
+Se una chiamata restituisce un errore "non trovato" o "più corrispondenze" (progetto o task), il messaggio elenca già i nomi/titoli disponibili o candidati: usali per capire il problema (es. un refuso, o un nome troppo generico che corrisponde a più cose) e chiedi conferma all'utente invece di ritentare alla cieca con lo stesso valore.
+Se prima del messaggio dell'utente trovi un messaggio di sistema che inizia con "Contesto:", indica in quale pagina/progetto si trova l'utente in questo momento nell'app: usalo per risolvere riferimenti impliciti (es. "sposta il primo task in review" senza nominare un progetto, mentre l'utente sta guardando la task-list di "Hodum" -> intendi quel progetto). Se però l'utente nomina esplicitamente un progetto o task diverso, quello che dice lui ha sempre la priorità su questo contesto.
+Prima di chiamare create_task, update_task o update_task_status, se l'utente non ha specificato in modo inequivocabile il progetto o il task su cui operare (e il contesto pagina, se presente, non basta a risolvere l'ambiguità), chiedi UNA SOLA VOLTA i dettagli mancanti. Non appena il target è chiaro (dal messaggio dell'utente, da una risposta di chiarimento, o dal contesto pagina), esegui subito lo strumento: queste tre operazioni non sono distruttive e non richiedono un'ulteriore domanda "confermi?" prima di procedere.
+Fa eccezione delete_task, l'unica operazione distruttiva e irreversibile: prima di chiamarlo chiedi sempre conferma esplicita indicando titolo del task e progetto, e procedi non appena il messaggio successivo dell'utente è chiaramente affermativo (es. "sì", "confermo", "vai", "fallo", anche con un refuso come "condermo"), senza pretendere che ripeta una parola esatta né chiedere una seconda conferma se la risposta è già inequivocabile.
+Dopo aver chiamato uno strumento che modifica dati (create_task, update_task, update_task_status, delete_task), guarda il risultato prima di rispondere: se contiene un campo error l'operazione NON è riuscita, quindi riporta all'utente quell'errore invece di dire che è andata a buon fine. Dichiara un'azione completata solo subito dopo aver ricevuto, in questo stesso turno, un risultato dello strumento corrispondente senza errori: mai perché "dovrebbe" essere andata bene o perché l'hai detto in un turno precedente.
 L'app ha solo due pagine: "dashboard" (elenco dei progetti) e "task_list" (elenco dei task di un progetto specifico, richiede il progetto). Quando l'utente chiede esplicitamente di essere portato, spostato o mandato a una di queste pagine, usa navigate_to_page: non descrivere a parole come arrivarci, spostacelo davvero. Non usarlo per rispondere a semplici domande sui dati.
 Se la domanda non riguarda progetti o task, rispondi comunque in modo utile ma segnala che il tuo ambito principale è la gestione di progetti e task.`;
 
@@ -236,21 +254,40 @@ function looksLikeBrokenToolCall(content: string): boolean {
 // string): rende `id`/`error` accessibili senza cast dopo il check su `ok`.
 type Resolved = { ok: true; id: string } | { ok: false; error: string };
 
+// L'utente umano scrive nomi/titoli a memoria, spesso parziali o approssimati
+// ("Hodum" invece di "Progetto Hodum"): un match solo esatto costringeva a
+// ripetere la richiesta con il nome copiato lettera per lettera. Qui si
+// prova prima il match esatto (così un nome che è anche sottostringa di un
+// altro resta univoco) e solo se non c'è nulla si passa alla sottostringa,
+// restituendo comunque tutti i candidati per far emergere l'ambiguità.
+function findByNameOrTitle<T>(items: T[], getName: (item: T) => string, needle: string): T[] {
+  const normalizedNeedle = needle.trim().toLowerCase();
+  const exact = items.filter((item) => getName(item).trim().toLowerCase() === normalizedNeedle);
+  if (exact.length > 0) return exact;
+  return items.filter((item) => getName(item).trim().toLowerCase().includes(normalizedNeedle));
+}
+
 // Il modello (soprattutto un 14B locale) non conserva in modo affidabile gli
 // id ottenuti da list_projects/list_tasks in un turno precedente: la history
 // che riceve è solo testo (vedi askAssistant), non i risultati strutturati
 // delle tool call passate. Qui trattiamo un projectId/taskId che non è un
-// uuid come un nome/titolo da risolvere al volo, invece di limitarci a
+// uuid come un nome/titolo da risolvere al volo, invece di limitarsi a
 // rifiutarlo: così un'operazione riesce anche quando il modello passa
 // "Hodum" o "FEAT: Task Di Test" invece del vero id.
 async function resolveProjectId(idOrName: string): Promise<Resolved> {
+  const projects = await listProjects();
+
   if (isValidUuid(idOrName)) {
-    return { ok: true, id: idOrName };
+    const byId = projects.find((project) => project.id === idOrName);
+    if (byId) return { ok: true, id: byId.id };
+    // Id sintatticamente valido ma inesistente (allucinato dal modello, o
+    // riferito a un progetto nel frattempo eliminato): niente ricerca "sia
+    // per id sia per nome" in contemporanea, si passa del tutto alla ricerca
+    // per nome usando lo stesso valore, che fallirà in modo pulito con
+    // l'elenco dei progetti disponibili invece di un id opaco non trovato.
   }
 
-  const projects = await listProjects();
-  const needle = idOrName.trim().toLowerCase();
-  const matches = projects.filter((project) => project.name.trim().toLowerCase() === needle);
+  const matches = findByNameOrTitle(projects, (project) => project.name, idOrName);
 
   if (matches.length === 1) {
     return { ok: true, id: matches[0].id };
@@ -259,14 +296,11 @@ async function resolveProjectId(idOrName: string): Promise<Resolved> {
     const available = projects.map((project) => project.name).join(', ') || 'nessuno';
     return { ok: false, error: `Nessun progetto trovato con nome "${idOrName}". Progetti esistenti: ${available}.` };
   }
-  return { ok: false, error: `Più progetti hanno nome "${idOrName}": serve l'id esatto, richiama list_projects.` };
+  const names = matches.map((project) => project.name).join(', ');
+  return { ok: false, error: `Più progetti corrispondono a "${idOrName}" (${names}): specifica il nome esatto o l'id.` };
 }
 
 async function resolveTaskId(projectId: string, idOrTitle: string): Promise<Resolved> {
-  if (isValidUuid(idOrTitle)) {
-    return { ok: true, id: idOrTitle };
-  }
-
   let tasks;
   try {
     tasks = await listTasksByProject(projectId);
@@ -277,8 +311,14 @@ async function resolveTaskId(projectId: string, idOrTitle: string): Promise<Reso
     throw err;
   }
 
-  const needle = idOrTitle.trim().toLowerCase();
-  const matches = tasks.filter((task) => task.title.trim().toLowerCase() === needle);
+  if (isValidUuid(idOrTitle)) {
+    const byId = tasks.find((task) => task.id === idOrTitle);
+    if (byId) return { ok: true, id: byId.id };
+    // Stesso fallback di resolveProjectId: id valido ma inesistente in questo
+    // progetto -> si tenta lo stesso valore come titolo invece di arrendersi.
+  }
+
+  const matches = findByNameOrTitle(tasks, (task) => task.title, idOrTitle);
 
   if (matches.length === 1) {
     return { ok: true, id: matches[0].id };
@@ -290,9 +330,10 @@ async function resolveTaskId(projectId: string, idOrTitle: string): Promise<Reso
       error: `Nessun task trovato con titolo "${idOrTitle}" in questo progetto. Task esistenti: ${available}.`,
     };
   }
+  const titles = matches.map((task) => task.title).join(', ');
   return {
     ok: false,
-    error: `Più task hanno titolo "${idOrTitle}" in questo progetto: serve l'id esatto, richiama list_tasks.`,
+    error: `Più task in questo progetto corrispondono a "${idOrTitle}" (${titles}): specifica il titolo esatto o l'id.`,
   };
 }
 
@@ -441,12 +482,48 @@ export interface AssistantReply {
   navigateTo?: string;
 }
 
-export async function askAssistant(message: string, history: AssistantMessage[] = []): Promise<AssistantReply> {
+// Un messaggio "system" ad-hoc, non fa parte di SYSTEM_PROMPT: viene
+// ricalcolato e reinserito ad ogni richiesta (mai salvato in `history`, che
+// resta solo testo utente/assistente) così riflette sempre la pagina in cui
+// si trova l'utente in QUESTO turno, non quella di un turno precedente.
+async function buildPageContextMessage(pageContext: PageContext | undefined): Promise<OllamaChatMessage | null> {
+  if (!pageContext) return null;
+
+  if (pageContext.page === 'dashboard') {
+    return {
+      role: 'system',
+      content: "Contesto: l'utente sta guardando la dashboard con l'elenco di tutti i progetti, non è dentro un progetto specifico in questo momento.",
+    };
+  }
+
+  try {
+    const project = await getProjectById(pageContext.projectId);
+    return {
+      role: 'system',
+      content: `Contesto: l'utente sta guardando la pagina dei task del progetto "${project.name}" (id ${project.id}).`,
+    };
+  } catch {
+    // Progetto nel frattempo rinominato/eliminato dall'id che il frontend
+    // aveva in URL: meglio nessun contesto che uno fasullo o un errore che
+    // interrompe la richiesta per un dettaglio secondario.
+    return null;
+  }
+}
+
+export async function askAssistant(
+  message: string,
+  history: AssistantMessage[] = [],
+  pageContext?: PageContext,
+): Promise<AssistantReply> {
   const messages: OllamaChatMessage[] = [
     { role: 'system', content: SYSTEM_PROMPT },
     ...history.map((entry) => ({ role: entry.role, content: entry.content })),
-    { role: 'user', content: message },
   ];
+  const contextMessage = await buildPageContextMessage(pageContext);
+  if (contextMessage) {
+    messages.push(contextMessage);
+  }
+  messages.push({ role: 'user', content: message });
   let navigateTo: string | undefined;
 
   for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
@@ -488,6 +565,7 @@ export async function askAssistant(message: string, history: AssistantMessage[] 
     // Un turno può contenere più tool_calls (es. list_tasks su due progetti
     // diversi): eseguiamo tutte le chiamate richieste prima di tornare dal
     // modello, con un messaggio "tool" di risposta per ciascuna.
+    const failedCalls: { name: string; error: string }[] = [];
     for (const call of toolCalls) {
       const result = await callTool(call.function.name, call.function.arguments ?? {});
       if (call.function.name === 'navigate_to_page' && result && typeof result === 'object' && 'path' in result) {
@@ -496,7 +574,28 @@ export async function askAssistant(message: string, history: AssistantMessage[] 
           navigateTo = path;
         }
       }
+      if (result && typeof result === 'object' && 'error' in result) {
+        const error = (result as { error?: unknown }).error;
+        if (typeof error === 'string') {
+          failedCalls.push({ name: call.function.name, error });
+        }
+      }
       messages.push({ role: 'tool', content: JSON.stringify(result) });
+    }
+
+    // Il SYSTEM_PROMPT vieta già di dichiarare un'azione riuscita senza un
+    // risultato senza errori, ma quell'istruzione è distante (in token) dal
+    // punto in cui il modello genera la risposta finale: con un modello
+    // quantizzato locale la recency conta, e in pratica capita che citi
+    // l'errore e poi dichiari comunque successo. Ripetiamo il divieto qui,
+    // subito dopo i risultati falliti e appena prima della prossima
+    // generazione, elencando esplicitamente quali chiamate sono fallite.
+    if (failedCalls.length > 0) {
+      const summary = failedCalls.map((f) => `- ${f.name}: ${f.error}`).join('\n');
+      messages.push({
+        role: 'system',
+        content: `Promemoria: le seguenti chiamate appena eseguite sono FALLITE (nessun dato è stato modificato):\n${summary}\nNella tua prossima risposta non devi dichiarare che l'azione è riuscita: riporta questi errori all'utente, oppure prova a correggerli (es. richiamando list_tasks/list_projects per trovare l'id o il titolo corretto) prima di ritentare.`,
+      });
     }
   }
 

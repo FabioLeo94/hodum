@@ -1,9 +1,40 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { sendAssistantMessage } from "../../services/assistant/assistantService";
-import type { AssistantMessage } from "../../services/assistant/assistantService";
+import type { AssistantMessage, PageContext } from "../../services/assistant/assistantService";
+import { getProjectName } from "../../services/project/projectService";
 import styles from "./assistantDrawerComponent.module.css";
+
+// Le uniche due pagine protette esistenti (vedi App.tsx): questo componente è
+// montato solo dentro ProtectedLayoutComponent, quindi il pathname corrente
+// combacia sempre con una delle due.
+const TASK_LIST_PATH_PATTERN = /^\/dashboard\/([^/]+)\/task-list\/?$/;
+
+function derivePageContext(pathname: string): PageContext | null {
+  const taskListMatch = pathname.match(TASK_LIST_PATH_PATTERN);
+  if (taskListMatch) {
+    return { page: "task_list", projectId: taskListMatch[1] };
+  }
+  if (pathname.startsWith("/dashboard")) {
+    return { page: "dashboard" };
+  }
+  return null;
+}
+
+const CONTEXT_PREFERENCE_KEY = "assistant.contextEnabled";
+
+// localStorage può non essere disponibile (privacy mode, contesti di test):
+// un default sensato (attivo) evita che l'assenza del valore salvato rompa
+// il rendering.
+function readContextPreference(): boolean {
+  try {
+    const stored = localStorage.getItem(CONTEXT_PREFERENCE_KEY);
+    return stored === null ? true : stored === "true";
+  } catch {
+    return true;
+  }
+}
 
 // Id locale solo per la key di React: non fa parte del contratto con il
 // backend (vedi AssistantMessage in assistantService.ts), che riceve la
@@ -27,10 +58,57 @@ const BOTTOM_THRESHOLD_PX = 24;
 function AssistantDrawerComponent({ isOpen, onToggle }: Prop) {
   const panelId = useId();
   const navigate = useNavigate();
+  const location = useLocation();
   const [messages, setMessages] = useState<ChatEntry[]>([]);
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState("");
+  const [isContextEnabled, setIsContextEnabled] = useState(readContextPreference);
+  // Tenuto insieme all'id a cui si riferisce: evita di mostrare per un attimo
+  // il nome del progetto precedente quando l'utente naviga da un progetto a
+  // un altro (vedi il confronto in projectName più sotto).
+  const [resolvedProject, setResolvedProject] = useState<{ id: string; name: string | undefined } | undefined>(
+    undefined,
+  );
+
+  const pageContext = derivePageContext(location.pathname);
+  const contextProjectId = pageContext?.page === "task_list" ? pageContext.projectId : undefined;
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(CONTEXT_PREFERENCE_KEY, String(isContextEnabled));
+    } catch {
+      // Preferenza non persistita (localStorage non disponibile): resta
+      // comunque valida per la sessione corrente in memoria.
+    }
+  }, [isContextEnabled]);
+
+  // Solo per l'etichetta del toggle: il backend risolve comunque il nome dal
+  // projectId ricevuto, questa fetch serve solo a mostrarlo qui prima di inviare.
+  useEffect(() => {
+    if (!contextProjectId) return;
+    let cancelled = false;
+    getProjectName(contextProjectId)
+      .then((name) => {
+        if (!cancelled) setResolvedProject({ id: contextProjectId, name });
+      })
+      .catch(() => {
+        if (!cancelled) setResolvedProject({ id: contextProjectId, name: undefined });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [contextProjectId]);
+
+  const projectName =
+    resolvedProject && resolvedProject.id === contextProjectId ? resolvedProject.name : undefined;
+
+  const contextLabel =
+    pageContext?.page === "dashboard"
+      ? "Dashboard"
+      : pageContext?.page === "task_list"
+        ? (projectName ?? "Progetto")
+        : null;
 
   const messageListRef = useRef<HTMLDivElement>(null);
   // Rispecchia se l'utente è già in fondo alla chat: letto (non come dep)
@@ -98,7 +176,11 @@ function AssistantDrawerComponent({ isOpen, onToggle }: Prop) {
     setIsSending(true);
 
     try {
-      const result = await sendAssistantMessage(trimmed, history);
+      const result = await sendAssistantMessage(
+        trimmed,
+        history,
+        isContextEnabled && pageContext ? pageContext : undefined,
+      );
       setMessages((current) => [
         ...current,
         { id: crypto.randomUUID(), role: "assistant", content: result.reply },
@@ -167,6 +249,36 @@ function AssistantDrawerComponent({ isOpen, onToggle }: Prop) {
           <p className={styles.subtitle}>
             Chiedi informazioni sui tuoi progetti e sui task.
           </p>
+          {pageContext && (
+            <button
+              type="button"
+              className={styles.contextToggle}
+              aria-pressed={isContextEnabled}
+              onClick={() => setIsContextEnabled((current) => !current)}
+              title={
+                isContextEnabled
+                  ? `I messaggi includono dove ti trovi ora (${contextLabel}): l'assistente lo usa quando non nomini un progetto o un task esplicitamente.`
+                  : "I messaggi non includono la pagina in cui ti trovi: dovrai nominare esplicitamente progetto e task."
+              }
+            >
+              <svg
+                className={styles.contextIcon}
+                viewBox="0 0 24 24"
+                width="14"
+                height="14"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M12 21s-7-6.1-7-11a7 7 0 0 1 14 0c0 4.9-7 11-7 11Z" />
+                <circle cx="12" cy="10" r="2.5" />
+              </svg>
+              {isContextEnabled ? `Contesto: ${contextLabel}` : "Contesto disattivato"}
+            </button>
+          )}
         </header>
 
         <div className={styles.messageListWrapper}>
