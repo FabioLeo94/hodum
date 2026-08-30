@@ -101,7 +101,11 @@ function Dashboard() {
   async function handleCreateProject(name: string) {
     try {
       const project = await createProject(name);
-      setProjects((current) => [...current, project]);
+      setProjects((current) =>
+        current.some((existing) => existing.id === project.id)
+          ? current
+          : [...current, project],
+      );
       closeCreateModal();
     } catch (error) {
       setCreateError(
