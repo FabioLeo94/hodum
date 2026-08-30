@@ -24,6 +24,7 @@ interface TaskRow {
   title: string;
   description: string | null;
   status_name: string;
+  priority: number;
 }
 
 // task_status.name (seed in migrations/0004_task_status_smallint_identity_e_seed_stati_assegnabili.sql)
@@ -49,9 +50,17 @@ const SLUG_TO_STATUS_NAME: Record<TaskStatus, string> = {
 
 // Select condivisa da getTaskById e listTasksByProject: stessa forma di riga
 // (TaskRow) per entrambe, cambia solo il filtro WHERE.
-const TASK_SELECT = `SELECT t.id, t.project_id, t.title, t.description, ts.name AS status_name
+const TASK_SELECT = `SELECT t.id, t.project_id, t.title, t.description, t.priority, ts.name AS status_name
      FROM tasks t
      JOIN task_status ts ON ts.id = t.status`;
+
+// 1 = priorità più alta, 10 = più bassa (vedi models/task.ts): stesso vincolo
+// del CHECK a livello di DB (migration 0012), ripetuto qui perché un valore
+// fuori range deve essere rifiutato dal controller con un 422 prima di
+// arrivare alla query, non emergere come un errore generico del driver.
+export function isValidPriority(value: number): boolean {
+  return Number.isInteger(value) && value >= 1 && value <= 10;
+}
 
 function toTask(row: TaskRow): Task {
   const status = STATUS_NAME_TO_SLUG[row.status_name];
@@ -64,6 +73,7 @@ function toTask(row: TaskRow): Task {
     title: row.title,
     description: row.description,
     status,
+    priority: row.priority,
   };
 }
 
@@ -164,6 +174,27 @@ export async function updateTaskStatus(projectId: string, taskId: string, status
      SET status = (SELECT id FROM task_status WHERE name = $3)
      WHERE id = $1 AND project_id = $2`,
     [taskId, projectId, statusName],
+  );
+  if (result.rowCount === 0) {
+    throw new TaskNotFoundError(taskId);
+  }
+  const task = await getTaskById(taskId);
+  emitTaskUpdated(task);
+  return task;
+}
+
+export async function updateTaskPriority(projectId: string, taskId: string, priority: number): Promise<Task> {
+  // Stesso guard di updateTaskStatus: evita l'errore del driver su un id
+  // sintatticamente non valido.
+  if (!isValidUuid(projectId) || !isValidUuid(taskId)) {
+    throw new TaskNotFoundError(taskId);
+  }
+
+  const result = await pool.query(
+    `UPDATE tasks
+     SET priority = $3
+     WHERE id = $1 AND project_id = $2`,
+    [taskId, projectId, priority],
   );
   if (result.rowCount === 0) {
     throw new TaskNotFoundError(taskId);

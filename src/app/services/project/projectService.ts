@@ -13,6 +13,7 @@ interface TaskDto {
   title: string;
   description: string | null;
   status: TaskStatus;
+  priority: number;
 }
 
 function toTask(dto: TaskDto): Task {
@@ -21,6 +22,7 @@ function toTask(dto: TaskDto): Task {
     title: dto.title,
     description: dto.description ?? "",
     status: dto.status,
+    priority: dto.priority,
   };
 }
 
@@ -178,6 +180,27 @@ export async function updateTaskStatus(
   if (!response.ok) {
     const message = await readErrorMessage(response);
     throw new Error(message ?? "Impossibile aggiornare lo stato del task.");
+  }
+  const task = (await response.json()) as TaskDto;
+  return toTask(task);
+}
+
+export async function updateTaskPriority(
+  projectId: string,
+  taskId: string,
+  priority: number,
+): Promise<Task> {
+  const response = await fetch(
+    `${API_BASE_URL}/projects/${projectId}/tasks/${taskId}/priority`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ priority }),
+    },
+  );
+  if (!response.ok) {
+    const message = await readErrorMessage(response);
+    throw new Error(message ?? "Impossibile aggiornare la priorità del task.");
   }
   const task = (await response.json()) as TaskDto;
   return toTask(task);

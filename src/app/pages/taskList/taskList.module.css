@@ -40,16 +40,77 @@
   border-radius: var(--radious-xs);
 }
 
+/* Riga anziché colonna: il titolo resta l'ancora a sinistra, il controllo di
+   ordinamento è un'azione secondaria sulla tabella e vive alla sua destra,
+   sulla stessa altezza. wrap per non stringere il titolo su viewport stretti
+   (vedi anche la regola @media più sotto). */
 .taskListHeader {
   display: flex;
-  flex-direction: column;
-  gap: var(--m-sm);
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--m-md);
 }
 
 .taskListTitle {
   color: var(--text-primary);
   font-size: 1.75rem;
   font-weight: 700;
+}
+
+.sortControl {
+  display: flex;
+  align-items: center;
+  gap: var(--m-sm);
+}
+
+.sortLabel {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Stesso trattamento a "pillola" degli altri select della pagina (freccia
+   disegnata, stessi raggio/transizioni), ma neutro: non è uno stato del task,
+   è un controllo della vista, quindi niente tinta semantica. */
+.sortSelect {
+  padding: var(--p-xs) var(--p-lg) var(--p-xs) var(--p-md);
+  border: 1px solid var(--bg-field);
+  border-radius: var(--radious-xl);
+  background-color: var(--bg-field);
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    calc(100% - 12px) center,
+    calc(100% - 8px) center;
+  background-size:
+    4px 4px,
+    4px 4px;
+  background-repeat: no-repeat;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.sortSelect:hover {
+  border-color: var(--bg-primary);
+}
+
+.sortSelect:focus-visible {
+  border-color: var(--bg-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--bg-primary) 25%, transparent);
+}
+
+.sortSelect option {
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
 }
 
 .taskTableCard {
@@ -81,20 +142,25 @@
   text-transform: uppercase;
 }
 
-/* Pesi di colonna intenzionali: titolo e stato sono le due informazioni
-   azionabili (apri il task, cambia stato) e restano compatte e stabili;
-   la descrizione è di supporto e assorbe lo spazio restante, troncata
-   riga per riga (vedi .descriptionCell) invece di dettare l'altezza riga. */
+/* Pesi di colonna intenzionali: titolo, stato e priorità sono le informazioni
+   azionabili (apri il task, cambia stato, cambia priorità) e restano compatte
+   e stabili; la descrizione è di supporto e assorbe lo spazio restante,
+   troncata riga per riga (vedi .descriptionCell) invece di dettare l'altezza
+   riga. */
 .colTitle {
-  width: 34%;
+  width: 28%;
 }
 
 .colDescription {
-  width: 46%;
+  width: 38%;
 }
 
 .colStatus {
-  width: 20%;
+  width: 17%;
+}
+
+.colPriority {
+  width: 17%;
 }
 
 .groupHeaderCell {
@@ -270,7 +336,8 @@
   .backLink,
   .taskRow,
   .dragHandle,
-  .emptyRow {
+  .emptyRow,
+  .sortSelect {
     transition: none;
   }
 }

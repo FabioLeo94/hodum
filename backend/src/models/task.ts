@@ -3,10 +3,14 @@
 // slug vive in taskService.ts, vicino alla query che lo produce.
 export type TaskStatus = 'progress' | 'review' | 'completed' | 'rejected';
 
+// Numerico invece di uno slug come TaskStatus: 1 = priorità più alta, 10 = più
+// bassa, coerente con la richiesta di dominio (usato per ordinare, non solo
+// per etichettare) invece di un enum semantico chiuso.
 export interface Task {
   id: string;
   projectId: string;
   title: string;
   description: string | null;
   status: TaskStatus;
+  priority: number;
 }

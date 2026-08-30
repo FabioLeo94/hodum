@@ -8,6 +8,7 @@ interface TaskEventDto {
   title: string;
   description: string | null;
   status: TaskStatus;
+  priority: number;
 }
 
 interface ProjectEventDto {
@@ -42,7 +43,13 @@ function getSocket(): Socket<ServerToClientEvents, ClientToServerEvents> {
 }
 
 function toTask(dto: TaskEventDto): Task {
-  return { id: dto.id, title: dto.title, description: dto.description ?? "", status: dto.status };
+  return {
+    id: dto.id,
+    title: dto.title,
+    description: dto.description ?? "",
+    status: dto.status,
+    priority: dto.priority,
+  };
 }
 
 export interface TaskEventHandlers {

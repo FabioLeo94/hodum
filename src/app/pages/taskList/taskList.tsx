@@ -6,6 +6,7 @@ import {
   createTask,
   getProjectById,
   updateTask,
+  updateTaskPriority,
   updateTaskStatus,
 } from "../../services/project/projectService";
 import { subscribeToProjectTasks } from "../../services/realtime/socketService";
@@ -13,11 +14,24 @@ import { logout } from "../../services/auth/authService";
 import TopbarComponent from "../../components/topbar/topbarComponent";
 import TaskFormModalComponent from "../../components/taskFormModal/taskFormModalComponent";
 import TaskStatusSelectComponent from "../../components/taskStatusSelect/taskStatusSelectComponent";
+import PrioritySelectComponent from "../../components/prioritySelect/prioritySelectComponent";
 import type { AssistantLayoutContext } from "../../components/protectedLayout/protectedLayoutComponent";
 import { usePageMeta } from "../../../shared/hooks/usePageMeta";
 import styles from "./taskList.module.css";
 
 const STATUS_ORDER: readonly TaskStatus[] = ["progress", "review", "completed", "rejected"];
+
+// L'ordinamento resta per fascia di stato (raggruppamento consolidato, drag&drop
+// incluso): questo controllo riordina solo ALL'INTERNO di ciascun gruppo, non lo
+// sostituisce. "none" preserva l'ordine con cui i task arrivano dal backend
+// (stabile: Array.prototype.sort non viene nemmeno chiamato in quel caso).
+type PrioritySortOrder = "none" | "urgent-first" | "urgent-last";
+
+function sortTasksByPriority(tasks: Task[], order: PrioritySortOrder): Task[] {
+  if (order === "none") return tasks;
+  const direction = order === "urgent-first" ? 1 : -1;
+  return [...tasks].sort((a, b) => (a.priority - b.priority) * direction);
+}
 
 const STATUS_LABELS: Record<TaskStatus, string> = {
   progress: "In corso",
@@ -86,8 +100,12 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
   const [loadError, setLoadError] = useState("");
   const [taskModal, setTaskModal] = useState<TaskModalState>(null);
   const [taskModalError, setTaskModalError] = useState("");
-  const [statusUpdateError, setStatusUpdateError] = useState("");
+  // Condiviso tra cambio stato e cambio priorità: entrambi sono modifiche
+  // inline nella stessa riga di tabella, un solo banner d'errore sotto la
+  // tabella evita di duplicare lo stesso meccanismo per due campi affini.
+  const [inlineUpdateError, setInlineUpdateError] = useState("");
   const [dragOverStatus, setDragOverStatus] = useState<TaskStatus | null>(null);
+  const [prioritySort, setPrioritySort] = useState<PrioritySortOrder>("none");
 
   usePageMeta({
     title: project ? project.name : "Progetto",
@@ -198,12 +216,28 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
       setProject((current) =>
         current ? replaceTaskInProject(current, updatedTask) : current,
       );
-      setStatusUpdateError("");
+      setInlineUpdateError("");
     } catch (error) {
-      setStatusUpdateError(
+      setInlineUpdateError(
         error instanceof Error
           ? error.message
           : "Impossibile aggiornare lo stato del task.",
+      );
+    }
+  }
+
+  async function handlePriorityChange(taskId: string, priority: number) {
+    try {
+      const updatedTask = await updateTaskPriority(progettoId, taskId, priority);
+      setProject((current) =>
+        current ? replaceTaskInProject(current, updatedTask) : current,
+      );
+      setInlineUpdateError("");
+    } catch (error) {
+      setInlineUpdateError(
+        error instanceof Error
+          ? error.message
+          : "Impossibile aggiornare la priorità del task.",
       );
     }
   }
@@ -308,6 +342,20 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
         </Link>
         <header className={styles.taskListHeader}>
           <h1 className={styles.taskListTitle}>{project.name}</h1>
+          <label className={styles.sortControl}>
+            <span className={styles.sortLabel}>Ordina per priorità</span>
+            <select
+              className={styles.sortSelect}
+              value={prioritySort}
+              onChange={(event) =>
+                setPrioritySort(event.target.value as PrioritySortOrder)
+              }
+            >
+              <option value="none">Nessun ordinamento</option>
+              <option value="urgent-first">Più urgenti prima</option>
+              <option value="urgent-last">Meno urgenti prima</option>
+            </select>
+          </label>
         </header>
         <div className={styles.taskTableCard}>
           <table className={styles.taskTable}>
@@ -325,10 +373,13 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
                 <th className={styles.colStatus} scope="col">
                   Stato
                 </th>
+                <th className={styles.colPriority} scope="col">
+                  Priorità
+                </th>
               </tr>
             </thead>
             {STATUS_ORDER.map((status) => {
-              const tasks = groupedTasks[status];
+              const tasks = sortTasksByPriority(groupedTasks[status], prioritySort);
               return (
                 <tbody
                   key={status}
@@ -342,7 +393,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
                   <tr>
                     <th
                       className={`${styles.groupHeaderCell} ${STATUS_STYLES[status]}`}
-                      colSpan={3}
+                      colSpan={4}
                       scope="colgroup"
                     >
                       {STATUS_LABELS[status]} ({tasks.length})
@@ -353,7 +404,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
                       <td
                         className={styles.emptyRow}
                         data-drop-target={dragOverStatus === status}
-                        colSpan={3}
+                        colSpan={4}
                       >
                         {dragOverStatus === status
                           ? "Rilascia qui per spostare il task"
@@ -411,6 +462,15 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
                             }
                           />
                         </td>
+                        <td>
+                          <PrioritySelectComponent
+                            priority={task.priority}
+                            taskTitle={task.title}
+                            onChange={(newPriority) =>
+                              handlePriorityChange(task.id, newPriority)
+                            }
+                          />
+                        </td>
                       </tr>
                     ))
                   )}
@@ -419,9 +479,9 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
             })}
           </table>
         </div>
-        {statusUpdateError && (
+        {inlineUpdateError && (
           <p role="alert" className={styles.statusUpdateError}>
-            {statusUpdateError}
+            {inlineUpdateError}
           </p>
         )}
 

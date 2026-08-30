@@ -3,10 +3,12 @@ import type { Task, TaskStatus } from '../models/task';
 import {
   createTask,
   deleteTask,
+  isValidPriority,
   listTasksByProject,
   ProjectNotFoundError,
   TaskNotFoundError,
   updateTask,
+  updateTaskPriority,
   updateTaskStatus,
 } from '../services/taskService';
 
@@ -24,6 +26,10 @@ export interface CreateTaskRequest {
 
 export interface UpdateTaskStatusRequest {
   status: TaskStatus;
+}
+
+export interface UpdateTaskPriorityRequest {
+  priority: number;
 }
 
 export interface UpdateTaskRequest {
@@ -112,6 +118,30 @@ export class TaskController extends Controller {
   ): Promise<Task | TaskErrorResponse> {
     try {
       return await updateTaskStatus(projectId, taskId, body.status);
+    } catch (err) {
+      if (err instanceof TaskNotFoundError) {
+        this.setStatus(404);
+        return { message: err.message };
+      }
+      throw err;
+    }
+  }
+
+  @Patch('{projectId}/tasks/{taskId}/priority')
+  @Response<TaskErrorResponse>(404, 'Task non trovato')
+  @Response<TaskErrorResponse>(422, 'priority non è un intero tra 1 e 10')
+  public async updateTaskPriority(
+    @Path() projectId: string,
+    @Path() taskId: string,
+    @Body() body: UpdateTaskPriorityRequest,
+  ): Promise<Task | TaskErrorResponse> {
+    if (!isValidPriority(body.priority)) {
+      this.setStatus(422);
+      return { message: 'priority deve essere un intero tra 1 (alta) e 10 (bassa)' };
+    }
+
+    try {
+      return await updateTaskPriority(projectId, taskId, body.priority);
     } catch (err) {
       if (err instanceof TaskNotFoundError) {
         this.setStatus(404);
