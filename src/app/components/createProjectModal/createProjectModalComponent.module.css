@@ -1,12 +1,12 @@
 .description {
-  margin-bottom: var(--m-md);
+  margin-bottom: var(--m-lg);
   color: var(--text-muted);
   font-size: 0.9rem;
   line-height: 1.5;
 }
 
 .submitError {
-  margin-top: var(--m-sm);
+  margin-top: var(--m-md);
   color: var(--color-danger);
   font-size: 0.9rem;
 }

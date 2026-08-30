@@ -1,4 +1,4 @@
-.inputWrapper {
+.textareaWrapper {
   display: flex;
   flex-direction: column;
   gap: var(--m-xs);
@@ -8,14 +8,17 @@
   composes: srOnly from "../../../shared/styles/fieldBase.module.css";
 }
 
-.inputBase {
+.textareaBase {
   composes: fieldBase from "../../../shared/styles/fieldBase.module.css";
+  min-height: 96px;
+  line-height: 1.5;
+  resize: vertical;
 }
 
-.inputBaseError {
+.textareaBaseError {
   composes: fieldBaseError from "../../../shared/styles/fieldBase.module.css";
 }
 
-.inputErrorMessage {
+.textareaErrorMessage {
   composes: fieldErrorMessage from "../../../shared/styles/fieldBase.module.css";
 }

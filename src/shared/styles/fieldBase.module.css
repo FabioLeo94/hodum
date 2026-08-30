@@ -1,0 +1,64 @@
+/* Stile di base condiviso dai campi testuali dell'app — input a riga singola
+   (InputComponent) e textarea multi-riga (TextareaComponent) — tramite
+   `composes` (stesso pattern di shared/styles/fabButton.module.css). Un'unica
+   fonte per sfondo, bordo, radius e stati hover/focus/errore, così i campi
+   restano visivamente coerenti ovunque compaiano: modali di creazione,
+   form di autenticazione e di registrazione.
+   Radius a --radious-sm (4px, non --radious-xs) per allinearsi ai bottoni
+   delle modali (stesso token): un campo di testo troppo squadrato stona
+   accanto a controlli più arrotondati nello stesso contesto. */
+.fieldBase {
+  background-color: var(--bg-field);
+  color: var(--text-primary);
+  padding: var(--p-sm);
+  border: 2px solid transparent;
+  border-radius: var(--radious-sm);
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.fieldBase::placeholder {
+  color: var(--text-muted);
+}
+
+.fieldBase:hover {
+  background-color: color-mix(in srgb, var(--bg-field) 85%, white 15%);
+}
+
+.fieldBase:focus {
+  border-color: var(--bg-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--bg-primary) 25%, transparent);
+}
+
+.fieldBaseError {
+  border-color: var(--color-danger);
+}
+
+.fieldBaseError:focus {
+  border-color: var(--color-danger);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-danger) 25%, transparent);
+}
+
+.fieldErrorMessage {
+  color: var(--color-danger);
+  font-size: 0.85rem;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fieldBase {
+    transition: none;
+  }
+}

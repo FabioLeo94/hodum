@@ -25,7 +25,7 @@
   justify-content: space-between;
   gap: var(--m-md);
   flex-shrink: 0;
-  padding: var(--p-md) var(--p-lg);
+  padding: var(--p-md) var(--p-xl);
   border-bottom: 1px solid rgba(0, 0, 0, 0.15);
   color: var(--text-on-primary);
 }
@@ -93,7 +93,7 @@
 .content {
   flex: 1;
   min-height: 0;
-  padding: var(--p-lg);
+  padding: var(--p-xl);
   overflow-y: auto;
   font-size: 0.95rem;
   line-height: 1.5;
@@ -106,7 +106,7 @@
   justify-content: flex-end;
   gap: var(--m-md);
   flex-shrink: 0;
-  padding: var(--p-md) var(--p-lg);
+  padding: var(--p-md) var(--p-xl);
   border-top: 1px solid var(--bg-field);
 }
 
@@ -121,5 +121,19 @@
     width: 100vw;
     max-height: 100vh;
     border-radius: 0;
+  }
+
+  /* Su schermi molto stretti la modale occupa tutto lo schermo: l'inset
+     più ampio del desktop (--p-xl) sottrarrebbe spazio utile ai campi,
+     quindi torna a --p-lg mantenendo comunque topBar/content/bottomBar
+     allineati fra loro. */
+  .topBar,
+  .bottomBar {
+    padding-right: var(--p-lg);
+    padding-left: var(--p-lg);
+  }
+
+  .content {
+    padding: var(--p-lg);
   }
 }

@@ -1,5 +1,5 @@
 .submitError {
-  margin-top: var(--m-sm);
+  margin-top: var(--m-md);
   color: var(--color-danger);
   font-size: 0.9rem;
 }

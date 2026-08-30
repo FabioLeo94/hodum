@@ -1,6 +1,7 @@
 import { useState } from "react";
 import ModalBaseComponent from "../modalBase/modalBaseComponent";
 import InputComponent from "../input/inputComponent";
+import TextareaComponent from "../textarea/textareaComponent";
 import ButtonComponent from "../button/buttonComponent";
 import styles from "./taskFormModalComponent.module.css";
 
@@ -117,14 +118,14 @@ function TaskFormModalComponent({
         error={titleError}
       />
       <div className={styles.fieldSpacing}>
-        <InputComponent
-          type="text"
+        <TextareaComponent
           name="taskDescription"
           label="Descrizione del task"
           placeholder="Es. Il form non valida l'email"
           value={description}
           onChange={(event) => setDescription(event.target.value)}
           autoComplete="off"
+          rows={4}
         />
       </div>
       {submitError && (
