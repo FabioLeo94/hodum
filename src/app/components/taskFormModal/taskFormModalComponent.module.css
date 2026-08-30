@@ -10,43 +10,9 @@
 }
 
 .submitError {
-  margin-top: var(--m-md);
-  color: var(--color-danger);
-  font-size: 0.9rem;
+  composes: submitError from "../../../shared/styles/modalForm.module.css";
 }
 
 .cancelButton {
-  padding: var(--p-sm) var(--p-lg);
-  border-radius: var(--radious-sm);
-  color: var(--text-muted);
-  font-weight: 600;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition:
-    background-color 150ms ease,
-    color 150ms ease;
-}
-
-.cancelButton:hover {
-  background-color: var(--bg-field);
-  color: var(--text-primary);
-}
-
-.cancelButton:focus-visible {
-  outline: 2px solid var(--bg-primary);
-  outline-offset: 2px;
-}
-
-.cancelButton:active {
-  transform: scale(0.97);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .cancelButton {
-    transition: none;
-  }
-
-  .cancelButton:active {
-    transform: none;
-  }
+  composes: cancelButton from "../../../shared/styles/modalForm.module.css";
 }
