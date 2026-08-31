@@ -2,8 +2,8 @@ import { useState } from "react";
 import styles from "./registerFormComponent.module.css";
 import InputComponent from "../input/inputComponent";
 import ButtonComponent from "../button/buttonComponent";
-import { createUser } from "../../services/user/userService";
-import { login, persistSession } from "../../services/auth/authService";
+import { registerCompany } from "../../services/company/companyService";
+import { persistSession } from "../../services/auth/authService";
 import {
   validateEmail,
   validatePassword,
@@ -12,6 +12,7 @@ import { useNavigate } from "react-router";
 
 function RegisterFormComponent() {
   const navigate = useNavigate();
+  const [companyName, setCompanyName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,6 +20,11 @@ function RegisterFormComponent() {
   const [formError, setFormError] = useState("");
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const companyNameError =
+    submitAttempted && companyName.trim() === ""
+      ? "Inserire il nome dell'azienda."
+      : "";
 
   const usernameError =
     submitAttempted && username.trim() === "" ? "Inserire uno username." : "";
@@ -48,6 +54,7 @@ function RegisterFormComponent() {
     setSubmitAttempted(true);
 
     const isValid =
+      companyName.trim() !== "" &&
       username.trim() !== "" &&
       validateEmail(email) &&
       validatePassword(password) &&
@@ -59,14 +66,12 @@ function RegisterFormComponent() {
 
     setIsSubmitting(true);
     try {
-      await createUser({ username, email, password });
-      const token = await login(email, password);
-      if (!token) {
-        setFormError(
-          "Registrazione riuscita, ma l'accesso automatico non è andato a buon fine. Prova ad accedere manualmente.",
-        );
-        return;
-      }
+      const { token } = await registerCompany({
+        companyName,
+        username,
+        email,
+        password,
+      });
       persistSession(token, true);
       navigate("/dashboard");
     } catch (error) {
@@ -82,6 +87,17 @@ function RegisterFormComponent() {
 
   return (
     <form className={styles.registerForm} onSubmit={handleSubmit} noValidate>
+      <InputComponent
+        type="text"
+        name="companyName"
+        label="Nome azienda"
+        placeholder="Nome azienda"
+        value={companyName}
+        onChange={(event) => setCompanyName(event.target.value)}
+        autoComplete="organization"
+        required
+        error={companyNameError}
+      />
       <InputComponent
         type="text"
         name="username"

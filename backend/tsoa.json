@@ -14,6 +14,12 @@
         "name": "Authorization",
         "in": "header",
         "description": "Token di sessione: 'Bearer <token>' ottenuto da POST /auth/login"
+      },
+      "owner": {
+        "type": "apiKey",
+        "name": "Authorization",
+        "in": "header",
+        "description": "Stesso token di 'jwt', ma la rotta richiede inoltre role === 'owner' (verificato in expressAuthentication)"
       }
     }
   },

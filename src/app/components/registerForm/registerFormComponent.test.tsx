@@ -12,23 +12,17 @@ function jsonResponse(status: number, body: unknown): Response {
   } as Response;
 }
 
-// Il submit di successo fa due chiamate in sequenza: POST /users (creazione)
-// e POST /auth/login (per ottenere un token vero, vedi registerFormComponent.tsx).
-function mockCreateThenLoginSuccess(): void {
-  vi.mocked(fetch).mockImplementation((input) => {
-    const url = typeof input === "string" ? input : input.toString();
-    if (url.endsWith("/auth/login")) {
-      return Promise.resolve(
-        jsonResponse(200, {
-          user: { id: "1", username: "mario", email: "mario@example.com" },
-          token: "signed-jwt-token",
-        }),
-      );
-    }
-    return Promise.resolve(
-      jsonResponse(201, { id: "1", username: "mario", email: "mario@example.com" }),
-    );
-  });
+// Il submit di successo fa una sola chiamata: POST /companies crea azienda +
+// owner e restituisce già il token di sessione (vedi companyService.ts),
+// niente più POST /auth/login separata.
+function mockRegisterCompanySuccess(): void {
+  vi.mocked(fetch).mockResolvedValue(
+    jsonResponse(201, {
+      user: { id: "1", username: "mario", email: "mario@example.com", companyId: "10", role: "owner" },
+      company: { id: "10", name: "Acme", ownerId: "1" },
+      token: "signed-jwt-token",
+    }),
+  );
 }
 
 function renderForm() {
@@ -37,6 +31,24 @@ function renderForm() {
       <RegisterFormComponent />
     </MemoryRouter>,
   );
+}
+
+async function fillValidForm(): Promise<void> {
+  fireEvent.change(screen.getByPlaceholderText("Nome azienda"), {
+    target: { value: "Acme" },
+  });
+  fireEvent.change(screen.getByPlaceholderText("Username"), {
+    target: { value: "mario" },
+  });
+  fireEvent.change(screen.getByPlaceholderText("Email"), {
+    target: { value: "mario@example.com" },
+  });
+  fireEvent.change(screen.getByPlaceholderText("Password"), {
+    target: { value: "Password1" },
+  });
+  fireEvent.change(screen.getByPlaceholderText("Conferma password"), {
+    target: { value: "Password1" },
+  });
 }
 
 describe("RegisterFormComponent", () => {
@@ -49,8 +61,9 @@ describe("RegisterFormComponent", () => {
     vi.unstubAllGlobals();
   });
 
-  it("renders the four fields: username, email, password, confirm password", () => {
+  it("renders the five fields: company name, username, email, password, confirm password", () => {
     renderForm();
+    expect(screen.getByPlaceholderText("Nome azienda")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Username")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Email")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Password")).toBeInTheDocument();
@@ -62,8 +75,9 @@ describe("RegisterFormComponent", () => {
     fireEvent.click(screen.getByText("Registrati"));
 
     expect(
-      await screen.findByText("Inserire uno username."),
+      await screen.findByText("Inserire il nome dell'azienda."),
     ).toBeInTheDocument();
+    expect(screen.getByText("Inserire uno username.")).toBeInTheDocument();
     expect(screen.getByText("Inserire una email valida.")).toBeInTheDocument();
     expect(
       screen.getByText(
@@ -74,6 +88,9 @@ describe("RegisterFormComponent", () => {
 
   it("shows a mismatch error when password and confirm password differ", async () => {
     renderForm();
+    fireEvent.change(screen.getByPlaceholderText("Nome azienda"), {
+      target: { value: "Acme" },
+    });
     fireEvent.change(screen.getByPlaceholderText("Username"), {
       target: { value: "mario" },
     });
@@ -103,18 +120,7 @@ describe("RegisterFormComponent", () => {
     );
     renderForm();
 
-    fireEvent.change(screen.getByPlaceholderText("Username"), {
-      target: { value: "mario" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("Email"), {
-      target: { value: "mario@example.com" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("Password"), {
-      target: { value: "Password1" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("Conferma password"), {
-      target: { value: "Password1" },
-    });
+    await fillValidForm();
     fireEvent.click(screen.getByText("Registrati"));
 
     const submitButton = await screen.findByRole("button", {
@@ -123,7 +129,11 @@ describe("RegisterFormComponent", () => {
     expect(submitButton).toBeDisabled();
 
     resolveFetch(
-      jsonResponse(201, { id: "1", username: "mario", email: "mario@example.com" }),
+      jsonResponse(201, {
+        user: { id: "1", username: "mario", email: "mario@example.com", companyId: "10", role: "owner" },
+        company: { id: "10", name: "Acme", ownerId: "1" },
+        token: "signed-jwt-token",
+      }),
     );
     await waitFor(() =>
       expect(
@@ -132,29 +142,18 @@ describe("RegisterFormComponent", () => {
     );
   });
 
-  it("calls createUser, persists the session and navigates on success", async () => {
-    mockCreateThenLoginSuccess();
+  it("calls registerCompany, persists the session and navigates on success", async () => {
+    mockRegisterCompanySuccess();
     renderForm();
 
-    fireEvent.change(screen.getByPlaceholderText("Username"), {
-      target: { value: "mario" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("Email"), {
-      target: { value: "mario@example.com" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("Password"), {
-      target: { value: "Password1" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("Conferma password"), {
-      target: { value: "Password1" },
-    });
+    await fillValidForm();
     fireEvent.click(screen.getByText("Registrati"));
 
     await vi.waitFor(() =>
       expect(localStorage.getItem(AUTH_TOKEN_KEY)).toBe("signed-jwt-token"),
     );
     expect(fetch).toHaveBeenCalledWith(
-      "http://localhost:3000/users",
+      "http://localhost:3000/companies",
       expect.objectContaining({ method: "POST" }),
     );
   });
@@ -165,18 +164,7 @@ describe("RegisterFormComponent", () => {
     );
     renderForm();
 
-    fireEvent.change(screen.getByPlaceholderText("Username"), {
-      target: { value: "mario" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("Email"), {
-      target: { value: "mario@example.com" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("Password"), {
-      target: { value: "Password1" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("Conferma password"), {
-      target: { value: "Password1" },
-    });
+    await fillValidForm();
     fireEvent.click(screen.getByText("Registrati"));
 
     expect(

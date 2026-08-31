@@ -1,16 +1,9 @@
 import type { Request as ExRequest } from 'express';
-import { Body, Controller, Delete, Get, Path, Post, Put, Request, Response, Route, Security, SuccessResponse } from 'tsoa';
+import { Body, Controller, Delete, Get, Path, Put, Request, Response, Route, Security, SuccessResponse } from 'tsoa';
 import { getAuthenticatedUser } from '../middleware/authentication';
 import type { User } from '../models/user';
-import {
-  createUser,
-  deleteUser,
-  getUserById,
-  listUsers,
-  UserConflictError,
-  UserNotFoundError,
-  updateUser,
-} from '../services/userService';
+import { deleteUser, getUserById, listUsers, UserConflictError, UserNotFoundError, updateUser } from '../services/userService';
+import { isValidEmail, isValidPassword, PASSWORD_POLICY_MESSAGE } from '../utils/validation';
 
 // Corpo di risposta per gli esiti di errore documentati via @Response: stessa
 // forma { message } già usata dall'error handler globale in app.ts, per
@@ -23,43 +16,11 @@ interface UserErrorResponse {
   message: string;
 }
 
-export interface CreateUserRequest {
-  username: string;
-  email: string;
-  password: string;
-}
-
 export interface UpdateUserRequest {
   username?: string;
   email?: string;
   password?: string;
 }
-
-// Stessa forma richiesta lato frontend (vedi validationService.ts): non RFC
-// completa, ma scarta i casi palesemente sbagliati prima del vincolo UNIQUE
-// del DB, con lo stesso standard applicato client-side.
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-function isValidEmail(email: string): boolean {
-  return EMAIL_REGEX.test(email);
-}
-
-// Stessa policy applicata lato frontend in validationService.ts: replicata
-// qui perché chi chiama l'API direttamente (non solo il form di registrazione)
-// deve rispettare lo stesso standard, non solo chi passa dalla UI.
-const PASSWORD_MIN_LENGTH = 8;
-
-function isValidPassword(password: string): boolean {
-  return (
-    password.length >= PASSWORD_MIN_LENGTH &&
-    /[a-z]/.test(password) &&
-    /[A-Z]/.test(password) &&
-    /[0-9]/.test(password)
-  );
-}
-
-const PASSWORD_POLICY_MESSAGE =
-  'password deve avere almeno 8 caratteri, con almeno una maiuscola, una minuscola e un numero';
 
 // Un id che non combacia con l'utente autenticato (né come "sé stesso" né come
 // collega della stessa azienda) risponde 404, non 403: stesso principio già
@@ -102,43 +63,6 @@ export class UserController extends Controller {
     } catch (err) {
       if (err instanceof UserNotFoundError) {
         this.setStatus(404);
-        return { message: err.message };
-      }
-      throw err;
-    }
-  }
-
-  // Endpoint pubblico deliberatamente: è il flusso di registrazione (vedi
-  // registerFormComponent.tsx), l'unico che deve restare raggiungibile senza
-  // una sessione già attiva.
-  @Post()
-  @SuccessResponse(201, 'User creato')
-  @Response<UserErrorResponse>(422, 'username, email o password non validi')
-  @Response<UserErrorResponse>(409, 'username o email già in uso')
-  public async createUser(@Body() body: CreateUserRequest): Promise<User | UserErrorResponse> {
-    // tsoa valida che i campi siano stringhe (non opzionali), ma non che non
-    // siano vuote o abbiano una forma minima: regole di dominio, non di
-    // forma, quindi restano responsabilità del controller.
-    if (body.username.trim().length === 0) {
-      this.setStatus(422);
-      return { message: 'username non può essere vuoto' };
-    }
-    if (!isValidEmail(body.email)) {
-      this.setStatus(422);
-      return { message: 'email non valida' };
-    }
-    if (!isValidPassword(body.password)) {
-      this.setStatus(422);
-      return { message: PASSWORD_POLICY_MESSAGE };
-    }
-
-    try {
-      const user = await createUser({ username: body.username, email: body.email, password: body.password });
-      this.setStatus(201);
-      return user;
-    } catch (err) {
-      if (err instanceof UserConflictError) {
-        this.setStatus(409);
         return { message: err.message };
       }
       throw err;

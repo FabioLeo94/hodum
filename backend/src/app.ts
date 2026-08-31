@@ -4,7 +4,7 @@ import rateLimit from 'express-rate-limit';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ValidateError } from 'tsoa';
-import { AuthenticationError } from './middleware/authentication';
+import { AuthenticationError, AuthorizationError } from './middleware/authentication';
 import { RegisterRoutes } from './routes/routes';
 import { InvalidSessionTokenError } from './services/tokenService';
 
@@ -98,6 +98,12 @@ export async function createApp(): Promise<Express> {
       // messaggio interno di expressAuthentication invece di un errore
       // generico.
       res.status(401).json({ message: err.message });
+      return;
+    }
+
+    if (err instanceof AuthorizationError) {
+      // Identità accertata (401 non si applica) ma ruolo insufficiente: 403.
+      res.status(403).json({ message: err.message });
       return;
     }
 
