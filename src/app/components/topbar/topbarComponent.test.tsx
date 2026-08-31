@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import TopbarComponent from "./topbarComponent";
@@ -13,6 +13,14 @@ function renderTopbar(
       <TopbarComponent onLogout={onLogout} />
     </MemoryRouter>,
   );
+}
+
+function jsonResponse(status: number, body: unknown): Response {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: () => Promise.resolve(body),
+  } as Response;
 }
 
 function storeUser(role: "owner" | "employee") {
@@ -162,5 +170,110 @@ describe("TopbarComponent", () => {
 
     fireEvent.pointerDown(screen.getByText("Fuori"));
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  describe("menu Progetti", () => {
+    beforeEach(() => {
+      vi.stubGlobal("fetch", vi.fn());
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it("non fa alcuna richiesta finché il menu non viene aperto", () => {
+      renderTopbar();
+      expect(fetch).not.toHaveBeenCalled();
+    });
+
+    it("apre il menu e mostra i progetti al click sul bottone", async () => {
+      vi.mocked(fetch).mockResolvedValue(
+        jsonResponse(200, [
+          { id: "1", name: "Progetto Alpha", isActive: true },
+          { id: "2", name: "Progetto Beta", isActive: true },
+        ]),
+      );
+      renderTopbar();
+
+      fireEvent.click(screen.getByRole("button", { name: /Progetti/ }));
+
+      expect(await screen.findByRole("menuitem", { name: "Progetto Alpha" })).toHaveAttribute(
+        "href",
+        "/dashboard/1/task-list",
+      );
+      expect(screen.getByRole("menuitem", { name: "Progetto Beta" })).toBeInTheDocument();
+    });
+
+    it("mostra un messaggio quando non ci sono progetti", async () => {
+      vi.mocked(fetch).mockResolvedValue(jsonResponse(200, []));
+      renderTopbar();
+
+      fireEvent.click(screen.getByRole("button", { name: /Progetti/ }));
+
+      expect(await screen.findByText("Nessun progetto")).toBeInTheDocument();
+    });
+
+    it("mostra un errore quando il caricamento fallisce", async () => {
+      vi.mocked(fetch).mockResolvedValue(jsonResponse(500, { message: "Errore server" }));
+      renderTopbar();
+
+      fireEvent.click(screen.getByRole("button", { name: /Progetti/ }));
+
+      expect(await screen.findByRole("alert")).toHaveTextContent("Errore server");
+    });
+
+    it("chiude il menu e naviga al click su un progetto", async () => {
+      vi.mocked(fetch).mockResolvedValue(
+        jsonResponse(200, [{ id: "1", name: "Progetto Alpha", isActive: true }]),
+      );
+      renderTopbar();
+
+      fireEvent.click(screen.getByRole("button", { name: /Progetti/ }));
+      fireEvent.click(await screen.findByRole("menuitem", { name: "Progetto Alpha" }));
+
+      expect(screen.queryByRole("menu", { name: "Progetti" })).not.toBeInTheDocument();
+    });
+
+    it("chiude il menu Progetti quando si preme Escape", async () => {
+      vi.mocked(fetch).mockResolvedValue(jsonResponse(200, []));
+      renderTopbar();
+
+      fireEvent.click(screen.getByRole("button", { name: /Progetti/ }));
+      expect(await screen.findByText("Nessun progetto")).toBeInTheDocument();
+
+      fireEvent.keyDown(document, { key: "Escape" });
+      expect(screen.queryByRole("menu", { name: "Progetti" })).not.toBeInTheDocument();
+    });
+  });
+
+  describe("nome del progetto attivo", () => {
+    beforeEach(() => {
+      vi.stubGlobal("fetch", vi.fn());
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it("non mostra alcuna etichetta fuori da una pagina di progetto", () => {
+      renderTopbar(() => {}, "/dashboard");
+      expect(fetch).not.toHaveBeenCalled();
+    });
+
+    it("mostra il nome del progetto quando risolto", async () => {
+      vi.mocked(fetch).mockResolvedValue(
+        jsonResponse(200, { id: "1", name: "Progetto Alpha", isActive: true }),
+      );
+      renderTopbar(() => {}, "/dashboard/1/task-list");
+
+      expect(await screen.findByText("Progetto Alpha")).toBeInTheDocument();
+    });
+
+    it("mostra un placeholder mentre il nome è in corso di risoluzione", () => {
+      vi.mocked(fetch).mockReturnValue(new Promise(() => {}));
+      renderTopbar(() => {}, "/dashboard/1/task-list");
+
+      expect(screen.getByText("Progetto")).toBeInTheDocument();
+    });
   });
 });

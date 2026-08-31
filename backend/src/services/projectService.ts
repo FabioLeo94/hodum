@@ -29,14 +29,18 @@ export class MissingCompanyError extends Error {
 }
 
 // Forma della riga così come esce da pg: snake_case, coerente con lo schema
-// in migrations/0002_baseline_schema_esistente.sql.
-interface ProjectRow {
+// in migrations/0002_baseline_schema_esistente.sql. Esportata (con toProject
+// sotto) per projectAssignmentService.ts, che restituisce Project[] a partire
+// da una query diversa (JOIN su project_assignments) ma con la stessa forma di
+// riga — stesso pattern già in uso da userService.ts con UserRow/toUser per
+// companyService.ts.
+export interface ProjectRow {
   id: string;
   name: string;
   is_active: boolean;
 }
 
-function toProject(row: ProjectRow): Project {
+export function toProject(row: ProjectRow): Project {
   return { id: row.id, name: row.name, isActive: row.is_active };
 }
 
@@ -52,7 +56,22 @@ function toProject(row: ProjectRow): Project {
 // anche quel varco è il punto 4 del task ("Guardia di autorizzazione
 // trasversale", esplicitamente su projects **e tasks**) — qui (punto 3) si
 // scopa solo l'endpoint /projects, non a caso quello nominato dal task.
-export async function listProjects(companyId?: string | null): Promise<Project[]> {
+// assignedToUserId (task "Gestione del dipendente"): se presente, restringe
+// ulteriormente ai soli progetti assegnati a quell'utente in
+// project_assignments, tramite JOIN invece del semplice filtro su
+// company_id — è il caso della dashboard di un dipendente, che deve vedere
+// solo i progetti a lui assegnati, non tutti quelli della company.
+export async function listProjects(companyId?: string | null, assignedToUserId?: string): Promise<Project[]> {
+  if (assignedToUserId !== undefined) {
+    const result = await pool.query<ProjectRow>(
+      `SELECT p.id, p.name, p.is_active FROM projects p
+       JOIN project_assignments pa ON pa.project_id = p.id
+       WHERE p.company_id = $1 AND pa.user_id = $2
+       ORDER BY p.name`,
+      [companyId, assignedToUserId],
+    );
+    return result.rows.map(toProject);
+  }
   if (companyId === undefined) {
     const result = await pool.query<ProjectRow>('SELECT id, name, is_active FROM projects ORDER BY name');
     return result.rows.map(toProject);

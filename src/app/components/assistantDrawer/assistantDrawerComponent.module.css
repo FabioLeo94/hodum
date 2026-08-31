@@ -22,6 +22,13 @@
     transform 150ms ease;
 }
 
+/* Nessun FAB locale sulla pagina corrente (es. dashboard vista da un
+   dipendente): l'icona scivola nell'angolo che il FAB avrebbe occupato,
+   invece di lasciare vuoto lo spazio riservato ad esso. */
+.toggleButton[data-has-local-fab="false"] {
+  right: var(--p-xl);
+}
+
 .toggleButton[aria-expanded="true"] {
   right: calc(var(--assistant-panel-width) + var(--p-xl));
   background-color: var(--bg-primary);

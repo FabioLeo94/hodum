@@ -40,6 +40,7 @@
   font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
+  cursor: pointer;
   padding: var(--p-sm) var(--p-md);
   border-radius: var(--radious-sm);
   transition:
@@ -55,6 +56,134 @@
 .navItem:focus-visible {
   outline: 2px solid var(--bg-primary);
   outline-offset: 2px;
+}
+
+/* Trigger "Progetti": data-active segna che si è dentro una pagina di
+   progetto (task-list) senza essere una corrispondenza di rotta esatta come
+   Dashboard/Dipendenti, quindi riceve solo la tinta menta del testo, non il
+   riempimento pieno di .navItemActive - resta un ingresso di menu, non una
+   voce "pagina corrente". aria-expanded="true" (menu aperto) riusa lo stesso
+   sfondo dell'hover, così il bottone si legge "premuto" con lo stesso
+   linguaggio già noto. */
+.navItem[data-active="true"] {
+  color: var(--bg-primary);
+}
+
+.navItem[aria-expanded="true"] {
+  background-color: var(--bg-field);
+}
+
+.projectsMenuArea {
+  position: relative;
+}
+
+.chevronIcon {
+  margin-left: var(--m-xs);
+  transition: transform 150ms ease;
+}
+
+.chevronIcon[data-open="true"] {
+  transform: rotate(180deg);
+}
+
+/* position: fixed con top/left impostati via JS (vedi topbarComponent.tsx):
+   il pannello è in portal su document.body, fuori da .nav, che tiene
+   overflow-x: auto per restare scrollabile su viewport stretti - il browser
+   forza però anche overflow-y ad "auto" in quel caso, quindi qualunque figlio
+   assoluto sporgente da .nav verrebbe tagliato. */
+.projectsMenu {
+  position: fixed;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-xs);
+  width: max-content;
+  min-width: 220px;
+  max-width: 280px;
+  max-height: 320px;
+  padding: var(--p-sm);
+  overflow-y: auto;
+  border-radius: var(--radious-md);
+  background-color: var(--bg-surface);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  animation: menuPopIn 140ms ease both;
+  scrollbar-width: thin;
+}
+
+.projectsMenuItem {
+  display: block;
+  overflow: hidden;
+  padding: var(--p-sm) var(--p-md);
+  border-radius: var(--radious-sm);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: background-color 150ms ease;
+}
+
+.projectsMenuItem:hover {
+  background-color: var(--bg-field);
+}
+
+.projectsMenuItem:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: -2px;
+}
+
+/* Stesso principio cromatico di .activeProjectLabel (ambra, non menta): il
+   progetto aperto nel dropdown è un tag di contesto legato a quella label,
+   non uno stato di navigazione "pagina corrente" come .navItemActive. */
+.projectsMenuItem[aria-current="true"] {
+  color: var(--color-warning);
+  font-weight: 700;
+  background-color: color-mix(in srgb, var(--color-warning) 14%, transparent);
+}
+
+.projectsMenuItem[aria-current="true"]:hover {
+  background-color: color-mix(in srgb, var(--color-warning) 22%, transparent);
+}
+
+.projectsMenuStatus {
+  padding: var(--p-md);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.projectsMenuStatus[role="alert"] {
+  color: var(--color-danger);
+}
+
+/* Etichetta di contesto (nome del progetto aperto), non un link e non uno
+   stato di navigazione: colore ambra (--color-warning, già nella palette,
+   usato altrove per stati "in revisione"/priorità media) invece della menta
+   già occupata da .navItemActive, così le due categorie restano
+   distinguibili anche per chi non percepisce bene il colore. Il bordo e la
+   forma a pillola (non un riempimento pieno come i badge di stato) più il
+   pallino non affidano il significato al solo colore. */
+.activeProjectLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--m-xs);
+  color: var(--color-warning);
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+  padding: var(--p-xs) var(--p-md) var(--p-xs) var(--p-sm);
+  border: 1px solid color-mix(in srgb, var(--color-warning) 40%, transparent);
+  border-radius: var(--radious-xl);
+  background-color: color-mix(in srgb, var(--color-warning) 10%, transparent);
+}
+
+.activeProjectLabel::before {
+  content: "";
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--color-warning);
 }
 
 /* La voce attiva non è cliccabile (è uno <span>, non un <Link>): la
@@ -191,6 +320,14 @@
   .menu {
     animation: none;
   }
+
+  .chevronIcon {
+    transition: none;
+  }
+
+  .projectsMenu {
+    animation: none;
+  }
 }
 
 @media (max-width: 400px) {
@@ -208,7 +345,25 @@
     padding: var(--p-xs) var(--p-sm);
   }
 
-  .logo {
-    font-size: 0.95rem;
+  .activeProjectLabel {
+    padding: var(--p-xs) var(--p-sm) var(--p-xs) var(--p-xs);
+    font-size: 0.72rem;
+  }
+
+  .chevronIcon {
+    width: 12px;
+    height: 12px;
+  }
+
+  /* Con la nav già scorrevole a questa larghezza, il pannello va comunque
+     tenuto entro il viewport residuo (padding topbar + un margine di
+     sicurezza) invece del max-width fisso da desktop. */
+  .projectsMenu {
+    min-width: 180px;
+    max-width: calc(100vw - 2 * var(--p-md) - 8px);
+  }
+
+  .projectsMenuItem {
+    font-size: 0.82rem;
   }
 }

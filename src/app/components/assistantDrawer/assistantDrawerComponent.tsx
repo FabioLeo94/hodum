@@ -45,6 +45,10 @@ interface ChatEntry extends AssistantMessage {
 
 interface Prop {
   isOpen: boolean;
+  // Quando la pagina corrente non ha un FAB "+" locale (es. la dashboard vista
+  // da un dipendente, che non può creare progetti), il pulsante scivola nello
+  // spazio che il FAB avrebbe occupato invece di lasciarlo vuoto.
+  hasLocalFab: boolean;
   onToggle: () => void;
 }
 
@@ -55,7 +59,7 @@ const BOTTOM_THRESHOLD_PX = 24;
 // Montato una sola volta da ProtectedLayoutComponent, fuori dall'Outlet: la
 // conversazione (messages, input) sopravvive alla navigazione tra pagine,
 // che invece rimonta solo il contenuto dell'Outlet.
-function AssistantDrawerComponent({ isOpen, onToggle }: Prop) {
+function AssistantDrawerComponent({ isOpen, hasLocalFab, onToggle }: Prop) {
   const panelId = useId();
   const navigate = useNavigate();
   const location = useLocation();
@@ -202,6 +206,7 @@ function AssistantDrawerComponent({ isOpen, onToggle }: Prop) {
       <button
         type="button"
         className={styles.toggleButton}
+        data-has-local-fab={hasLocalFab}
         aria-label={isOpen ? "Chiudi l'assistente" : "Apri l'assistente"}
         aria-haspopup="dialog"
         aria-expanded={isOpen}

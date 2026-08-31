@@ -11,6 +11,7 @@ import {
   ProjectNotFoundError,
   updateProject,
 } from '../services/projectService';
+import { assertProjectAccessible } from '../services/projectAssignmentService';
 
 // Corpo di risposta per gli esiti di errore documentati via @Response: stessa
 // forma { message } già usata dall'error handler globale in app.ts, per
@@ -37,6 +38,11 @@ export class ProjectController extends Controller {
   @Security('jwt')
   public async listProjects(@Request() request: ExRequest): Promise<Project[]> {
     const user = getAuthenticatedUser(request);
+    // Un dipendente vede solo i progetti a lui assegnati (task "Gestione del
+    // dipendente"), l'owner vede tutti i progetti della company come prima.
+    if (user.role === 'employee') {
+      return listProjects(user.companyId, user.id);
+    }
     return listProjects(user.companyId);
   }
 
@@ -46,7 +52,12 @@ export class ProjectController extends Controller {
   public async getProject(@Path() id: string, @Request() request: ExRequest): Promise<Project | ErrorResponse> {
     const user = getAuthenticatedUser(request);
     try {
-      return await getProjectById(id, user.companyId);
+      const project = await getProjectById(id, user.companyId);
+      // Un dipendente non assegnato a questo progetto lo trova indistinguibile
+      // da un progetto inesistente, stesso principio del cross-tenant sopra
+      // (vedi assertProjectAccessible in projectAssignmentService.ts).
+      await assertProjectAccessible(id, user);
+      return project;
     } catch (err) {
       if (err instanceof ProjectNotFoundError) {
         this.setStatus(404);
@@ -57,7 +68,7 @@ export class ProjectController extends Controller {
   }
 
   @Post()
-  @Security('jwt')
+  @Security('owner')
   @SuccessResponse(201, 'Project creato')
   @Response<ErrorResponse>(422, 'name mancante o vuoto')
   @Response<ErrorResponse>(403, "L'utente non è associato a nessuna azienda")
@@ -88,7 +99,7 @@ export class ProjectController extends Controller {
   }
 
   @Put('{id}')
-  @Security('jwt')
+  @Security('owner')
   @Response<ErrorResponse>(404, 'Project non trovato')
   @Response<ErrorResponse>(422, 'name presente ma vuoto')
   public async updateProject(
@@ -114,7 +125,7 @@ export class ProjectController extends Controller {
   }
 
   @Delete('{id}')
-  @Security('jwt')
+  @Security('owner')
   @SuccessResponse(204, 'Project eliminato')
   @Response<ErrorResponse>(404, 'Project non trovato')
   public async deleteProject(@Path() id: string, @Request() request: ExRequest): Promise<void> {

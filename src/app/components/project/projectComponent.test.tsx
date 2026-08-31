@@ -17,11 +17,12 @@ const mockProject: Project = {
   ],
 };
 
-function renderProject() {
+function renderProject(canManage = true) {
   return render(
     <MemoryRouter>
       <ProjectComponent
         {...mockProject}
+        canManage={canManage}
         onRenameProject={vi.fn()}
         onDeleteProject={vi.fn()}
       />
@@ -59,5 +60,18 @@ describe("ProjectComponent", () => {
     expect(
       screen.getByRole("button", { name: "Elimina progetto Progetto Demo" }),
     ).toBeInTheDocument();
+  });
+
+  it("hides rename/delete/kebab actions when canManage is false", () => {
+    renderProject(false);
+    expect(
+      screen.queryByRole("button", { name: "Rinomina progetto Progetto Demo" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Elimina progetto Progetto Demo" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Altre azioni per Progetto Demo" }),
+    ).not.toBeInTheDocument();
   });
 });

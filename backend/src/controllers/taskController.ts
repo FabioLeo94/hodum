@@ -13,6 +13,7 @@ import {
   updateTaskPriority,
   updateTaskStatus,
 } from '../services/taskService';
+import { assertProjectAccessible } from '../services/projectAssignmentService';
 
 // Nome distinto da "ErrorResponse" di projectController.ts: tsoa risolve i
 // modelli per nome dell'interfaccia a livello globale (non per file), quindi
@@ -53,6 +54,7 @@ export class TaskController extends Controller {
   ): Promise<Task[] | TaskErrorResponse> {
     const user = getAuthenticatedUser(request);
     try {
+      await assertProjectAccessible(projectId, user);
       return await listTasksByProject(projectId, user.companyId);
     } catch (err) {
       if (err instanceof ProjectNotFoundError) {
@@ -83,6 +85,7 @@ export class TaskController extends Controller {
 
     const user = getAuthenticatedUser(request);
     try {
+      await assertProjectAccessible(projectId, user);
       const task = await createTask(projectId, { title: body.title, description: body.description }, user.companyId);
       this.setStatus(201);
       return task;
@@ -112,6 +115,7 @@ export class TaskController extends Controller {
 
     const user = getAuthenticatedUser(request);
     try {
+      await assertProjectAccessible(projectId, user);
       return await updateTask(projectId, taskId, body, user.companyId);
     } catch (err) {
       if (err instanceof TaskNotFoundError || err instanceof ProjectNotFoundError) {
@@ -133,6 +137,7 @@ export class TaskController extends Controller {
   ): Promise<Task | TaskErrorResponse> {
     const user = getAuthenticatedUser(request);
     try {
+      await assertProjectAccessible(projectId, user);
       return await updateTaskStatus(projectId, taskId, body.status, user.companyId);
     } catch (err) {
       if (err instanceof TaskNotFoundError || err instanceof ProjectNotFoundError) {
@@ -160,6 +165,7 @@ export class TaskController extends Controller {
 
     const user = getAuthenticatedUser(request);
     try {
+      await assertProjectAccessible(projectId, user);
       return await updateTaskPriority(projectId, taskId, body.priority, user.companyId);
     } catch (err) {
       if (err instanceof TaskNotFoundError || err instanceof ProjectNotFoundError) {
@@ -181,6 +187,7 @@ export class TaskController extends Controller {
   ): Promise<void> {
     const user = getAuthenticatedUser(request);
     try {
+      await assertProjectAccessible(projectId, user);
       await deleteTask(projectId, taskId, user.companyId);
       this.setStatus(204);
     } catch (err) {

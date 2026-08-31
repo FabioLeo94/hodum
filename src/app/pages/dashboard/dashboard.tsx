@@ -11,7 +11,7 @@ import {
   updateProject,
 } from "../../services/project/projectService";
 import { subscribeToProjects } from "../../services/realtime/socketService";
-import { logout } from "../../services/auth/authService";
+import { getUser, logout } from "../../services/auth/authService";
 import type { Project } from "../../../shared/types/project";
 import { usePageMeta } from "../../../shared/hooks/usePageMeta";
 import styles from "./dashboard.module.css";
@@ -20,15 +20,30 @@ function Dashboard() {
   const navigate = useNavigate();
   // Assente (undefined) quando il componente è renderizzato fuori dal layout
   // protetto (es. nei test): in quel caso il FAB resta nella posizione base.
-  const isAssistantOpen =
-    useOutletContext<AssistantLayoutContext | undefined>()?.isAssistantOpen ??
-    false;
+  const outletContext = useOutletContext<AssistantLayoutContext | undefined>();
+  const isAssistantOpen = outletContext?.isAssistantOpen ?? false;
+  const setHasLocalFab = outletContext?.setHasLocalFab;
   usePageMeta({ title: "Dashboard", robots: "noindex, nofollow" });
+  // Task "Gestione del dipendente": un dipendente vede solo i progetti a lui
+  // assegnati (già filtrati dal backend, vedi getAllProjects) e non può
+  // creare progetti né gestirli (rinomina/elimina), solo lavorare sui task
+  // al loro interno.
+  const canManage = getUser()?.role === "owner";
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createError, setCreateError] = useState("");
+
+  // Il FAB "+" sotto è nascosto ai dipendenti (canManage false): senza questo
+  // effect l'icona dell'assistente (montata nel layout, non qui) resterebbe
+  // scostata come se il FAB ci fosse, lasciando un vuoto nell'angolo. Il
+  // cleanup riporta il layout al default (true) quando si esce dalla
+  // dashboard, per non "sporcare" le altre pagine che hanno sempre un FAB.
+  useEffect(() => {
+    setHasLocalFab?.(canManage);
+    return () => setHasLocalFab?.(true);
+  }, [canManage, setHasLocalFab]);
 
   useEffect(() => {
     let cancelled = false;
@@ -163,6 +178,7 @@ function Dashboard() {
               <ProjectComponent
                 key={project.id}
                 {...project}
+                canManage={canManage}
                 onRenameProject={handleRenameProject}
                 onDeleteProject={handleDeleteProject}
               />
@@ -170,34 +186,38 @@ function Dashboard() {
           </div>
         ) : null}
 
-        <button
-          type="button"
-          className={styles.fabButton}
-          data-assistant-open={isAssistantOpen}
-          aria-label="Crea nuovo progetto"
-          onClick={openCreateModal}
-        >
-          <svg
-            className={styles.fabIcon}
-            viewBox="0 0 24 24"
-            width="24"
-            height="24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            aria-hidden="true"
-          >
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-        </button>
+        {canManage && (
+          <Fragment>
+            <button
+              type="button"
+              className={styles.fabButton}
+              data-assistant-open={isAssistantOpen}
+              aria-label="Crea nuovo progetto"
+              onClick={openCreateModal}
+            >
+              <svg
+                className={styles.fabIcon}
+                viewBox="0 0 24 24"
+                width="24"
+                height="24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                aria-hidden="true"
+              >
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            </button>
 
-        <CreateProjectModalComponent
-          isOpen={isCreateModalOpen}
-          onClose={closeCreateModal}
-          onCreate={handleCreateProject}
-          submitError={createError}
-        />
+            <CreateProjectModalComponent
+              isOpen={isCreateModalOpen}
+              onClose={closeCreateModal}
+              onCreate={handleCreateProject}
+              submitError={createError}
+            />
+          </Fragment>
+        )}
       </div>
     </Fragment>
   );

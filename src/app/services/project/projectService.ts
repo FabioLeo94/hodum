@@ -54,6 +54,25 @@ export async function getAllProjects(): Promise<Project[]> {
   );
 }
 
+// Solo id e nome di tutti i progetti della company, senza i task: usata dalla
+// checklist di assegnazione progetti (AssignProjectsModalComponent), che non
+// ha bisogno dei task e altrimenti pagherebbe la fetchProjectTasks per
+// progetto già fatta da getAllProjects.
+export interface ProjectSummary {
+  id: string;
+  name: string;
+}
+
+export async function listProjectsSummary(): Promise<ProjectSummary[]> {
+  const response = await fetch(`${API_BASE_URL}/projects`, { headers: authHeader() });
+  if (!response.ok) {
+    const message = await readErrorMessage(response);
+    throw new Error(message ?? "Impossibile caricare i progetti.");
+  }
+  const projects = (await response.json()) as ProjectDto[];
+  return projects.map((project) => ({ id: project.id, name: project.name }));
+}
+
 // Solo il nome, senza i task: usata dove serve un'etichetta leggibile (es. il
 // toggle "contesto" dell'assistente) senza pagare la fetchProjectTasks di
 // getProjectById.

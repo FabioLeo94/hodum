@@ -80,6 +80,36 @@
   color: var(--bg-primary);
 }
 
+.employeeActions {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--m-xs);
+}
+
+.iconButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radious-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.iconButton:hover {
+  background-color: var(--bg-field);
+  color: var(--text-primary);
+}
+
+.iconButton:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
 .emptyState {
   display: flex;
   flex-direction: column;
@@ -136,5 +166,9 @@
   .employeeCard {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .employeeActions {
+    align-self: flex-end;
   }
 }

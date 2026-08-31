@@ -2,8 +2,14 @@ import { Fragment, useEffect, useState } from "react";
 import { useNavigate, useOutletContext } from "react-router";
 import TopbarComponent from "../../components/topbar/topbarComponent";
 import CreateEmployeeModalComponent from "../../components/createEmployeeModal/createEmployeeModalComponent";
+import EditEmployeeModalComponent from "../../components/editEmployeeModal/editEmployeeModalComponent";
+import AssignProjectsModalComponent from "../../components/assignProjectsModal/assignProjectsModalComponent";
 import type { AssistantLayoutContext } from "../../components/protectedLayout/protectedLayoutComponent";
-import { listUsers } from "../../services/user/userService";
+import {
+  listUsers,
+  updateEmployee,
+  setAssignedProjects,
+} from "../../services/user/userService";
 import { createEmployee } from "../../services/company/companyService";
 import { getUser, isAuthenticated, logout } from "../../services/auth/authService";
 import type { User } from "../../services/auth/authService";
@@ -23,6 +29,10 @@ function Employees() {
   const [loadError, setLoadError] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createError, setCreateError] = useState("");
+  const [editingEmployee, setEditingEmployee] = useState<User | null>(null);
+  const [editError, setEditError] = useState("");
+  const [assigningEmployee, setAssigningEmployee] = useState<User | null>(null);
+  const [assignError, setAssignError] = useState("");
 
   // Pannello riservato all'owner: nessuna rotta protetta filtra già per
   // ruolo (ProtectedRouteComponent controlla solo autenticazione e
@@ -103,6 +113,62 @@ function Employees() {
     }
   }
 
+  function openEditModal(employee: User) {
+    setEditError("");
+    setEditingEmployee(employee);
+  }
+
+  function closeEditModal() {
+    setEditError("");
+    setEditingEmployee(null);
+  }
+
+  async function handleEditEmployee(values: {
+    username: string;
+    password?: string;
+  }) {
+    if (!editingEmployee) return;
+    try {
+      const updated = await updateEmployee(editingEmployee.id, values);
+      setEmployees((current) =>
+        current.map((employee) =>
+          employee.id === updated.id ? updated : employee,
+        ),
+      );
+      closeEditModal();
+    } catch (error) {
+      setEditError(
+        error instanceof Error
+          ? error.message
+          : "Impossibile aggiornare il dipendente.",
+      );
+    }
+  }
+
+  function openAssignModal(employee: User) {
+    setAssignError("");
+    setAssigningEmployee(employee);
+  }
+
+  function closeAssignModal() {
+    setAssignError("");
+    setAssigningEmployee(null);
+  }
+
+  async function handleAssignProjects(projectIds: string[]) {
+    if (!assigningEmployee) return;
+    try {
+      await setAssignedProjects(assigningEmployee.id, projectIds);
+      closeAssignModal();
+    } catch (error) {
+      setAssignError(
+        error instanceof Error
+          ? error.message
+          : "Impossibile aggiornare i progetti assegnati.",
+      );
+    }
+  }
+
   return (
     <Fragment>
       <TopbarComponent onLogout={handleLogout} />
@@ -149,6 +215,50 @@ function Employees() {
                     ? "In attesa del primo accesso"
                     : "Attivo"}
                 </span>
+                <div className={styles.employeeActions}>
+                  <button
+                    type="button"
+                    className={styles.iconButton}
+                    aria-label={`Modifica dipendente ${employee.username}`}
+                    onClick={() => openEditModal(employee)}
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="16"
+                      height="16"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M12 20h9" />
+                      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.iconButton}
+                    aria-label={`Assegna progetti a ${employee.username}`}
+                    onClick={() => openAssignModal(employee)}
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="16"
+                      height="16"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M9 11l3 3L22 4" />
+                      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                    </svg>
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
@@ -182,6 +292,29 @@ function Employees() {
           onCreate={handleCreateEmployee}
           submitError={createError}
         />
+
+        {editingEmployee && (
+          <EditEmployeeModalComponent
+            key={editingEmployee.id}
+            isOpen={editingEmployee !== null}
+            onClose={closeEditModal}
+            currentUsername={editingEmployee.username}
+            onSave={handleEditEmployee}
+            submitError={editError}
+          />
+        )}
+
+        {assigningEmployee && (
+          <AssignProjectsModalComponent
+            key={assigningEmployee.id}
+            isOpen={assigningEmployee !== null}
+            onClose={closeAssignModal}
+            employeeId={assigningEmployee.id}
+            employeeUsername={assigningEmployee.username}
+            onSave={handleAssignProjects}
+            submitError={assignError}
+          />
+        )}
       </div>
     </Fragment>
   );

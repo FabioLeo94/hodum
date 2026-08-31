@@ -1,0 +1,86 @@
+.statusText {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.projectList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-sm);
+  max-height: 16rem;
+  overflow-y: auto;
+}
+
+.projectItem {
+  border-radius: var(--radious-sm);
+}
+
+.projectLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--m-sm);
+  padding: var(--p-sm) var(--p-md);
+  border-radius: var(--radious-sm);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.projectLabel:hover {
+  background-color: var(--bg-field);
+}
+
+/* Il reset globale (src/index.css) azzera appearance/border/background su
+   ogni input: la checkbox va ricostruita a mano, stesso pattern di
+   .authCheckbox in authFormComponent.module.css. */
+.checkbox {
+  position: relative;
+  width: 1.1rem;
+  height: 1.1rem;
+  flex-shrink: 0;
+  border: 1px solid var(--text-muted);
+  border-radius: var(--radious-xs);
+  cursor: pointer;
+  transition: border-color 150ms ease;
+}
+
+.projectLabel:hover .checkbox {
+  border-color: var(--bg-primary);
+}
+
+.checkbox:checked {
+  background-color: var(--bg-primary);
+  border-color: var(--bg-primary);
+}
+
+.checkbox:checked::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 5px;
+  width: 4px;
+  height: 8px;
+  border: solid var(--text-on-primary);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.checkbox:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .checkbox {
+    transition: none;
+  }
+}
+
+.submitError {
+  composes: submitError from "../../../shared/styles/modalForm.module.css";
+}
+
+.cancelButton {
+  composes: cancelButton from "../../../shared/styles/modalForm.module.css";
+}

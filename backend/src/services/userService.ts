@@ -101,6 +101,13 @@ export interface UpdateUserInput {
   username?: string;
   email?: string;
   password?: string;
+  // Task "Gestione del dipendente": quando l'owner resetta la password di un
+  // dipendente, questo deve tornare a true (stesso comportamento della
+  // creazione, vedi createEmployee in companyService.ts) — a differenza del
+  // cambio password self-service, dove l'owner/dipendente sceglie la propria
+  // nuova password e non c'è nulla da forzare di nuovo. Ignorato se password
+  // non è fornito.
+  forceChangePassword?: boolean;
 }
 
 export async function updateUser(id: string, input: UpdateUserInput): Promise<User> {
@@ -108,14 +115,20 @@ export async function updateUser(id: string, input: UpdateUserInput): Promise<Us
   // saperlo, quindi se non fornita passiamo null e la colonna resta invariata,
   // esattamente come per gli altri campi opzionali.
   const passwordHash = input.password !== undefined ? await hashPassword(input.password) : null;
+  // true solo quando esplicitamente richiesto (reset password da owner): negli
+  // altri casi (incluso il self-service change password via questo stesso
+  // endpoint) COALESCE lascia must_change_password invariato, non lo forza a
+  // false, per non introdurre un effetto collaterale non richiesto dal task.
+  const mustChangePassword = input.forceChangePassword ? true : null;
 
   try {
     const result = await pool.query<UserRow>(
       `UPDATE users
-       SET username = COALESCE($2, username), email = COALESCE($3, email), password = COALESCE($4, password)
+       SET username = COALESCE($2, username), email = COALESCE($3, email), password = COALESCE($4, password),
+           must_change_password = COALESCE($5, must_change_password)
        WHERE id = $1
        RETURNING ${USER_COLUMNS}`,
-      [id, input.username ?? null, input.email ?? null, passwordHash],
+      [id, input.username ?? null, input.email ?? null, passwordHash, mustChangePassword],
     );
     const row = result.rows[0];
     if (!row) {

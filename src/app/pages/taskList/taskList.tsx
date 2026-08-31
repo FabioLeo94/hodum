@@ -198,8 +198,14 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
 
       setProject((current) => {
         if (!current) return current;
-        return editingTask
-          ? replaceTaskInProject(current, savedTask)
+        if (editingTask) {
+          return replaceTaskInProject(current, savedTask);
+        }
+        // Il socket (già iscritto alla room, vedi subscribeToProjectTasks) può
+        // notificare task:created prima che questa promise si risolva: senza
+        // questo controllo il task finirebbe aggiunto due volte.
+        return current.tasks.some((task) => task.id === savedTask.id)
+          ? current
           : { ...current, tasks: [...current.tasks, savedTask] };
       });
       closeTaskModal();
