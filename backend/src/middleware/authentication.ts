@@ -3,6 +3,12 @@ import type { User } from '../models/user';
 import { getUserById, UserNotFoundError } from '../services/userService';
 import { verifySessionToken } from '../services/tokenService';
 
+// Distinta da un errore generico: l'error handler globale (app.ts) la
+// riconosce per rispondere 401 invece del 500 di default, che altrimenti
+// scatterebbe per qualunque errore non tipizzato e rischierebbe di esporre
+// messaggi interni quando NODE_ENV non è impostato a "production".
+export class AuthenticationError extends Error {}
+
 // Modulo referenziato da tsoa.json (routes.authenticationModule): generato il
 // codice delle rotte, tsoa invoca questa funzione per ogni @Security('jwt')
 // incontrato. Il valore risolto NON viene iniettato automaticamente in un
@@ -17,7 +23,7 @@ export async function expressAuthentication(request: Request, securityName: stri
   const header = request.headers.authorization;
   const token = header?.startsWith('Bearer ') ? header.slice('Bearer '.length) : undefined;
   if (!token) {
-    throw new Error('Token di sessione mancante');
+    throw new AuthenticationError('Token di sessione mancante');
   }
 
   const { sub } = verifySessionToken(token);
@@ -28,7 +34,7 @@ export async function expressAuthentication(request: Request, securityName: stri
     return user;
   } catch (err) {
     if (err instanceof UserNotFoundError) {
-      throw new Error('Utente della sessione non trovato', { cause: err });
+      throw new AuthenticationError('Utente della sessione non trovato');
     }
     throw err;
   }

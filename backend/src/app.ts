@@ -1,9 +1,12 @@
 import cors from 'cors';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
+import rateLimit from 'express-rate-limit';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ValidateError } from 'tsoa';
+import { AuthenticationError } from './middleware/authentication';
 import { RegisterRoutes } from './routes/routes';
+import { InvalidSessionTokenError } from './services/tokenService';
 
 // `@scalar/express-api-reference` è distribuito come puro ESM ("type": "module",
 // nessuna condizione "require" in "exports"). Node 24 sa caricare ESM da un
@@ -25,6 +28,22 @@ export async function createApp(): Promise<Express> {
   // pattern di PORT in server.ts: fallback alla porta di default di Vite per
   // non richiedere configurazione in sviluppo locale.
   app.use(cors({ origin: process.env.FRONTEND_ORIGIN ?? 'http://localhost:5173' }));
+
+  // Limite per IP sul login: senza, niente si oppone a un brute-force sulle
+  // credenziali (aggravato dal fatto che GET /users, se mai raggiunto senza
+  // auth, enumererebbe email valide da provare). Non applicato ad altre rotte:
+  // sono tutte già dietro @Security('jwt'), che richiede un token valido
+  // ottenibile solo passando da qui.
+  app.use(
+    '/auth/login',
+    rateLimit({
+      windowMs: 15 * 60 * 1000,
+      limit: 10,
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: { message: 'Troppi tentativi di accesso, riprova più tardi' },
+    }),
+  );
 
   // La spec viene generata da `npm run tsoa:gen` in build/swagger.json (gitignored).
   // Letta ad ogni richiesta (file piccolo, nessuna cache) così riflette l'ultima
@@ -68,6 +87,17 @@ export async function createApp(): Promise<Express> {
       // err.fields descrive quali campi non hanno passato la validazione tsoa:
       // è informazione di dominio, non uno stack trace o un dettaglio del driver.
       res.status(422).json({ message: 'Validazione della richiesta fallita', details: err.fields });
+      return;
+    }
+
+    if (err instanceof AuthenticationError || err instanceof InvalidSessionTokenError) {
+      // Prima di questa correzione qualunque fallimento di autenticazione
+      // (token assente, scaduto, manomesso, utente non più esistente) cadeva
+      // nel ramo 500 sotto: semanticamente sbagliato (401 è lo status
+      // corretto) e, se NODE_ENV non è impostato a "production", esponeva il
+      // messaggio interno di expressAuthentication invece di un errore
+      // generico.
+      res.status(401).json({ message: err.message });
       return;
     }
 

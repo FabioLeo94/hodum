@@ -56,8 +56,18 @@ function toUser(row: UserRow): User {
 
 const USER_COLUMNS = 'id, username, email, password, company_id, role';
 
-export async function listUsers(): Promise<User[]> {
-  const result = await pool.query<UserRow>(`SELECT ${USER_COLUMNS} FROM users ORDER BY username`);
+// companyId omesso (undefined) per usi interni che devono vedere tutti gli
+// utenti; il controller lo valorizza sempre con l'azienda del richiedente
+// (vedi userController.ts), stesso pattern opzionale di projectService.ts.
+export async function listUsers(companyId?: string | null): Promise<User[]> {
+  if (companyId === undefined) {
+    const result = await pool.query<UserRow>(`SELECT ${USER_COLUMNS} FROM users ORDER BY username`);
+    return result.rows.map(toUser);
+  }
+  const result = await pool.query<UserRow>(
+    `SELECT ${USER_COLUMNS} FROM users WHERE company_id = $1 ORDER BY username`,
+    [companyId],
+  );
   return result.rows.map(toUser);
 }
 

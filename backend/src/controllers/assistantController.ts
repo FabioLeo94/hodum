@@ -1,4 +1,6 @@
-import { Body, Controller, Post, Response, Route } from 'tsoa';
+import type { Request as ExRequest } from 'express';
+import { Body, Controller, Post, Request, Response, Route, Security } from 'tsoa';
+import { getAuthenticatedUser } from '../middleware/authentication';
 import { askAssistant } from '../services/assistantService';
 import type { AssistantMessage, PageContext } from '../services/assistantService';
 import { OllamaError } from '../services/ollamaClient';
@@ -30,18 +32,25 @@ export interface AssistantChatResponse {
 @Route('assistant')
 export class AssistantController extends Controller {
   @Post('chat')
+  @Security('jwt')
   @Response<AssistantErrorResponse>(422, 'message mancante o vuoto')
   @Response<AssistantErrorResponse>(502, 'Ollama non raggiungibile o in errore')
   public async chat(
     @Body() body: AssistantChatRequest,
+    @Request() request: ExRequest,
   ): Promise<AssistantChatResponse | AssistantErrorResponse> {
     if (body.message.trim().length === 0) {
       this.setStatus(422);
       return { message: 'message non può essere vuoto' };
     }
 
+    const user = getAuthenticatedUser(request);
     try {
-      return await askAssistant(body.message, body.history ?? [], body.pageContext);
+      // companyId dell'utente autenticato: senza, l'assistente potrebbe
+      // leggere/modificare progetti e task di qualunque azienda (vedi
+      // assistantService.ts, dove viene propagato a listProjects/
+      // getProjectById lungo tutta la catena di tool-calling).
+      return await askAssistant(body.message, body.history ?? [], body.pageContext, user.companyId);
     } catch (err) {
       if (err instanceof OllamaError) {
         // 502 (Bad Gateway): il problema è nel servizio a valle (Ollama non

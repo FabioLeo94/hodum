@@ -1,4 +1,6 @@
-import { Body, Controller, Delete, Get, Patch, Path, Post, Put, Response, Route, SuccessResponse } from 'tsoa';
+import type { Request as ExRequest } from 'express';
+import { Body, Controller, Delete, Get, Patch, Path, Post, Put, Request, Response, Route, Security, SuccessResponse } from 'tsoa';
+import { getAuthenticatedUser } from '../middleware/authentication';
 import type { Task, TaskStatus } from '../models/task';
 import {
   createTask,
@@ -43,10 +45,15 @@ export interface UpdateTaskRequest {
 @Route('projects')
 export class TaskController extends Controller {
   @Get('{projectId}/tasks')
+  @Security('jwt')
   @Response<TaskErrorResponse>(404, 'Project non trovato')
-  public async listProjectTasks(@Path() projectId: string): Promise<Task[] | TaskErrorResponse> {
+  public async listProjectTasks(
+    @Path() projectId: string,
+    @Request() request: ExRequest,
+  ): Promise<Task[] | TaskErrorResponse> {
+    const user = getAuthenticatedUser(request);
     try {
-      return await listTasksByProject(projectId);
+      return await listTasksByProject(projectId, user.companyId);
     } catch (err) {
       if (err instanceof ProjectNotFoundError) {
         this.setStatus(404);
@@ -57,12 +64,14 @@ export class TaskController extends Controller {
   }
 
   @Post('{projectId}/tasks')
+  @Security('jwt')
   @SuccessResponse(201, 'Task creato')
   @Response<TaskErrorResponse>(404, 'Project non trovato')
   @Response<TaskErrorResponse>(422, 'title mancante o vuoto')
   public async createTask(
     @Path() projectId: string,
     @Body() body: CreateTaskRequest,
+    @Request() request: ExRequest,
   ): Promise<Task | TaskErrorResponse> {
     // Stesso pattern di createProject in projectController.ts: tsoa valida
     // che "title" sia una stringa (campo non opzionale), ma non che non sia
@@ -72,8 +81,9 @@ export class TaskController extends Controller {
       return { message: 'title non può essere vuoto' };
     }
 
+    const user = getAuthenticatedUser(request);
     try {
-      const task = await createTask(projectId, { title: body.title, description: body.description });
+      const task = await createTask(projectId, { title: body.title, description: body.description }, user.companyId);
       this.setStatus(201);
       return task;
     } catch (err) {
@@ -86,22 +96,25 @@ export class TaskController extends Controller {
   }
 
   @Put('{projectId}/tasks/{taskId}')
-  @Response<TaskErrorResponse>(404, 'Task non trovato')
+  @Security('jwt')
+  @Response<TaskErrorResponse>(404, 'Project o task non trovato')
   @Response<TaskErrorResponse>(422, 'title presente ma vuoto')
   public async updateTask(
     @Path() projectId: string,
     @Path() taskId: string,
     @Body() body: UpdateTaskRequest,
+    @Request() request: ExRequest,
   ): Promise<Task | TaskErrorResponse> {
     if (body.title !== undefined && body.title.trim().length === 0) {
       this.setStatus(422);
       return { message: 'title non può essere vuoto' };
     }
 
+    const user = getAuthenticatedUser(request);
     try {
-      return await updateTask(projectId, taskId, body);
+      return await updateTask(projectId, taskId, body, user.companyId);
     } catch (err) {
-      if (err instanceof TaskNotFoundError) {
+      if (err instanceof TaskNotFoundError || err instanceof ProjectNotFoundError) {
         this.setStatus(404);
         return { message: err.message };
       }
@@ -110,16 +123,19 @@ export class TaskController extends Controller {
   }
 
   @Patch('{projectId}/tasks/{taskId}/status')
-  @Response<TaskErrorResponse>(404, 'Task non trovato')
+  @Security('jwt')
+  @Response<TaskErrorResponse>(404, 'Project o task non trovato')
   public async updateTaskStatus(
     @Path() projectId: string,
     @Path() taskId: string,
     @Body() body: UpdateTaskStatusRequest,
+    @Request() request: ExRequest,
   ): Promise<Task | TaskErrorResponse> {
+    const user = getAuthenticatedUser(request);
     try {
-      return await updateTaskStatus(projectId, taskId, body.status);
+      return await updateTaskStatus(projectId, taskId, body.status, user.companyId);
     } catch (err) {
-      if (err instanceof TaskNotFoundError) {
+      if (err instanceof TaskNotFoundError || err instanceof ProjectNotFoundError) {
         this.setStatus(404);
         return { message: err.message };
       }
@@ -128,22 +144,25 @@ export class TaskController extends Controller {
   }
 
   @Patch('{projectId}/tasks/{taskId}/priority')
-  @Response<TaskErrorResponse>(404, 'Task non trovato')
+  @Security('jwt')
+  @Response<TaskErrorResponse>(404, 'Project o task non trovato')
   @Response<TaskErrorResponse>(422, 'priority non è un intero tra 1 e 10')
   public async updateTaskPriority(
     @Path() projectId: string,
     @Path() taskId: string,
     @Body() body: UpdateTaskPriorityRequest,
+    @Request() request: ExRequest,
   ): Promise<Task | TaskErrorResponse> {
     if (!isValidPriority(body.priority)) {
       this.setStatus(422);
       return { message: 'priority deve essere un intero tra 1 (alta) e 10 (bassa)' };
     }
 
+    const user = getAuthenticatedUser(request);
     try {
-      return await updateTaskPriority(projectId, taskId, body.priority);
+      return await updateTaskPriority(projectId, taskId, body.priority, user.companyId);
     } catch (err) {
-      if (err instanceof TaskNotFoundError) {
+      if (err instanceof TaskNotFoundError || err instanceof ProjectNotFoundError) {
         this.setStatus(404);
         return { message: err.message };
       }
@@ -152,14 +171,20 @@ export class TaskController extends Controller {
   }
 
   @Delete('{projectId}/tasks/{taskId}')
+  @Security('jwt')
   @SuccessResponse(204, 'Task eliminato')
-  @Response<TaskErrorResponse>(404, 'Task non trovato')
-  public async deleteTask(@Path() projectId: string, @Path() taskId: string): Promise<void> {
+  @Response<TaskErrorResponse>(404, 'Project o task non trovato')
+  public async deleteTask(
+    @Path() projectId: string,
+    @Path() taskId: string,
+    @Request() request: ExRequest,
+  ): Promise<void> {
+    const user = getAuthenticatedUser(request);
     try {
-      await deleteTask(projectId, taskId);
+      await deleteTask(projectId, taskId, user.companyId);
       this.setStatus(204);
     } catch (err) {
-      if (err instanceof TaskNotFoundError) {
+      if (err instanceof TaskNotFoundError || err instanceof ProjectNotFoundError) {
         this.setStatus(404);
         return;
       }

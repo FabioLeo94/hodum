@@ -30,7 +30,7 @@ Vitest is configured in `vite.config.ts` (`environment: 'jsdom'`, setup file `sr
 
 ## Available agents
 
-These live in the user-level `~/.claude/agents/` directory (there is no project-level `.claude/agents/` folder), so they're already available — reach for one instead of recreating its job inline or spawning a fresh ad-hoc agent for it. None of them retain memory across sessions.
+These live in the user-level `~/.claude/agents/` directory (there is no project-level `.claude/agents/` folder), so they're already available — reach for one instead of recreating its job inline or spawning a fresh ad-hoc agent for it. Most don't retain memory across sessions; `security-auditor` and `pentest-engineer` do (shared across projects, each entry prefixed by project name).
 
 - **react-expert** — writes, fixes and reviews React 19 + TypeScript components, pages, hooks and routes. Use for a new component/page or a targeted review of recently changed React code (hooks correctness, re-renders, a11y, tests).
 - **css-expert** — writes and fixes CSS Modules: design tokens (`src/index.css`), specificity, redundancy, interaction states (hover/focus/disabled), responsive layout, CSS-level accessibility. Not for overall visual direction — that's `web-design`.
@@ -41,4 +41,5 @@ These live in the user-level `~/.claude/agents/` directory (there is no project-
 - **esploratore** — read-only; maps every file a task might touch before implementation starts, without judging the code. Use before a non-trivial change to scope its blast radius.
 - **ricognitore** — checks whether the code state has drifted since a task was defined, and remaps impacted files. Use at the start of a session that resumes WIP or a previously-planned task.
 - **node-expert** — read-only; assesses npm dependency vulnerabilities, upgrade risk and regressions. Use when `npm audit` flags something or before a mass dependency upgrade.
-- **security-auditor** — audits sensitive code (auth, input handling, env/config, network exposure). Requires explicit user consent before each invocation — never launch it proactively without asking first.
+- **security-auditor** — read-only; audits sensitive code (auth, input handling, env/config, network exposure) and produces a report. Requires explicit user consent before each invocation — never launch it proactively without asking first.
+- **pentest-engineer** — offensive/defensive security: actively verifies vulnerabilities against the local/dev instance (not just static review), researches real CVEs on installed dependency versions, audits infra/deploy config (env vars, CI/CD, secrets), and applies the minimal fix. Only ever tests against `localhost`/dev — never third-party or production targets. Requires explicit user consent before each invocation, same as `security-auditor`.

@@ -86,12 +86,15 @@ async function getTaskById(id: string): Promise<Task> {
   return toTask(row);
 }
 
-export async function listTasksByProject(projectId: string): Promise<Task[]> {
+export async function listTasksByProject(projectId: string, companyId?: string | null): Promise<Task[]> {
   // Verifica esistenza del progetto: senza, un id inesistente risponderebbe
   // con una lista vuota indistinguibile da "progetto esistente senza task".
   // getProjectById lancia ProjectNotFoundError, che il controller intercetta
-  // per rispondere 404 (stesso pattern di projectController.ts).
-  await getProjectById(projectId);
+  // per rispondere 404 (stesso pattern di projectController.ts). Passare
+  // companyId qui è anche ciò che impedisce a un utente autenticato di
+  // un'azienda di leggere i task di un progetto di un'altra azienda
+  // conoscendone solo l'id (IDOR cross-tenant, vedi projectService.ts).
+  await getProjectById(projectId, companyId);
 
   const result = await pool.query<TaskRow>(
     `${TASK_SELECT} WHERE t.project_id = $1 ORDER BY t.creation_date NULLS LAST, t.title`,
@@ -105,11 +108,11 @@ export interface CreateTaskInput {
   description?: string;
 }
 
-export async function createTask(projectId: string, input: CreateTaskInput): Promise<Task> {
+export async function createTask(projectId: string, input: CreateTaskInput, companyId?: string | null): Promise<Task> {
   // Stesso controllo di listTasksByProject: senza, un projectId inesistente
-  // inserirebbe comunque la riga (project_id è NOT NULL ma non FK-validato
-  // qui) invece di rispondere 404.
-  await getProjectById(projectId);
+  // (o di un'altra azienda) inserirebbe comunque la riga (project_id è NOT
+  // NULL ma non FK-validato qui) invece di rispondere 404.
+  await getProjectById(projectId, companyId);
 
   // Niente colonna status nell'INSERT: usa il DEFAULT del DB (id di "in
   // progress", vedi migration 0004), che è già lo stato iniziale voluto.
@@ -127,14 +130,24 @@ export interface UpdateTaskInput {
   description?: string;
 }
 
-export async function updateTask(projectId: string, taskId: string, input: UpdateTaskInput): Promise<Task> {
-  // Un projectId o taskId sintatticamente non validi (es. un titolo passato
-  // per errore invece dell'uuid, come può capitare all'assistente LLM) non
-  // possono comunque combaciare con nessuna riga: intercettarli qui evita che
-  // le colonne uuid li rifiutino con un errore del driver ("invalid input
-  // syntax for type uuid"), che altrimenti uscirebbe come eccezione non
-  // gestita invece del consueto TaskNotFoundError già previsto dal chiamante.
-  if (!isValidUuid(projectId) || !isValidUuid(taskId)) {
+export async function updateTask(
+  projectId: string,
+  taskId: string,
+  input: UpdateTaskInput,
+  companyId?: string | null,
+): Promise<Task> {
+  // Verifica che il progetto esista e appartenga alla company del richiedente
+  // (getProjectById lancia ProjectNotFoundError altrimenti, intercettata dal
+  // controller): senza questo controllo, il filtro WHERE project_id = $2 qui
+  // sotto basta a restare dentro il progetto giusto, ma non impedisce di
+  // operare su un progetto di un'altra azienda di cui si conosce l'id.
+  await getProjectById(projectId, companyId);
+  // taskId invece non è coperto da getProjectById: un valore sintatticamente
+  // non valido (es. un titolo passato per errore invece dell'uuid, come può
+  // capitare all'assistente LLM) va intercettato qui per evitare che la
+  // colonna uuid lo rifiuti con un errore del driver ("invalid input syntax
+  // for type uuid") invece del consueto TaskNotFoundError.
+  if (!isValidUuid(taskId)) {
     throw new TaskNotFoundError(taskId);
   }
 
@@ -158,10 +171,16 @@ export async function updateTask(projectId: string, taskId: string, input: Updat
   return task;
 }
 
-export async function updateTaskStatus(projectId: string, taskId: string, status: TaskStatus): Promise<Task> {
-  // Stesso guard di updateTask: evita l'errore del driver su un id
-  // sintatticamente non valido.
-  if (!isValidUuid(projectId) || !isValidUuid(taskId)) {
+export async function updateTaskStatus(
+  projectId: string,
+  taskId: string,
+  status: TaskStatus,
+  companyId?: string | null,
+): Promise<Task> {
+  // Stesso controllo di updateTask: verifica che il progetto appartenga alla
+  // company del richiedente prima di toccare i suoi task.
+  await getProjectById(projectId, companyId);
+  if (!isValidUuid(taskId)) {
     throw new TaskNotFoundError(taskId);
   }
 
@@ -183,10 +202,16 @@ export async function updateTaskStatus(projectId: string, taskId: string, status
   return task;
 }
 
-export async function updateTaskPriority(projectId: string, taskId: string, priority: number): Promise<Task> {
-  // Stesso guard di updateTaskStatus: evita l'errore del driver su un id
-  // sintatticamente non valido.
-  if (!isValidUuid(projectId) || !isValidUuid(taskId)) {
+export async function updateTaskPriority(
+  projectId: string,
+  taskId: string,
+  priority: number,
+  companyId?: string | null,
+): Promise<Task> {
+  // Stesso controllo di updateTaskStatus: verifica che il progetto appartenga
+  // alla company del richiedente prima di toccare i suoi task.
+  await getProjectById(projectId, companyId);
+  if (!isValidUuid(taskId)) {
     throw new TaskNotFoundError(taskId);
   }
 
@@ -204,10 +229,11 @@ export async function updateTaskPriority(projectId: string, taskId: string, prio
   return task;
 }
 
-export async function deleteTask(projectId: string, taskId: string): Promise<void> {
-  // Stesso guard di updateTask: evita l'errore del driver su un id
-  // sintatticamente non valido.
-  if (!isValidUuid(projectId) || !isValidUuid(taskId)) {
+export async function deleteTask(projectId: string, taskId: string, companyId?: string | null): Promise<void> {
+  // Stesso controllo di updateTask: verifica che il progetto appartenga alla
+  // company del richiedente prima di eliminare un suo task.
+  await getProjectById(projectId, companyId);
+  if (!isValidUuid(taskId)) {
     throw new TaskNotFoundError(taskId);
   }
 

@@ -1,3 +1,4 @@
+import { authHeader } from "../auth/authService";
 import { API_BASE_URL, readErrorMessage } from "../httpClient";
 
 export type AssistantRole = "user" | "assistant";
@@ -30,7 +31,7 @@ export async function sendAssistantMessage(
 ): Promise<AssistantReply> {
   const response = await fetch(`${API_BASE_URL}/assistant/chat`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeader() },
     body: JSON.stringify({ message, history, pageContext }),
   });
   if (!response.ok) {

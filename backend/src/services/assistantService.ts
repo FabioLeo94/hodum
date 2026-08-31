@@ -492,8 +492,8 @@ function findByNameOrTitle<T>(items: T[], getName: (item: T) => string, needle: 
 // uuid come un nome/titolo da risolvere al volo, invece di limitarsi a
 // rifiutarlo: così un'operazione riesce anche quando il modello passa
 // "Hodum" o "FEAT: Task Di Test" invece del vero id.
-async function resolveProjectId(idOrName: string): Promise<Resolved> {
-  const projects = await listProjects();
+async function resolveProjectId(idOrName: string, companyId?: string | null): Promise<Resolved> {
+  const projects = await listProjects(companyId);
 
   if (isValidUuid(idOrName)) {
     const byId = projects.find((project) => project.id === idOrName);
@@ -647,10 +647,10 @@ function resolvePositionalProject(projects: Project[], idOrName: string): Resolv
   return { ok: true, id: projects[index].id };
 }
 
-async function resolveTaskId(projectId: string, idOrTitle: string): Promise<Resolved> {
+async function resolveTaskId(projectId: string, idOrTitle: string, companyId?: string | null): Promise<Resolved> {
   let tasks;
   try {
-    tasks = await listTasksByProject(projectId);
+    tasks = await listTasksByProject(projectId, companyId);
   } catch (err) {
     if (err instanceof ProjectNotFoundError) {
       return { ok: false, error: err.message };
@@ -690,20 +690,20 @@ async function resolveTaskId(projectId: string, idOrTitle: string): Promise<Reso
   };
 }
 
-async function callTool(name: string, args: Record<string, unknown>): Promise<unknown> {
+async function callTool(name: string, args: Record<string, unknown>, companyId?: string | null): Promise<unknown> {
   switch (name) {
     case 'list_projects':
-      return listProjects();
+      return listProjects(companyId);
 
     case 'list_tasks': {
       const projectIdArg = typeof args.projectId === 'string' ? args.projectId : undefined;
       if (!projectIdArg) {
         return { error: 'Argomento projectId mancante o non valido.' };
       }
-      const project = await resolveProjectId(projectIdArg);
+      const project = await resolveProjectId(projectIdArg, companyId);
       if (!project.ok) return { error: project.error };
       try {
-        return await listTasksByProject(project.id);
+        return await listTasksByProject(project.id, companyId);
       } catch (err) {
         if (err instanceof ProjectNotFoundError) {
           return { error: err.message };
@@ -722,10 +722,10 @@ async function callTool(name: string, args: Record<string, unknown>): Promise<un
       if (title.trim().length === 0) {
         return { error: 'title non può essere vuoto.' };
       }
-      const project = await resolveProjectId(projectIdArg);
+      const project = await resolveProjectId(projectIdArg, companyId);
       if (!project.ok) return { error: project.error };
       try {
-        return await createTask(project.id, { title, description });
+        return await createTask(project.id, { title, description }, companyId);
       } catch (err) {
         if (err instanceof ProjectNotFoundError) {
           return { error: err.message };
@@ -745,12 +745,12 @@ async function callTool(name: string, args: Record<string, unknown>): Promise<un
       if (title !== undefined && title.trim().length === 0) {
         return { error: 'title non può essere vuoto.' };
       }
-      const project = await resolveProjectId(projectIdArg);
+      const project = await resolveProjectId(projectIdArg, companyId);
       if (!project.ok) return { error: project.error };
-      const task = await resolveTaskId(project.id, taskIdArg);
+      const task = await resolveTaskId(project.id, taskIdArg, companyId);
       if (!task.ok) return { error: task.error };
       try {
-        return await updateTask(project.id, task.id, { title, description });
+        return await updateTask(project.id, task.id, { title, description }, companyId);
       } catch (err) {
         if (err instanceof TaskNotFoundError) {
           return { error: err.message };
@@ -766,12 +766,12 @@ async function callTool(name: string, args: Record<string, unknown>): Promise<un
       if (!projectIdArg || !taskIdArg || !status || !TASK_STATUS_VALUES.includes(status)) {
         return { error: 'Argomenti projectId, taskId e/o status mancanti o non validi.' };
       }
-      const project = await resolveProjectId(projectIdArg);
+      const project = await resolveProjectId(projectIdArg, companyId);
       if (!project.ok) return { error: project.error };
-      const task = await resolveTaskId(project.id, taskIdArg);
+      const task = await resolveTaskId(project.id, taskIdArg, companyId);
       if (!task.ok) return { error: task.error };
       try {
-        return await updateTaskStatus(project.id, task.id, status);
+        return await updateTaskStatus(project.id, task.id, status, companyId);
       } catch (err) {
         if (err instanceof TaskNotFoundError) {
           return { error: err.message };
@@ -787,12 +787,12 @@ async function callTool(name: string, args: Record<string, unknown>): Promise<un
       if (!projectIdArg || !taskIdArg || priority === undefined || !isValidPriority(priority)) {
         return { error: 'Argomenti projectId, taskId e/o priority mancanti o non validi (priority deve essere un intero tra 1 e 10).' };
       }
-      const project = await resolveProjectId(projectIdArg);
+      const project = await resolveProjectId(projectIdArg, companyId);
       if (!project.ok) return { error: project.error };
-      const task = await resolveTaskId(project.id, taskIdArg);
+      const task = await resolveTaskId(project.id, taskIdArg, companyId);
       if (!task.ok) return { error: task.error };
       try {
-        return await updateTaskPriority(project.id, task.id, priority);
+        return await updateTaskPriority(project.id, task.id, priority, companyId);
       } catch (err) {
         if (err instanceof TaskNotFoundError) {
           return { error: err.message };
@@ -807,18 +807,18 @@ async function callTool(name: string, args: Record<string, unknown>): Promise<un
       if (!projectIdArg || !taskIdArg) {
         return { error: 'Argomenti projectId e/o taskId mancanti o non validi.' };
       }
-      const project = await resolveProjectId(projectIdArg);
+      const project = await resolveProjectId(projectIdArg, companyId);
       if (!project.ok) return { error: project.error };
-      const task = await resolveTaskId(project.id, taskIdArg);
+      const task = await resolveTaskId(project.id, taskIdArg, companyId);
       if (!task.ok) return { error: task.error };
       // Il titolo va recuperato PRIMA di eliminare (dopo, il task non esiste
       // più): serve a comporre un resoconto finale accurato senza doversi
       // fidare del titolo che il modello dice di voler eliminare, che potrebbe
       // non coincidere con quello davvero risolto da resolveTaskId.
-      const tasksBeforeDelete = await listTasksByProject(project.id);
+      const tasksBeforeDelete = await listTasksByProject(project.id, companyId);
       const title = tasksBeforeDelete.find((t) => t.id === task.id)?.title ?? taskIdArg;
       try {
-        await deleteTask(project.id, task.id);
+        await deleteTask(project.id, task.id, companyId);
         return { success: true, title };
       } catch (err) {
         if (err instanceof TaskNotFoundError) {
@@ -838,7 +838,7 @@ async function callTool(name: string, args: Record<string, unknown>): Promise<un
         if (!projectIdArg) {
           return { error: 'Argomento projectId mancante: necessario per aprire i task di un progetto.' };
         }
-        const project = await resolveProjectId(projectIdArg);
+        const project = await resolveProjectId(projectIdArg, companyId);
         if (!project.ok) return { error: project.error };
         return { path: `/dashboard/${project.id}/task-list` };
       }
@@ -866,7 +866,10 @@ export interface AssistantReply {
 // ricalcolato e reinserito ad ogni richiesta (mai salvato in `history`, che
 // resta solo testo utente/assistente) così riflette sempre la pagina in cui
 // si trova l'utente in QUESTO turno, non quella di un turno precedente.
-async function buildPageContextMessage(pageContext: PageContext | undefined): Promise<OllamaChatMessage | null> {
+async function buildPageContextMessage(
+  pageContext: PageContext | undefined,
+  companyId?: string | null,
+): Promise<OllamaChatMessage | null> {
   if (!pageContext) return null;
 
   if (pageContext.page === 'dashboard') {
@@ -877,7 +880,7 @@ async function buildPageContextMessage(pageContext: PageContext | undefined): Pr
   }
 
   try {
-    const project = await getProjectById(pageContext.projectId);
+    const project = await getProjectById(pageContext.projectId, companyId);
     return {
       role: 'system',
       content: `Contesto: l'utente sta guardando la pagina dei task del progetto "${project.name}" (id ${project.id}).`,
@@ -894,12 +897,13 @@ export async function askAssistant(
   message: string,
   history: AssistantMessage[] = [],
   pageContext?: PageContext,
+  companyId?: string | null,
 ): Promise<AssistantReply> {
   const messages: OllamaChatMessage[] = [
     { role: 'system', content: SYSTEM_PROMPT },
     ...history.map((entry) => ({ role: entry.role, content: entry.content })),
   ];
-  const contextMessage = await buildPageContextMessage(pageContext);
+  const contextMessage = await buildPageContextMessage(pageContext, companyId);
   if (contextMessage) {
     messages.push(contextMessage);
   }
@@ -1031,7 +1035,7 @@ export async function askAssistant(
             'Per sicurezza, elimino al massimo un task alla volta in un singolo messaggio: chiedi conferma per gli altri singolarmente, uno per messaggio.',
         };
       } else {
-        result = await callTool(call.function.name, call.function.arguments ?? {});
+        result = await callTool(call.function.name, call.function.arguments ?? {}, companyId);
         if (call.function.name === 'delete_task' && !(result && typeof result === 'object' && 'error' in result)) {
           deleteCallsExecutedThisTurn++;
         }

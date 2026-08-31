@@ -133,7 +133,7 @@ export async function createTask(
 ): Promise<Task> {
   const response = await fetch(`${API_BASE_URL}/projects/${projectId}/tasks`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeader() },
     body: JSON.stringify({ title, description }),
   });
   if (!response.ok) {
@@ -154,7 +154,7 @@ export async function updateTask(
     `${API_BASE_URL}/projects/${projectId}/tasks/${taskId}`,
     {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeader() },
       body: JSON.stringify({ title, description }),
     },
   );
@@ -175,7 +175,7 @@ export async function updateTaskStatus(
     `${API_BASE_URL}/projects/${projectId}/tasks/${taskId}/status`,
     {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeader() },
       body: JSON.stringify({ status }),
     },
   );
@@ -196,7 +196,7 @@ export async function updateTaskPriority(
     `${API_BASE_URL}/projects/${projectId}/tasks/${taskId}/priority`,
     {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeader() },
       body: JSON.stringify({ priority }),
     },
   );
