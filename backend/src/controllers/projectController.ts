@@ -1,10 +1,13 @@
-import { Body, Controller, Delete, Get, Path, Post, Put, Response, Route, SuccessResponse } from 'tsoa';
+import type { Request as ExRequest } from 'express';
+import { Body, Controller, Delete, Get, Path, Post, Put, Request, Response, Route, Security, SuccessResponse } from 'tsoa';
+import { getAuthenticatedUser } from '../middleware/authentication';
 import type { Project } from '../models/project';
 import {
   createProject,
   deleteProject,
   getProjectById,
   listProjects,
+  MissingCompanyError,
   ProjectNotFoundError,
   updateProject,
 } from '../services/projectService';
@@ -31,15 +34,19 @@ export interface UpdateProjectRequest {
 @Route('projects')
 export class ProjectController extends Controller {
   @Get()
-  public async listProjects(): Promise<Project[]> {
-    return listProjects();
+  @Security('jwt')
+  public async listProjects(@Request() request: ExRequest): Promise<Project[]> {
+    const user = getAuthenticatedUser(request);
+    return listProjects(user.companyId);
   }
 
   @Get('{id}')
+  @Security('jwt')
   @Response<ErrorResponse>(404, 'Project non trovato')
-  public async getProject(@Path() id: string): Promise<Project | ErrorResponse> {
+  public async getProject(@Path() id: string, @Request() request: ExRequest): Promise<Project | ErrorResponse> {
+    const user = getAuthenticatedUser(request);
     try {
-      return await getProjectById(id);
+      return await getProjectById(id, user.companyId);
     } catch (err) {
       if (err instanceof ProjectNotFoundError) {
         this.setStatus(404);
@@ -50,9 +57,14 @@ export class ProjectController extends Controller {
   }
 
   @Post()
+  @Security('jwt')
   @SuccessResponse(201, 'Project creato')
   @Response<ErrorResponse>(422, 'name mancante o vuoto')
-  public async createProject(@Body() body: CreateProjectRequest): Promise<Project | ErrorResponse> {
+  @Response<ErrorResponse>(403, "L'utente non è associato a nessuna azienda")
+  public async createProject(
+    @Body() body: CreateProjectRequest,
+    @Request() request: ExRequest,
+  ): Promise<Project | ErrorResponse> {
     // tsoa valida che "name" sia una stringa (campo non opzionale), ma non che
     // non sia vuota: è una regola di dominio, non di forma, quindi resta
     // responsabilità del controller e non del layer di validazione generato.
@@ -61,24 +73,37 @@ export class ProjectController extends Controller {
       return { message: 'name non può essere vuoto' };
     }
 
-    this.setStatus(201);
-    return createProject({ name: body.name, isActive: body.isActive });
+    const user = getAuthenticatedUser(request);
+    try {
+      const project = await createProject({ name: body.name, isActive: body.isActive }, user.companyId);
+      this.setStatus(201);
+      return project;
+    } catch (err) {
+      if (err instanceof MissingCompanyError) {
+        this.setStatus(403);
+        return { message: err.message };
+      }
+      throw err;
+    }
   }
 
   @Put('{id}')
+  @Security('jwt')
   @Response<ErrorResponse>(404, 'Project non trovato')
   @Response<ErrorResponse>(422, 'name presente ma vuoto')
   public async updateProject(
     @Path() id: string,
     @Body() body: UpdateProjectRequest,
+    @Request() request: ExRequest,
   ): Promise<Project | ErrorResponse> {
     if (body.name !== undefined && body.name.trim().length === 0) {
       this.setStatus(422);
       return { message: 'name non può essere vuoto' };
     }
 
+    const user = getAuthenticatedUser(request);
     try {
-      return await updateProject(id, body);
+      return await updateProject(id, body, user.companyId);
     } catch (err) {
       if (err instanceof ProjectNotFoundError) {
         this.setStatus(404);
@@ -89,11 +114,13 @@ export class ProjectController extends Controller {
   }
 
   @Delete('{id}')
+  @Security('jwt')
   @SuccessResponse(204, 'Project eliminato')
   @Response<ErrorResponse>(404, 'Project non trovato')
-  public async deleteProject(@Path() id: string): Promise<void> {
+  public async deleteProject(@Path() id: string, @Request() request: ExRequest): Promise<void> {
+    const user = getAuthenticatedUser(request);
     try {
-      await deleteProject(id);
+      await deleteProject(id, user.companyId);
       this.setStatus(204);
     } catch (err) {
       if (err instanceof ProjectNotFoundError) {

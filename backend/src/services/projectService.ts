@@ -4,11 +4,27 @@ import { isValidUuid } from '../utils/uuid';
 import { emitProjectCreated, emitProjectDeleted, emitProjectUpdated } from '../realtime/io';
 
 // Segnala "0 righe trovate/modificate" al chiamante senza che il service
-// conosca HTTP: il controller la intercetta e decide lo status (404).
+// conosca HTTP: il controller la intercetta e decide lo status (404). Stessa
+// classe usata sia per "id inesistente" sia per "id di un'altra azienda"
+// (vedi companyId nelle query sotto): un progetto fuori dalla propria company
+// deve risultare indistinguibile da uno che non esiste, non un 403 che
+// confermerebbe la sua esistenza.
 export class ProjectNotFoundError extends Error {
   constructor(public readonly id: string) {
     super(`Project con id ${id} non trovato`);
     this.name = 'ProjectNotFoundError';
+  }
+}
+
+// L'utente autenticato non ha ancora un'azienda (users.company_id è nullable,
+// vedi migrations/0014_add_company_id_e_role_a_users.sql): i task 5/6 del
+// task "Azienda multi-utente" (registrazione crea azienda, owner crea
+// dipendenti) sono quelli che la valorizzano. Senza company non esiste un
+// ambito in cui creare un progetto.
+export class MissingCompanyError extends Error {
+  constructor() {
+    super("L'utente non è associato a nessuna azienda");
+    this.name = 'MissingCompanyError';
   }
 }
 
@@ -24,12 +40,31 @@ function toProject(row: ProjectRow): Project {
   return { id: row.id, name: row.name, isActive: row.is_active };
 }
 
-export async function listProjects(): Promise<Project[]> {
-  const result = await pool.query<ProjectRow>('SELECT id, name, is_active FROM projects ORDER BY name');
+// company_id dell'utente autenticato (getAuthenticatedUser(request).companyId
+// nel controller): null finché l'utente non è agganciato a un'azienda, nel
+// qual caso queste query non devono restituire nulla, non "tutti i progetti"
+// (company_id su projects è NOT NULL, quindi `= NULL` non combacia mai).
+//
+// companyId è invece omesso (undefined) dalle chiamate interne fatte da
+// taskService.ts e assistantService.ts, che oggi non hanno ancora accesso
+// all'utente autenticato: quelle chiamate restano un existence-check non
+// filtrato per company, esattamente come prima di questa migration. Chiudere
+// anche quel varco è il punto 4 del task ("Guardia di autorizzazione
+// trasversale", esplicitamente su projects **e tasks**) — qui (punto 3) si
+// scopa solo l'endpoint /projects, non a caso quello nominato dal task.
+export async function listProjects(companyId?: string | null): Promise<Project[]> {
+  if (companyId === undefined) {
+    const result = await pool.query<ProjectRow>('SELECT id, name, is_active FROM projects ORDER BY name');
+    return result.rows.map(toProject);
+  }
+  const result = await pool.query<ProjectRow>(
+    'SELECT id, name, is_active FROM projects WHERE company_id = $1 ORDER BY name',
+    [companyId],
+  );
   return result.rows.map(toProject);
 }
 
-export async function getProjectById(id: string): Promise<Project> {
+export async function getProjectById(id: string, companyId?: string | null): Promise<Project> {
   // Un id sintatticamente non valido (es. un nome passato per errore invece
   // dell'uuid, come può capitare all'assistente LLM) non può comunque
   // combaciare con nessuna riga: intercettarlo qui evita che la colonna uuid
@@ -40,7 +75,14 @@ export async function getProjectById(id: string): Promise<Project> {
     throw new ProjectNotFoundError(id);
   }
 
-  const result = await pool.query<ProjectRow>('SELECT id, name, is_active FROM projects WHERE id = $1', [id]);
+  // Stesso companyId opzionale di listProjects: vedi il commento lì sopra.
+  const result =
+    companyId === undefined
+      ? await pool.query<ProjectRow>('SELECT id, name, is_active FROM projects WHERE id = $1', [id])
+      : await pool.query<ProjectRow>('SELECT id, name, is_active FROM projects WHERE id = $1 AND company_id = $2', [
+          id,
+          companyId,
+        ]);
   const row = result.rows[0];
   if (!row) {
     throw new ProjectNotFoundError(id);
@@ -53,13 +95,17 @@ export interface CreateProjectInput {
   isActive?: boolean;
 }
 
-export async function createProject(input: CreateProjectInput): Promise<Project> {
+export async function createProject(input: CreateProjectInput, companyId: string | null): Promise<Project> {
+  if (companyId === null) {
+    throw new MissingCompanyError();
+  }
+
   // id generato dal database: projects.id ha DEFAULT gen_random_uuid() dalla
   // migration 0005_projects_id_default_gen_random_uuid.sql.
   const isActive = input.isActive ?? true;
   const result = await pool.query<ProjectRow>(
-    'INSERT INTO projects (name, is_active) VALUES ($1, $2) RETURNING id, name, is_active',
-    [input.name, isActive],
+    'INSERT INTO projects (name, is_active, company_id) VALUES ($1, $2, $3) RETURNING id, name, is_active',
+    [input.name, isActive, companyId],
   );
   const project = toProject(result.rows[0]);
   emitProjectCreated(project);
@@ -71,7 +117,11 @@ export interface UpdateProjectInput {
   isActive?: boolean;
 }
 
-export async function updateProject(id: string, input: UpdateProjectInput): Promise<Project> {
+export async function updateProject(
+  id: string,
+  input: UpdateProjectInput,
+  companyId: string | null,
+): Promise<Project> {
   // Stesso guard di getProjectById: un id sintatticamente non valido non può
   // combaciare con nessuna riga, intercettarlo qui evita l'errore del driver.
   if (!isValidUuid(id)) {
@@ -83,10 +133,10 @@ export async function updateProject(id: string, input: UpdateProjectInput): Prom
   // concatenando stringhe in base ai campi presenti.
   const result = await pool.query<ProjectRow>(
     `UPDATE projects
-     SET name = COALESCE($2, name), is_active = COALESCE($3, is_active)
-     WHERE id = $1
+     SET name = COALESCE($3, name), is_active = COALESCE($4, is_active)
+     WHERE id = $1 AND company_id = $2
      RETURNING id, name, is_active`,
-    [id, input.name ?? null, input.isActive ?? null],
+    [id, companyId, input.name ?? null, input.isActive ?? null],
   );
   const row = result.rows[0];
   if (!row) {
@@ -97,14 +147,14 @@ export async function updateProject(id: string, input: UpdateProjectInput): Prom
   return project;
 }
 
-export async function deleteProject(id: string): Promise<void> {
+export async function deleteProject(id: string, companyId: string | null): Promise<void> {
   // Stesso guard di getProjectById: un id sintatticamente non valido non può
   // combaciare con nessuna riga, intercettarlo qui evita l'errore del driver.
   if (!isValidUuid(id)) {
     throw new ProjectNotFoundError(id);
   }
 
-  const result = await pool.query('DELETE FROM projects WHERE id = $1', [id]);
+  const result = await pool.query('DELETE FROM projects WHERE id = $1 AND company_id = $2', [id, companyId]);
   if (result.rowCount === 0) {
     throw new ProjectNotFoundError(id);
   }

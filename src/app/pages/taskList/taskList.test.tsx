@@ -155,10 +155,10 @@ describe("TaskList", () => {
   it("crea un nuovo task tramite il bottone + e lo mostra in tabella", async () => {
     vi.mocked(fetch).mockImplementation(async (input, init) => {
       const url = String(input);
-      if (url === "http://localhost:3000/projects/1" && !init) {
+      if (url === "http://localhost:3000/projects/1" && !init?.method) {
         return jsonResponse(200, { id: "1", name: "Progetto Demo", isActive: true });
       }
-      if (url === "http://localhost:3000/projects/1/tasks" && (!init || init.method === "GET")) {
+      if (url === "http://localhost:3000/projects/1/tasks" && (!init?.method || init.method === "GET")) {
         return jsonResponse(200, []);
       }
       if (url === "http://localhost:3000/projects/1/tasks" && init?.method === "POST") {
@@ -196,10 +196,10 @@ describe("TaskList", () => {
   it("modifica un task tramite il click sul titolo, riusando il form di creazione", async () => {
     vi.mocked(fetch).mockImplementation(async (input, init) => {
       const url = String(input);
-      if (url === "http://localhost:3000/projects/1" && !init) {
+      if (url === "http://localhost:3000/projects/1" && !init?.method) {
         return jsonResponse(200, { id: "1", name: "Progetto Demo", isActive: true });
       }
-      if (url === "http://localhost:3000/projects/1/tasks" && (!init || init.method === "GET")) {
+      if (url === "http://localhost:3000/projects/1/tasks" && (!init?.method || init.method === "GET")) {
         return jsonResponse(200, [
           {
             id: "t1",
@@ -265,10 +265,10 @@ describe("TaskList", () => {
   it("cambia lo stato di un task tramite il menu a tendina e lo sposta di gruppo", async () => {
     vi.mocked(fetch).mockImplementation(async (input, init) => {
       const url = String(input);
-      if (url === "http://localhost:3000/projects/1" && !init) {
+      if (url === "http://localhost:3000/projects/1" && !init?.method) {
         return jsonResponse(200, { id: "1", name: "Progetto Demo", isActive: true });
       }
-      if (url === "http://localhost:3000/projects/1/tasks" && (!init || init.method === "GET")) {
+      if (url === "http://localhost:3000/projects/1/tasks" && (!init?.method || init.method === "GET")) {
         return jsonResponse(200, [
           {
             id: "t1",
@@ -315,10 +315,10 @@ describe("TaskList", () => {
   it("cambia la priorità di un task tramite il menu a tendina dedicato", async () => {
     vi.mocked(fetch).mockImplementation(async (input, init) => {
       const url = String(input);
-      if (url === "http://localhost:3000/projects/1" && !init) {
+      if (url === "http://localhost:3000/projects/1" && !init?.method) {
         return jsonResponse(200, { id: "1", name: "Progetto Demo", isActive: true });
       }
-      if (url === "http://localhost:3000/projects/1/tasks" && (!init || init.method === "GET")) {
+      if (url === "http://localhost:3000/projects/1/tasks" && (!init?.method || init.method === "GET")) {
         return jsonResponse(200, [
           {
             id: "t1",

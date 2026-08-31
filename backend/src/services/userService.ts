@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { DatabaseError } from 'pg';
 import { pool } from '../db/pool';
-import type { User } from '../models/user';
+import type { User, UserRole } from '../models/user';
 
 // Cost factor per bcrypt: 12 round è il compromesso standard attuale tra
 // resistenza a brute-force e tempo di hashing lato server.
@@ -46,19 +46,23 @@ interface UserRow {
   username: string;
   email: string;
   password: string;
+  company_id: string | null;
+  role: UserRole | null;
 }
 
 function toUser(row: UserRow): User {
-  return { id: row.id, username: row.username, email: row.email };
+  return { id: row.id, username: row.username, email: row.email, companyId: row.company_id, role: row.role };
 }
 
+const USER_COLUMNS = 'id, username, email, password, company_id, role';
+
 export async function listUsers(): Promise<User[]> {
-  const result = await pool.query<UserRow>('SELECT id, username, email, password FROM users ORDER BY username');
+  const result = await pool.query<UserRow>(`SELECT ${USER_COLUMNS} FROM users ORDER BY username`);
   return result.rows.map(toUser);
 }
 
 export async function getUserById(id: string): Promise<User> {
-  const result = await pool.query<UserRow>('SELECT id, username, email, password FROM users WHERE id = $1', [id]);
+  const result = await pool.query<UserRow>(`SELECT ${USER_COLUMNS} FROM users WHERE id = $1`, [id]);
   const row = result.rows[0];
   if (!row) {
     throw new UserNotFoundError(id);
@@ -80,7 +84,7 @@ export async function createUser(input: CreateUserInput): Promise<User> {
 
   try {
     const result = await pool.query<UserRow>(
-      'INSERT INTO users (id, username, email, password) VALUES ($1, $2, $3, $4) RETURNING id, username, email, password',
+      `INSERT INTO users (id, username, email, password) VALUES ($1, $2, $3, $4) RETURNING ${USER_COLUMNS}`,
       [id, input.username, input.email, passwordHash],
     );
     return toUser(result.rows[0]);
@@ -109,7 +113,7 @@ export async function updateUser(id: string, input: UpdateUserInput): Promise<Us
       `UPDATE users
        SET username = COALESCE($2, username), email = COALESCE($3, email), password = COALESCE($4, password)
        WHERE id = $1
-       RETURNING id, username, email, password`,
+       RETURNING ${USER_COLUMNS}`,
       [id, input.username ?? null, input.email ?? null, passwordHash],
     );
     const row = result.rows[0];

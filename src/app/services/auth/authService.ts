@@ -34,6 +34,15 @@ export function getToken(): string | null {
   return sessionStorage.getItem(AUTH_TOKEN_KEY) ?? localStorage.getItem(AUTH_TOKEN_KEY);
 }
 
+// Header da fondere in ogni fetch verso una rotta @Security('jwt') (vedi
+// backend/src/middleware/authentication.ts). Oggetto vuoto se non c'è
+// sessione, invece di lanciare qui: la richiesta parte comunque e sarà il
+// 401 del backend a segnalare l'assenza di token, coerente con readErrorMessage.
+export function authHeader(): HeadersInit {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 export function isAuthenticated(): boolean {
   return getToken() !== null;
 }
