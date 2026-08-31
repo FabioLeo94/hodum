@@ -12,4 +12,9 @@ export interface User {
   email: string;
   companyId: string | null;
   role: UserRole | null;
+  // Task "cambio password obbligatorio al primo accesso": a differenza di
+  // companyId/role, NON nullable, perché la colonna DB è NOT NULL DEFAULT
+  // false (migrations/0016_add_must_change_password_a_users.sql) — ogni riga
+  // ne ha sempre un valore booleano.
+  mustChangePassword: boolean;
 }

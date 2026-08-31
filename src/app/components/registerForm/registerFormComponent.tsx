@@ -66,13 +66,13 @@ function RegisterFormComponent() {
 
     setIsSubmitting(true);
     try {
-      const { token } = await registerCompany({
+      const { token, user } = await registerCompany({
         companyName,
         username,
         email,
         password,
       });
-      persistSession(token, true);
+      persistSession(token, user, true);
       navigate("/dashboard");
     } catch (error) {
       setFormError(

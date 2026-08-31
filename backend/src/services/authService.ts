@@ -19,11 +19,12 @@ interface UserRow {
   password: string;
   company_id: string | null;
   role: User['role'];
+  must_change_password: boolean;
 }
 
 export async function login(email: string, password: string): Promise<User> {
   const result = await pool.query<UserRow>(
-    'SELECT id, username, email, password, company_id, role FROM users WHERE email = $1',
+    'SELECT id, username, email, password, company_id, role, must_change_password FROM users WHERE email = $1',
     [email],
   );
   const row = result.rows[0];
@@ -38,5 +39,12 @@ export async function login(email: string, password: string): Promise<User> {
     throw new InvalidCredentialsError();
   }
 
-  return { id: row.id, username: row.username, email: row.email, companyId: row.company_id, role: row.role };
+  return {
+    id: row.id,
+    username: row.username,
+    email: row.email,
+    companyId: row.company_id,
+    role: row.role,
+    mustChangePassword: row.must_change_password,
+  };
 }

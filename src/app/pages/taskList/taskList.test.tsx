@@ -88,8 +88,8 @@ describe("TaskList", () => {
 
     expect(await screen.findByText("Progetto non trovato.")).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "Torna alla dashboard" }),
-    ).toBeInTheDocument();
+      screen.getByRole("link", { name: "Dashboard" }),
+    ).toHaveAttribute("href", "/dashboard");
   });
 
   it("mostra un menu a tendina per lo stato di ogni task", async () => {

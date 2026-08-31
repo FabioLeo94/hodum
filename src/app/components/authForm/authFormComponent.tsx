@@ -34,14 +34,14 @@ function AuthFormComponent() {
 
     setIsSubmitting(true);
     try {
-      const token = await login(email, password);
-      if (!token) {
+      const result = await login(email, password);
+      if (!result) {
         setPasswordError("Email o password non corretti.");
         return;
       }
 
-      persistSession(token, rememberMe);
-      navigate("/dashboard");
+      persistSession(result.token, result.user, rememberMe);
+      navigate(result.user.mustChangePassword ? "/change-password" : "/dashboard");
     } finally {
       setIsSubmitting(false);
     }

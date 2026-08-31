@@ -16,6 +16,19 @@ export class AuthenticationError extends Error {}
 // 403 = autenticato ma non autorizzato).
 export class AuthorizationError extends Error {}
 
+// Distinta sia da AuthenticationError (identità non accertata) sia da
+// AuthorizationError (ruolo insufficiente): qui identità e ruolo vanno bene,
+// ma l'utente ha must_change_password = true e non può usare NESSUNA rotta
+// tranne quella dedicata al cambio password ('password-change' qui sotto).
+// L'error handler globale (app.ts) la riconosce per rispondere 428, uno
+// status distinto sia da 401 che da 403 per un futuro interceptor frontend.
+export class PasswordChangeRequiredError extends Error {
+  constructor() {
+    super('Cambio password obbligatorio prima di continuare');
+    this.name = 'PasswordChangeRequiredError';
+  }
+}
+
 // Modulo referenziato da tsoa.json (routes.authenticationModule): generato il
 // codice delle rotte, tsoa invoca questa funzione per ogni @Security(...)
 // incontrato. Il valore risolto NON viene iniettato automaticamente in un
@@ -23,14 +36,15 @@ export class AuthorizationError extends Error {}
 // request.user, valorizzato qui prima di risolvere la promise (vedi
 // getAuthenticatedUser più sotto e src/types/express.d.ts per il tipo).
 //
-// Due schemi condividono questa stessa funzione (vedi tsoa.json
+// Tre schemi condividono questa stessa funzione (vedi tsoa.json
 // securityDefinitions): 'jwt' risolve solo l'identità, 'owner' risolve
-// l'identità E richiede role === 'owner'. Non sono due funzioni separate
-// perché la risoluzione del token/utente è identica in entrambi i casi: solo
-// il controllo finale sul ruolo cambia in base allo schema dichiarato dal
-// controller con @Security('jwt') / @Security('owner').
+// l'identità E richiede role === 'owner', 'password-change' risolve la sola
+// identità mai bloccando su must_change_password (è lo schema della rotta che
+// lo azzera). Non sono funzioni separate perché la risoluzione del
+// token/utente è identica in tutti e tre i casi: solo il controllo finale
+// cambia in base allo schema dichiarato dal controller con @Security(...).
 export async function expressAuthentication(request: Request, securityName: string): Promise<User> {
-  if (securityName !== 'jwt' && securityName !== 'owner') {
+  if (securityName !== 'jwt' && securityName !== 'owner' && securityName !== 'password-change') {
     throw new Error(`Schema di sicurezza sconosciuto: ${securityName}`);
   }
 
@@ -54,6 +68,14 @@ export async function expressAuthentication(request: Request, securityName: stri
 
   if (securityName === 'owner' && user.role !== 'owner') {
     throw new AuthorizationError('Azione riservata al titolare dell\'azienda');
+  }
+
+  // Blocca ogni rotta protetta da 'jwt'/'owner' finché la password non viene
+  // cambiata, TRANNE quella dichiarata con 'password-change' (che serve
+  // esattamente ad azzerare must_change_password: bloccarla anche lì
+  // creerebbe un vicolo cieco senza uscita per l'utente).
+  if (securityName !== 'password-change' && user.mustChangePassword) {
+    throw new PasswordChangeRequiredError();
   }
 
   request.user = user;

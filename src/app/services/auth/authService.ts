@@ -3,14 +3,28 @@ import { API_BASE_URL } from "../httpClient";
 // Il token JWT sostituisce il vecchio flag booleano: la sessione ora sa
 // "chi" è l'utente autenticato, non solo che qualcuno lo è.
 export const AUTH_TOKEN_KEY = "authToken";
+export const AUTH_USER_KEY = "authUser";
+
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  companyId: string | null;
+  role: "owner" | "employee" | null;
+  mustChangePassword: boolean;
+}
 
 interface LoginResponseBody {
+  user: User;
   token: string;
 }
 
-// Ritorna il token di sessione su credenziali valide, null altrimenti: chi
-// chiama decide se e dove persisterlo (vedi persistSession).
-export async function login(email: string, password: string): Promise<string | null> {
+// Ritorna { user, token } su credenziali valide, null altrimenti: chi
+// chiama decide se e dove persisterli (vedi persistSession).
+export async function login(
+  email: string,
+  password: string,
+): Promise<{ user: User; token: string } | null> {
   const response = await fetch(`${API_BASE_URL}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -20,18 +34,42 @@ export async function login(email: string, password: string): Promise<string | n
     return null;
   }
   const body = (await response.json()) as LoginResponseBody;
-  return body.token;
+  return body;
 }
 
-export function persistSession(token: string, rememberMe: boolean): void {
+// Scrive lo user sotto AUTH_USER_KEY, mirror di dove vive già il token: se
+// il token è in localStorage (rememberMe true) lo user lo segue lì, altrimenti
+// resta solo in sessionStorage. Usata sia al login/registrazione sia dopo un
+// cambio password riuscito, che aggiorna mustChangePassword senza un nuovo login.
+export function updateStoredUser(user: User): void {
+  sessionStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+  if (localStorage.getItem(AUTH_TOKEN_KEY) !== null) {
+    localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+  }
+}
+
+export function persistSession(token: string, user: User, rememberMe: boolean): void {
   sessionStorage.setItem(AUTH_TOKEN_KEY, token);
   if (rememberMe) {
     localStorage.setItem(AUTH_TOKEN_KEY, token);
   }
+  updateStoredUser(user);
 }
 
 export function getToken(): string | null {
   return sessionStorage.getItem(AUTH_TOKEN_KEY) ?? localStorage.getItem(AUTH_TOKEN_KEY);
+}
+
+export function getUser(): User | null {
+  const raw = sessionStorage.getItem(AUTH_USER_KEY) ?? localStorage.getItem(AUTH_USER_KEY);
+  if (raw === null) {
+    return null;
+  }
+  try {
+    return JSON.parse(raw) as User;
+  } catch {
+    return null;
+  }
 }
 
 // Header da fondere in ogni fetch verso una rotta @Security('jwt') (vedi
@@ -49,8 +87,10 @@ export function isAuthenticated(): boolean {
 
 // Sessione stateless lato server (nessuna tabella di revoca, vedi
 // backend/src/services/tokenService.ts): il logout invalida solo lato
-// client, rimuovendo il token da entrambi gli storage.
+// client, rimuovendo token e user da entrambi gli storage.
 export function logout(): void {
   sessionStorage.removeItem(AUTH_TOKEN_KEY);
   localStorage.removeItem(AUTH_TOKEN_KEY);
+  sessionStorage.removeItem(AUTH_USER_KEY);
+  localStorage.removeItem(AUTH_USER_KEY);
 }

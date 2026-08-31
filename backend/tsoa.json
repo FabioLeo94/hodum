@@ -20,6 +20,12 @@
         "name": "Authorization",
         "in": "header",
         "description": "Stesso token di 'jwt', ma la rotta richiede inoltre role === 'owner' (verificato in expressAuthentication)"
+      },
+      "password-change": {
+        "type": "apiKey",
+        "name": "Authorization",
+        "in": "header",
+        "description": "Stesso token di 'jwt', ma la rotta è raggiungibile anche quando must_change_password è true (è la rotta che lo azzera)"
       }
     }
   },

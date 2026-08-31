@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useState } from "react";
 import type { DragEvent } from "react";
-import { Link, useNavigate, useOutletContext, useParams } from "react-router";
+import { useNavigate, useOutletContext, useParams } from "react-router";
 import type { Project, Task, TaskStatus } from "../../../shared/types/project";
 import {
   createTask,
@@ -247,9 +247,6 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
       <Fragment>
         <TopbarComponent onLogout={handleLogout} />
         <div className={styles.taskListContainer}>
-          <Link className={styles.backLink} to="/dashboard">
-            Torna alla dashboard
-          </Link>
           <p className={styles.notFoundText} role="status">
             Caricamento in corso...
           </p>
@@ -263,9 +260,6 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
       <Fragment>
         <TopbarComponent onLogout={handleLogout} />
         <div className={styles.taskListContainer}>
-          <Link className={styles.backLink} to="/dashboard">
-            Torna alla dashboard
-          </Link>
           <div className={styles.notFoundState} data-variant="error" role="alert">
             <p className={styles.errorMessage}>Errore di caricamento.</p>
             <p className={styles.notFoundText}>{loadError}</p>
@@ -280,9 +274,6 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
       <Fragment>
         <TopbarComponent onLogout={handleLogout} />
         <div className={styles.taskListContainer}>
-          <Link className={styles.backLink} to="/dashboard">
-            Torna alla dashboard
-          </Link>
           <div className={styles.notFoundState} role="alert">
             <p className={styles.errorMessage}>Progetto non trovato.</p>
             <p className={styles.notFoundText}>
@@ -337,9 +328,6 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
     <Fragment>
       <TopbarComponent onLogout={handleLogout} />
       <div className={styles.taskListContainer}>
-        <Link className={styles.backLink} to="/dashboard">
-          Torna alla dashboard
-        </Link>
         <header className={styles.taskListHeader}>
           <h1 className={styles.taskListTitle}>{project.name}</h1>
           <label className={styles.sortControl}>
@@ -538,9 +526,6 @@ function TaskListMissingProject() {
     <Fragment>
       <TopbarComponent onLogout={handleLogout} />
       <div className={styles.taskListContainer}>
-        <Link className={styles.backLink} to="/dashboard">
-          Torna alla dashboard
-        </Link>
         <div className={styles.notFoundState} role="alert">
           <p className={styles.errorMessage}>Progetto non trovato.</p>
           <p className={styles.notFoundText}>

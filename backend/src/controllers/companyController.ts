@@ -1,7 +1,9 @@
-import { Body, Controller, Post, Response, Route, SuccessResponse } from 'tsoa';
+import type { Request as ExRequest } from 'express';
+import { Body, Controller, Path, Post, Request, Response, Route, Security, SuccessResponse } from 'tsoa';
+import { getAuthenticatedUser } from '../middleware/authentication';
 import type { Company } from '../models/company';
 import type { User } from '../models/user';
-import { registerCompany } from '../services/companyService';
+import { createEmployee, registerCompany } from '../services/companyService';
 import { signSessionToken } from '../services/tokenService';
 import { UserConflictError } from '../services/userService';
 import { isValidEmail, isValidPassword, PASSWORD_POLICY_MESSAGE } from '../utils/validation';
@@ -27,6 +29,20 @@ export interface RegisterCompanyResponse {
   // POST /auth/login subito dopo la registrazione (come faceva il vecchio
   // flusso self-signup, vedi registerFormComponent.tsx).
   token: string;
+}
+
+export interface CreateEmployeeRequest {
+  username: string;
+  email: string;
+  password: string;
+}
+
+// Un :id nel path che non combacia con la company del richiedente risponde
+// 404, non 403: stesso principio di notFoundResponse in userController.ts,
+// non conferma con un 403 l'esistenza di una company fuori dal proprio
+// ambito.
+function companyNotFoundResponse(id: string): CompanyErrorResponse {
+  return { message: `Company con id ${id} non trovata` };
 }
 
 // Il path va scritto come stringa letterale: tsoa lo legge dall'AST prima
@@ -71,6 +87,61 @@ export class CompanyController extends Controller {
       const token = signSessionToken(user.id);
       this.setStatus(201);
       return { user, company, token };
+    } catch (err) {
+      if (err instanceof UserConflictError) {
+        this.setStatus(409);
+        return { message: err.message };
+      }
+      throw err;
+    }
+  }
+
+  // Nessun self-signup per dipendenti: solo l'owner autenticato della
+  // company crea le loro credenziali (punto 3 del task "Azienda
+  // multi-utente"), a differenza di register() sopra che è pubblico.
+  @Post('{id}/employees')
+  @Security('owner')
+  @SuccessResponse(201, 'Dipendente creato')
+  @Response<CompanyErrorResponse>(404, 'Company non trovata')
+  @Response<CompanyErrorResponse>(422, 'username, email o password non validi')
+  @Response<CompanyErrorResponse>(409, 'username o email già in uso')
+  public async createEmployee(
+    @Path() id: string,
+    @Body() body: CreateEmployeeRequest,
+    @Request() request: ExRequest,
+  ): Promise<User | CompanyErrorResponse> {
+    const requester = getAuthenticatedUser(request);
+    // @Security('owner') garantisce role === 'owner', ma companyId resta
+    // tipizzato string | null (vedi models/user.ts): trattato qui come 404
+    // invece di lasciarlo risalire come TypeError, per lo stesso principio di
+    // notFoundResponse sopra, anche se nella pratica del dominio attuale un
+    // owner ha sempre una company_id valorizzata.
+    if (requester.companyId === null || id !== requester.companyId) {
+      this.setStatus(404);
+      return companyNotFoundResponse(id);
+    }
+
+    if (body.username.trim().length === 0) {
+      this.setStatus(422);
+      return { message: 'username non può essere vuoto' };
+    }
+    if (!isValidEmail(body.email)) {
+      this.setStatus(422);
+      return { message: 'email non valida' };
+    }
+    if (!isValidPassword(body.password)) {
+      this.setStatus(422);
+      return { message: PASSWORD_POLICY_MESSAGE };
+    }
+
+    try {
+      const employee = await createEmployee(requester.companyId, {
+        username: body.username,
+        email: body.email,
+        password: body.password,
+      });
+      this.setStatus(201);
+      return employee;
     } catch (err) {
       if (err instanceof UserConflictError) {
         this.setStatus(409);

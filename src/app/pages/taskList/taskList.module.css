@@ -20,26 +20,6 @@
   border: 0;
 }
 
-.backLink {
-  width: fit-content;
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  font-weight: 600;
-  text-decoration: none;
-  transition: color 150ms ease;
-}
-
-.backLink:hover {
-  color: var(--text-primary);
-  text-decoration: underline;
-}
-
-.backLink:focus-visible {
-  outline: 2px solid var(--bg-primary);
-  outline-offset: 2px;
-  border-radius: var(--radious-xs);
-}
-
 /* Riga anziché colonna: il titolo resta l'ancora a sinistra, il controllo di
    ordinamento è un'azione secondaria sulla tabella e vive alla sua destra,
    sulla stessa altezza. wrap per non stringere il titolo su viewport stretti
@@ -333,7 +313,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .backLink,
   .taskRow,
   .dragHandle,
   .emptyRow,

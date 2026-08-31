@@ -4,7 +4,7 @@ import rateLimit from 'express-rate-limit';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ValidateError } from 'tsoa';
-import { AuthenticationError, AuthorizationError } from './middleware/authentication';
+import { AuthenticationError, AuthorizationError, PasswordChangeRequiredError } from './middleware/authentication';
 import { RegisterRoutes } from './routes/routes';
 import { InvalidSessionTokenError } from './services/tokenService';
 
@@ -104,6 +104,15 @@ export async function createApp(): Promise<Express> {
     if (err instanceof AuthorizationError) {
       // Identità accertata (401 non si applica) ma ruolo insufficiente: 403.
       res.status(403).json({ message: err.message });
+      return;
+    }
+
+    if (err instanceof PasswordChangeRequiredError) {
+      // Identità e ruolo accertati (401/403 non si applicano), ma
+      // must_change_password è true: 428 Precondition Required, distinto da
+      // un 403 generico così un futuro interceptor frontend può reagire
+      // reindirizzando al cambio password invece che a un errore di permessi.
+      res.status(428).json({ message: err.message });
       return;
     }
 

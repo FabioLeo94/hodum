@@ -12,8 +12,67 @@
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
 }
 
-.side {
-  min-width: 40px;
+.nav {
+  display: flex;
+  align-items: center;
+  gap: var(--m-md);
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+/* Su viewport strettissimi con più voci (Dashboard + Dipendenti) il
+   contenuto può eccedere la colonna della grid: piuttosto che spingerla
+   oltre lo spazio riservato al logo/account (che romperebbe la
+   simmetria 1fr/auto/1fr), la nav scorre in orizzontale al proprio
+   interno. Scrollbar nascosta perché qui è solo una valvola di sicurezza,
+   non un pattern di navigazione primario. */
+.nav::-webkit-scrollbar {
+  display: none;
+}
+
+.navItem {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  padding: var(--p-sm) var(--p-md);
+  border-radius: var(--radious-sm);
+  transition:
+    color 150ms ease,
+    background-color 150ms ease;
+}
+
+.navItem:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-field);
+}
+
+.navItem:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+/* La voce attiva non è cliccabile (è uno <span>, non un <Link>): la
+   distingue dalle altre non solo il colore/sfondo a tinta menta ma anche
+   il peso tipografico maggiore, così lo stato resta leggibile anche senza
+   percezione del colore. Stesso linguaggio del badge "in attesa" nella
+   pagina dipendenti (tinta bg-primary a bassa opacità + testo bg-primary). */
+.navItemActive {
+  display: inline-flex;
+  align-items: center;
+  color: var(--bg-primary);
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+  padding: var(--p-sm) var(--p-md);
+  border-radius: var(--radious-sm);
+  background-color: color-mix(in srgb, var(--bg-primary) 18%, transparent);
+  cursor: default;
 }
 
 .logo {
@@ -137,6 +196,16 @@
 @media (max-width: 400px) {
   .topbar {
     padding: 0 var(--p-md);
+  }
+
+  .nav {
+    gap: var(--m-sm);
+  }
+
+  .navItem,
+  .navItemActive {
+    font-size: 0.78rem;
+    padding: var(--p-xs) var(--p-sm);
   }
 
   .logo {

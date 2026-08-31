@@ -1,4 +1,5 @@
 import { API_BASE_URL, readErrorMessage } from "../httpClient";
+import { authHeader } from "../auth/authService";
 
 export interface RegisterCompanyInput {
   companyName: string;
@@ -19,6 +20,7 @@ export interface RegisteredUser {
   email: string;
   companyId: string | null;
   role: "owner" | "employee" | null;
+  mustChangePassword: boolean;
 }
 
 export interface RegisterCompanyResult {
@@ -50,4 +52,36 @@ export async function registerCompany(
   }
 
   return (await response.json()) as RegisterCompanyResult;
+}
+
+export interface CreateEmployeeInput {
+  username: string;
+  email: string;
+  password: string;
+}
+
+// Nessun self-signup per i dipendenti (backend/src/controllers/companyController.ts,
+// @Security('owner')): solo l'owner autenticato può chiamarla, da qui il token in header.
+export async function createEmployee(
+  companyId: string,
+  input: CreateEmployeeInput,
+): Promise<RegisteredUser> {
+  const response = await fetch(`${API_BASE_URL}/companies/${companyId}/employees`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    body: JSON.stringify(input),
+  });
+
+  if (!response.ok) {
+    const message = await readErrorMessage(response);
+    if (response.status === 409) {
+      throw new Error(message ?? "Username o email già in uso.");
+    }
+    if (response.status === 422) {
+      throw new Error(message ?? "Dati non validi. Controlla i campi inseriti.");
+    }
+    throw new Error(message ?? "Creazione del dipendente non riuscita. Riprova più tardi.");
+  }
+
+  return (await response.json()) as RegisteredUser;
 }

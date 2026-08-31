@@ -57,13 +57,21 @@ export interface UserRow {
   password: string;
   company_id: string | null;
   role: UserRole | null;
+  must_change_password: boolean;
 }
 
 export function toUser(row: UserRow): User {
-  return { id: row.id, username: row.username, email: row.email, companyId: row.company_id, role: row.role };
+  return {
+    id: row.id,
+    username: row.username,
+    email: row.email,
+    companyId: row.company_id,
+    role: row.role,
+    mustChangePassword: row.must_change_password,
+  };
 }
 
-const USER_COLUMNS = 'id, username, email, password, company_id, role';
+const USER_COLUMNS = 'id, username, email, password, company_id, role, must_change_password';
 
 // companyId omesso (undefined) per usi interni che devono vedere tutti gli
 // utenti; il controller lo valorizza sempre con l'azienda del richiedente
@@ -120,6 +128,24 @@ export async function updateUser(id: string, input: UpdateUserInput): Promise<Us
     }
     throw err;
   }
+}
+
+// Endpoint dedicato al cambio password (task "cambio password obbligatorio al
+// primo accesso"): a differenza di updateUser, azzera sempre
+// must_change_password nella stessa UPDATE, così un dipendente che cambia la
+// password ricevuta dall'owner smette immediatamente di essere bloccato dal
+// terzo securityName in expressAuthentication.
+export async function changePassword(id: string, password: string): Promise<User> {
+  const passwordHash = await hashPassword(password);
+  const result = await pool.query<UserRow>(
+    `UPDATE users SET password = $2, must_change_password = false WHERE id = $1 RETURNING ${USER_COLUMNS}`,
+    [id, passwordHash],
+  );
+  const row = result.rows[0];
+  if (!row) {
+    throw new UserNotFoundError(id);
+  }
+  return toUser(row);
 }
 
 export async function deleteUser(id: string): Promise<void> {

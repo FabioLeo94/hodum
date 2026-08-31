@@ -1,0 +1,30 @@
+.description {
+  margin-bottom: var(--m-lg);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-lg);
+}
+
+/* Coppia password/conferma: gap interno più stretto per leggerle come
+   un'unica unità, più un margine sopra che somma al gap di .fields
+   (16px + 8px = 24px) per staccarla dai campi anagrafici. */
+.passwordGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-md);
+  margin-top: var(--m-md);
+}
+
+.submitError {
+  composes: submitError from "../../../shared/styles/modalForm.module.css";
+}
+
+.cancelButton {
+  composes: cancelButton from "../../../shared/styles/modalForm.module.css";
+}

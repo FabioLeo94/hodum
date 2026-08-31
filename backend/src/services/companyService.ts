@@ -29,6 +29,12 @@ export interface RegisterCompanyResult {
   company: Company;
 }
 
+export interface CreateEmployeeInput {
+  username: string;
+  email: string;
+  password: string;
+}
+
 // Punto 2 di .tasks/TASK.md: sostituisce il vecchio self-signup libero
 // (POST /users, rimosso). Le tre scritture (user, company, aggiornamento di
 // user con company_id/role) condividono un solo client di pool invece di
@@ -65,7 +71,7 @@ export async function registerCompany(input: RegisterCompanyInput): Promise<Regi
     const userResult = await client.query<UserRow>(
       `UPDATE users SET company_id = $2, role = 'owner'
        WHERE id = $1
-       RETURNING id, username, email, password, company_id, role`,
+       RETURNING id, username, email, password, company_id, role, must_change_password`,
       [userId, company.id],
     );
 
@@ -81,5 +87,34 @@ export async function registerCompany(input: RegisterCompanyInput): Promise<Regi
     throw err;
   } finally {
     client.release();
+  }
+}
+
+// Punto 3 di .tasks/TASK.md: crea un dipendente già agganciato alla company
+// del chiamante (verificata dal controller). Un solo INSERT, a differenza di
+// registerCompany: qui non c'è una company da creare né un utente da
+// aggiornare in un secondo tempo, quindi niente transazione a più passi da
+// far fallire a metà.
+export async function createEmployee(companyId: string, input: CreateEmployeeInput): Promise<User> {
+  const userId = randomUUID();
+  const passwordHash = await hashPassword(input.password);
+
+  try {
+    // must_change_password = true esplicito (non il DEFAULT globale): un
+    // dipendente riceve la password dall'owner e deve sostituirla al primo
+    // accesso, a differenza dell'owner stesso (registerCompany), che sceglie
+    // la propria password e resta a false via DEFAULT.
+    const result = await pool.query<UserRow>(
+      `INSERT INTO users (id, username, email, password, company_id, role, must_change_password)
+       VALUES ($1, $2, $3, $4, $5, 'employee', true)
+       RETURNING id, username, email, password, company_id, role, must_change_password`,
+      [userId, input.username, input.email, passwordHash, companyId],
+    );
+    return toUser(result.rows[0]);
+  } catch (err) {
+    if (err instanceof DatabaseError && err.code === '23505') {
+      throw mapUserUniqueViolation(err);
+    }
+    throw err;
   }
 }

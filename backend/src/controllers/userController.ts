@@ -2,7 +2,15 @@ import type { Request as ExRequest } from 'express';
 import { Body, Controller, Delete, Get, Path, Put, Request, Response, Route, Security, SuccessResponse } from 'tsoa';
 import { getAuthenticatedUser } from '../middleware/authentication';
 import type { User } from '../models/user';
-import { deleteUser, getUserById, listUsers, UserConflictError, UserNotFoundError, updateUser } from '../services/userService';
+import {
+  changePassword,
+  deleteUser,
+  getUserById,
+  listUsers,
+  UserConflictError,
+  UserNotFoundError,
+  updateUser,
+} from '../services/userService';
 import { isValidEmail, isValidPassword, PASSWORD_POLICY_MESSAGE } from '../utils/validation';
 
 // Corpo di risposta per gli esiti di errore documentati via @Response: stessa
@@ -20,6 +28,10 @@ export interface UpdateUserRequest {
   username?: string;
   email?: string;
   password?: string;
+}
+
+export interface ChangePasswordRequest {
+  password: string;
 }
 
 // Un id che non combacia con l'utente autenticato (né come "sé stesso" né come
@@ -113,6 +125,43 @@ export class UserController extends Controller {
       if (err instanceof UserConflictError) {
         this.setStatus(409);
         return { message: err.message };
+      }
+      throw err;
+    }
+  }
+
+  // Rotta dedicata (task "cambio password obbligatorio al primo accesso"),
+  // distinta da PUT /users/{id} sopra: @Security('password-change') invece di
+  // 'jwt' è ciò che la rende raggiungibile anche quando mustChangePassword è
+  // true, mentre updateUser resta bloccato in quel caso (vedi
+  // expressAuthentication in middleware/authentication.ts). Stessa
+  // restrizione self-service (id !== requester.id -> 404).
+  @Put('{id}/password')
+  @Security('password-change')
+  @Response<UserErrorResponse>(404, 'User non trovato')
+  @Response<UserErrorResponse>(422, 'password non valida')
+  public async changePassword(
+    @Path() id: string,
+    @Body() body: ChangePasswordRequest,
+    @Request() request: ExRequest,
+  ): Promise<User | UserErrorResponse> {
+    const requester = getAuthenticatedUser(request);
+    if (id !== requester.id) {
+      this.setStatus(404);
+      return notFoundResponse(id);
+    }
+
+    if (!isValidPassword(body.password)) {
+      this.setStatus(422);
+      return { message: PASSWORD_POLICY_MESSAGE };
+    }
+
+    try {
+      return await changePassword(id, body.password);
+    } catch (err) {
+      if (err instanceof UserNotFoundError) {
+        this.setStatus(404);
+        return notFoundResponse(id);
       }
       throw err;
     }
