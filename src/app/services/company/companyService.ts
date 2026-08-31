@@ -19,7 +19,7 @@ export interface RegisteredUser {
   username: string;
   email: string;
   companyId: string | null;
-  role: "owner" | "employee" | null;
+  role: "owner" | "manager" | "employee" | null;
   mustChangePassword: boolean;
 }
 
@@ -58,6 +58,9 @@ export interface CreateEmployeeInput {
   username: string;
   email: string;
   password: string;
+  // Assente = dipendente (comportamento storico): vedi CreateEmployeeRequest
+  // in backend/src/controllers/companyController.ts.
+  role?: "employee" | "manager";
 }
 
 // Nessun self-signup per i dipendenti (backend/src/controllers/companyController.ts,

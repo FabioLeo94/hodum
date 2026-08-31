@@ -9,6 +9,7 @@ describe("EditEmployeeModalComponent", () => {
         isOpen
         onClose={() => {}}
         currentUsername="dipendente1"
+        currentRole="employee"
         onSave={() => {}}
       />,
     );
@@ -23,6 +24,7 @@ describe("EditEmployeeModalComponent", () => {
         isOpen
         onClose={() => {}}
         currentUsername="dipendente1"
+        currentRole="employee"
         onSave={onSave}
       />,
     );
@@ -43,6 +45,7 @@ describe("EditEmployeeModalComponent", () => {
         isOpen
         onClose={() => {}}
         currentUsername="dipendente1"
+        currentRole="employee"
         onSave={onSave}
       />,
     );
@@ -56,6 +59,7 @@ describe("EditEmployeeModalComponent", () => {
     expect(onSave).toHaveBeenCalledWith({
       username: "nuovoNome",
       password: undefined,
+      role: "employee",
     });
   });
 
@@ -65,6 +69,7 @@ describe("EditEmployeeModalComponent", () => {
         isOpen
         onClose={() => {}}
         currentUsername="dipendente1"
+        currentRole="employee"
         onSave={() => {}}
       />,
     );
@@ -87,6 +92,7 @@ describe("EditEmployeeModalComponent", () => {
         isOpen
         onClose={() => {}}
         currentUsername="dipendente1"
+        currentRole="employee"
         onSave={onSave}
       />,
     );
@@ -112,6 +118,7 @@ describe("EditEmployeeModalComponent", () => {
         isOpen
         onClose={() => {}}
         currentUsername="dipendente1"
+        currentRole="employee"
         onSave={onSave}
       />,
     );
@@ -128,7 +135,33 @@ describe("EditEmployeeModalComponent", () => {
     expect(onSave).toHaveBeenCalledWith({
       username: "dipendente1",
       password: "Password1",
+      role: "employee",
     });
+  });
+
+  it("precompiles the role select with currentRole and allows changing it", async () => {
+    const onSave = vi.fn();
+    render(
+      <EditEmployeeModalComponent
+        isOpen
+        onClose={() => {}}
+        currentUsername="dipendente1"
+        currentRole="manager"
+        onSave={onSave}
+      />,
+    );
+
+    expect(screen.getByLabelText("Ruolo")).toHaveValue("manager");
+
+    fireEvent.change(screen.getByLabelText("Ruolo"), {
+      target: { value: "employee" },
+    });
+    fireEvent.click(screen.getByText("Salva"));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ role: "employee" }),
+    );
   });
 
   it("calls onClose when the cancel button is clicked", () => {
@@ -138,6 +171,7 @@ describe("EditEmployeeModalComponent", () => {
         isOpen
         onClose={onClose}
         currentUsername="dipendente1"
+        currentRole="employee"
         onSave={() => {}}
       />,
     );
@@ -152,6 +186,7 @@ describe("EditEmployeeModalComponent", () => {
         isOpen
         onClose={() => {}}
         currentUsername="dipendente1"
+        currentRole="employee"
         onSave={() => {}}
         submitError="Username già in uso."
       />,

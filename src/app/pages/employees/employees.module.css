@@ -3,7 +3,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--m-lg);
-  min-height: 100vh;
   padding: var(--p-xl);
   padding-bottom: calc(var(--fab-size) + var(--fab-offset) * 2);
 }
@@ -62,6 +61,25 @@
   font-size: 0.85rem;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.employeeRoleBadge {
+  flex-shrink: 0;
+  padding: var(--p-xs) var(--p-sm);
+  border-radius: var(--radious-sm);
+  background-color: var(--bg-field);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Stessa tinta ambra già usata altrove (es. .activeProjectLabel in
+   topbarComponent.module.css) per un'etichetta di ruolo elevato, distinta
+   dalla tinta menta di stato/azioni. */
+.employeeRoleBadge[data-role="manager"] {
+  background-color: color-mix(in srgb, var(--color-warning) 14%, transparent);
+  color: var(--color-warning);
 }
 
 .employeeStatus {

@@ -68,7 +68,7 @@ export class ProjectController extends Controller {
   }
 
   @Post()
-  @Security('owner')
+  @Security('manager')
   @SuccessResponse(201, 'Project creato')
   @Response<ErrorResponse>(422, 'name mancante o vuoto')
   @Response<ErrorResponse>(403, "L'utente non è associato a nessuna azienda")
@@ -99,7 +99,7 @@ export class ProjectController extends Controller {
   }
 
   @Put('{id}')
-  @Security('owner')
+  @Security('manager')
   @Response<ErrorResponse>(404, 'Project non trovato')
   @Response<ErrorResponse>(422, 'name presente ma vuoto')
   public async updateProject(
@@ -125,7 +125,7 @@ export class ProjectController extends Controller {
   }
 
   @Delete('{id}')
-  @Security('owner')
+  @Security('manager')
   @SuccessResponse(204, 'Project eliminato')
   @Response<ErrorResponse>(404, 'Project non trovato')
   public async deleteProject(@Path() id: string, @Request() request: ExRequest): Promise<void> {

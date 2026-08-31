@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import ModalBaseComponent from "../modalBase/modalBaseComponent";
 import InputComponent from "../input/inputComponent";
 import ButtonComponent from "../button/buttonComponent";
@@ -12,6 +12,7 @@ export interface CreateEmployeeFormValues {
   username: string;
   email: string;
   password: string;
+  role: "employee" | "manager";
 }
 
 interface Prop {
@@ -31,8 +32,10 @@ function CreateEmployeeModalComponent({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [role, setRole] = useState<"employee" | "manager">("employee");
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const roleFieldId = useId();
 
   const usernameError =
     submitAttempted && username.trim() === "" ? "Inserire uno username." : "";
@@ -58,6 +61,7 @@ function CreateEmployeeModalComponent({
     setEmail("");
     setPassword("");
     setConfirmPassword("");
+    setRole("employee");
     setSubmitAttempted(false);
   }
 
@@ -80,7 +84,7 @@ function CreateEmployeeModalComponent({
 
     setIsSubmitting(true);
     try {
-      await onCreate({ username: username.trim(), email, password });
+      await onCreate({ username: username.trim(), email, password, role });
       resetForm();
     } catch {
       // onCreate è responsabile di segnalare l'errore tramite submitError;
@@ -94,7 +98,7 @@ function CreateEmployeeModalComponent({
     <ModalBaseComponent
       isOpen={isOpen}
       onClose={handleClose}
-      title="Nuovo dipendente"
+      title={role === "manager" ? "Nuovo project manager" : "Nuovo dipendente"}
       onSubmit={handleCreate}
       primaryAction={
         <ButtonComponent onClick={() => {}} disabled={isSubmitting}>
@@ -139,6 +143,20 @@ function CreateEmployeeModalComponent({
           required
           error={emailError}
         />
+        <div className={styles.roleField}>
+          <label className={styles.roleLabel} htmlFor={roleFieldId}>
+            Ruolo
+          </label>
+          <select
+            id={roleFieldId}
+            className={styles.roleSelect}
+            value={role}
+            onChange={(event) => setRole(event.target.value as "employee" | "manager")}
+          >
+            <option value="employee">Dipendente</option>
+            <option value="manager">Project Manager</option>
+          </select>
+        </div>
         {/* Password iniziale e conferma sono un'unica "risposta" divisa in due
             campi: un gap più stretto le lega visivamente tra loro, mentre lo
             spazio in più prima del gruppo (vedi .passwordGroup) le separa dai

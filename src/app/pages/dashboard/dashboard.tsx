@@ -24,11 +24,14 @@ function Dashboard() {
   const isAssistantOpen = outletContext?.isAssistantOpen ?? false;
   const setHasLocalFab = outletContext?.setHasLocalFab;
   usePageMeta({ title: "Dashboard", robots: "noindex, nofollow" });
-  // Task "Gestione del dipendente": un dipendente vede solo i progetti a lui
-  // assegnati (già filtrati dal backend, vedi getAllProjects) e non può
-  // creare progetti né gestirli (rinomina/elimina), solo lavorare sui task
-  // al loro interno.
-  const canManage = getUser()?.role === "owner";
+  // Task "Gestione del dipendente" + "Ruolo project manager": un dipendente
+  // vede solo i progetti a lui assegnati (già filtrati dal backend, vedi
+  // getAllProjects) e non può creare progetti né gestirli (rinomina/elimina),
+  // solo lavorare sui task al loro interno. Owner e project manager hanno
+  // invece pieno accesso di gestione (stesso @Security('manager') lato
+  // backend, vedi projectController.ts).
+  const role = getUser()?.role;
+  const canManage = role === "owner" || role === "manager";
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");

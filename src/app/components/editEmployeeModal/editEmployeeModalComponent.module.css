@@ -11,6 +11,23 @@
   gap: var(--m-lg);
 }
 
+.roleField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-xs);
+}
+
+.roleLabel {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.roleSelect {
+  composes: fieldBase from "../../../shared/styles/fieldBase.module.css";
+  cursor: pointer;
+}
+
 .passwordGroup {
   display: flex;
   flex-direction: column;

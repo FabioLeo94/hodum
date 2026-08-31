@@ -36,15 +36,23 @@ export class PasswordChangeRequiredError extends Error {
 // request.user, valorizzato qui prima di risolvere la promise (vedi
 // getAuthenticatedUser più sotto e src/types/express.d.ts per il tipo).
 //
-// Tre schemi condividono questa stessa funzione (vedi tsoa.json
+// Quattro schemi condividono questa stessa funzione (vedi tsoa.json
 // securityDefinitions): 'jwt' risolve solo l'identità, 'owner' risolve
-// l'identità E richiede role === 'owner', 'password-change' risolve la sola
-// identità mai bloccando su must_change_password (è lo schema della rotta che
-// lo azzera). Non sono funzioni separate perché la risoluzione del
-// token/utente è identica in tutti e tre i casi: solo il controllo finale
-// cambia in base allo schema dichiarato dal controller con @Security(...).
+// l'identità E richiede role === 'owner', 'manager' richiede role === 'owner'
+// OPPURE role === 'manager' (project manager: crea progetti/task e assegna
+// progetti ai dipendenti, ma non gestisce le loro credenziali — quello resta
+// dietro 'owner'), 'password-change' risolve la sola identità mai bloccando
+// su must_change_password (è lo schema della rotta che lo azzera). Non sono
+// funzioni separate perché la risoluzione del token/utente è identica in
+// tutti i casi: solo il controllo finale cambia in base allo schema
+// dichiarato dal controller con @Security(...).
 export async function expressAuthentication(request: Request, securityName: string): Promise<User> {
-  if (securityName !== 'jwt' && securityName !== 'owner' && securityName !== 'password-change') {
+  if (
+    securityName !== 'jwt' &&
+    securityName !== 'owner' &&
+    securityName !== 'manager' &&
+    securityName !== 'password-change'
+  ) {
     throw new Error(`Schema di sicurezza sconosciuto: ${securityName}`);
   }
 
@@ -68,6 +76,10 @@ export async function expressAuthentication(request: Request, securityName: stri
 
   if (securityName === 'owner' && user.role !== 'owner') {
     throw new AuthorizationError('Azione riservata al titolare dell\'azienda');
+  }
+
+  if (securityName === 'manager' && user.role !== 'owner' && user.role !== 'manager') {
+    throw new AuthorizationError('Azione riservata al titolare o a un project manager dell\'azienda');
   }
 
   // Blocca ogni rotta protetta da 'jwt'/'owner' finché la password non viene

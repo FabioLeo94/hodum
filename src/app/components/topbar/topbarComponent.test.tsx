@@ -23,7 +23,7 @@ function jsonResponse(status: number, body: unknown): Response {
   } as Response;
 }
 
-function storeUser(role: "owner" | "employee") {
+function storeUser(role: "owner" | "manager" | "employee") {
   sessionStorage.setItem(AUTH_TOKEN_KEY, "signed-jwt-token");
   sessionStorage.setItem(
     AUTH_USER_KEY,
@@ -61,6 +61,15 @@ describe("TopbarComponent", () => {
 
   it("renders a link to /employees for an owner", () => {
     storeUser("owner");
+    renderTopbar();
+    expect(screen.getByRole("link", { name: "Dipendenti" })).toHaveAttribute(
+      "href",
+      "/employees",
+    );
+  });
+
+  it("renders a link to /employees for a manager", () => {
+    storeUser("manager");
     renderTopbar();
     expect(screen.getByRole("link", { name: "Dipendenti" })).toHaveAttribute(
       "href",

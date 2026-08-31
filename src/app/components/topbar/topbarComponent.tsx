@@ -26,8 +26,11 @@ function TopbarComponent({ onLogout }: Prop) {
   // Letto direttamente da qui (invece che passato come prop) per non dover
   // propagare user/role in ogni pagina che monta TopbarComponent (dashboard,
   // taskList in 5 punti diversi): stesso storage già usato da
-  // ProtectedRouteComponent per la stessa decisione.
-  const isOwner = getUser()?.role === "owner";
+  // ProtectedRouteComponent per la stessa decisione. Il project manager vede
+  // "Dipendenti" come l'owner (per assegnare progetti), ma la pagina stessa
+  // gli nasconde crea/modifica dipendente (vedi employees.tsx).
+  const role = getUser()?.role;
+  const canSeeEmployees = role === "owner" || role === "manager";
   const { pathname } = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuId = useId();
@@ -290,7 +293,7 @@ function TopbarComponent({ onLogout }: Prop) {
           <span className={styles.activeProjectLabel}>{activeProjectLabel}</span>
         )}
 
-        {isOwner && renderNavItem({ to: "/employees", label: "Dipendenti" })}
+        {canSeeEmployees && renderNavItem({ to: "/employees", label: "Dipendenti" })}
       </nav>
 
       <span className={styles.logo}>

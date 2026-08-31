@@ -10,7 +10,7 @@ export interface User {
   username: string;
   email: string;
   companyId: string | null;
-  role: "owner" | "employee" | null;
+  role: "owner" | "manager" | "employee" | null;
   mustChangePassword: boolean;
 }
 

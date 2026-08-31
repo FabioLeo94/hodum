@@ -35,6 +35,11 @@ export interface CreateEmployeeRequest {
   username: string;
   email: string;
   password: string;
+  // Assente/'employee' = dipendente (comportamento storico). 'manager' crea
+  // invece un project manager: stesso account, stesso flusso di primo
+  // accesso, ma con permessi più ampi (vedi @Security('manager') su
+  // projectController.ts e userController.ts).
+  role?: 'employee' | 'manager';
 }
 
 // Un :id nel path che non combacia con la company del richiedente risponde
@@ -139,6 +144,7 @@ export class CompanyController extends Controller {
         username: body.username,
         email: body.email,
         password: body.password,
+        role: body.role,
       });
       this.setStatus(201);
       return employee;

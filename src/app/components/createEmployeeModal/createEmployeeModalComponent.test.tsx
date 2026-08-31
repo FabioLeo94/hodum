@@ -113,7 +113,30 @@ describe("CreateEmployeeModalComponent", () => {
       username: "dipendente1",
       email: "dipendente1@example.com",
       password: "Password1",
+      role: "employee",
     });
+  });
+
+  it("calls onCreate with role 'manager' when Project Manager is selected", async () => {
+    const onCreate = vi.fn();
+    render(
+      <CreateEmployeeModalComponent
+        isOpen
+        onClose={() => {}}
+        onCreate={onCreate}
+      />,
+    );
+
+    fillValidForm();
+    fireEvent.change(screen.getByLabelText("Ruolo"), {
+      target: { value: "manager" },
+    });
+    fireEvent.click(screen.getByText("Crea dipendente"));
+
+    await waitFor(() => expect(onCreate).toHaveBeenCalledTimes(1));
+    expect(onCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ role: "manager" }),
+    );
   });
 
   it("calls onClose when the cancel button is clicked", () => {

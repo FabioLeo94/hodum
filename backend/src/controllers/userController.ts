@@ -35,6 +35,12 @@ export interface UpdateUserRequest {
   username?: string;
   email?: string;
   password?: string;
+  // Applicato solo quando l'owner modifica un proprio dipendente (mai nel
+  // self-service: un utente non può cambiare il proprio ruolo), per
+  // promuoverlo a project manager o retrocederlo a dipendente. 'owner' non è
+  // un valore accettato: non è raggiungibile per via applicativa da questo
+  // endpoint (vedi isOwnerEditingEmployee sotto).
+  role?: 'employee' | 'manager';
 }
 
 export interface ChangePasswordRequest {
@@ -127,7 +133,10 @@ export class UserController extends Controller {
         }
         throw err;
       }
-      if (target.role !== 'employee' || target.companyId !== requester.companyId) {
+      if (
+        (target.role !== 'employee' && target.role !== 'manager') ||
+        target.companyId !== requester.companyId
+      ) {
         this.setStatus(404);
         return notFoundResponse(id);
       }
@@ -152,7 +161,14 @@ export class UserController extends Controller {
       // true, stesso comportamento della creazione dipendente (createEmployee
       // in companyService.ts): il dipendente deve sceglierne una propria al
       // prossimo accesso, l'owner non deve comunicargliene una valida per sempre.
-      return await updateUser(id, { ...body, forceChangePassword: isOwnerEditingEmployee });
+      return await updateUser(id, {
+        ...body,
+        // Scartato nel self-service (isOwnerEditingEmployee false) anche se
+        // presente nel body: un utente non deve poter promuovere sé stesso
+        // cambiando il proprio ruolo.
+        role: isOwnerEditingEmployee ? body.role : undefined,
+        forceChangePassword: isOwnerEditingEmployee,
+      });
     } catch (err) {
       if (err instanceof UserNotFoundError) {
         this.setStatus(404);
@@ -208,7 +224,7 @@ export class UserController extends Controller {
   // pratica, ma non escluso dal tipo) non ha dipendenti da elencare —
   // EmployeeNotFoundError normalizza entrambi i casi allo stesso 404.
   @Get('{id}/projects')
-  @Security('owner')
+  @Security('manager')
   @Response<UserErrorResponse>(404, 'Dipendente non trovato')
   public async listEmployeeProjects(
     @Path() id: string,
@@ -231,7 +247,7 @@ export class UserController extends Controller {
   }
 
   @Put('{id}/projects')
-  @Security('owner')
+  @Security('manager')
   @Response<UserErrorResponse>(404, 'Dipendente o progetto non trovato')
   public async assignEmployeeProjects(
     @Path() id: string,

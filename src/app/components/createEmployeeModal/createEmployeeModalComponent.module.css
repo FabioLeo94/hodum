@@ -11,6 +11,23 @@
   gap: var(--m-lg);
 }
 
+.roleField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-xs);
+}
+
+.roleLabel {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.roleSelect {
+  composes: fieldBase from "../../../shared/styles/fieldBase.module.css";
+  cursor: pointer;
+}
+
 /* Coppia password/conferma: gap interno più stretto per leggerle come
    un'unica unità, più un margine sopra che somma al gap di .fields
    (16px + 8px = 24px) per staccarla dai campi anagrafici. */

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import ModalBaseComponent from "../modalBase/modalBaseComponent";
 import InputComponent from "../input/inputComponent";
 import ButtonComponent from "../button/buttonComponent";
@@ -10,12 +10,17 @@ export interface EditEmployeeFormValues {
   // Omesso quando l'owner non vuole cambiare la password: distinto da una
   // stringa vuota, che invece verrebbe rifiutata dalla validazione.
   password?: string;
+  // Promozione/retrocessione project manager <-> dipendente (task "Ruolo
+  // project manager"): sempre presente, a differenza di password, perché il
+  // select ha sempre un valore selezionato.
+  role: "employee" | "manager";
 }
 
 interface Prop {
   isOpen: boolean;
   onClose: () => void;
   currentUsername: string;
+  currentRole: "employee" | "manager";
   onSave: (values: EditEmployeeFormValues) => void | Promise<void>;
   submitError?: string;
 }
@@ -24,6 +29,7 @@ function EditEmployeeModalComponent({
   isOpen,
   onClose,
   currentUsername,
+  currentRole,
   onSave,
   submitError,
 }: Prop) {
@@ -33,8 +39,10 @@ function EditEmployeeModalComponent({
   const [username, setUsername] = useState(currentUsername);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [role, setRole] = useState<"employee" | "manager">(currentRole);
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const roleFieldId = useId();
 
   const usernameError =
     submitAttempted && username.trim() === "" ? "Inserire uno username." : "";
@@ -59,6 +67,7 @@ function EditEmployeeModalComponent({
     setUsername(currentUsername);
     setPassword("");
     setConfirmPassword("");
+    setRole(currentRole);
     setSubmitAttempted(false);
   }
 
@@ -83,6 +92,7 @@ function EditEmployeeModalComponent({
       await onSave({
         username: trimmedUsername,
         password: password === "" ? undefined : password,
+        role,
       });
       resetForm();
     } catch {
@@ -97,7 +107,7 @@ function EditEmployeeModalComponent({
     <ModalBaseComponent
       isOpen={isOpen}
       onClose={handleClose}
-      title="Modifica dipendente"
+      title={currentRole === "manager" ? "Modifica project manager" : "Modifica dipendente"}
       onSubmit={handleSave}
       primaryAction={
         <ButtonComponent onClick={() => {}} disabled={isSubmitting}>
@@ -132,6 +142,20 @@ function EditEmployeeModalComponent({
           required
           error={usernameError}
         />
+        <div className={styles.roleField}>
+          <label className={styles.roleLabel} htmlFor={roleFieldId}>
+            Ruolo
+          </label>
+          <select
+            id={roleFieldId}
+            className={styles.roleSelect}
+            value={role}
+            onChange={(event) => setRole(event.target.value as "employee" | "manager")}
+          >
+            <option value="employee">Dipendente</option>
+            <option value="manager">Project Manager</option>
+          </select>
+        </div>
         <div className={styles.passwordGroup}>
           <InputComponent
             type="password"

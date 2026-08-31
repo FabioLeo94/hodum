@@ -101,6 +101,11 @@ export interface UpdateUserInput {
   username?: string;
   email?: string;
   password?: string;
+  // Promozione/retrocessione project manager <-> dipendente (task "Ruolo
+  // project manager"): il controller lo valorizza solo quando l'owner
+  // modifica un proprio dipendente, mai nel self-service, quindi qui basta
+  // applicarlo con lo stesso COALESCE degli altri campi opzionali.
+  role?: UserRole;
   // Task "Gestione del dipendente": quando l'owner resetta la password di un
   // dipendente, questo deve tornare a true (stesso comportamento della
   // creazione, vedi createEmployee in companyService.ts) — a differenza del
@@ -125,10 +130,10 @@ export async function updateUser(id: string, input: UpdateUserInput): Promise<Us
     const result = await pool.query<UserRow>(
       `UPDATE users
        SET username = COALESCE($2, username), email = COALESCE($3, email), password = COALESCE($4, password),
-           must_change_password = COALESCE($5, must_change_password)
+           must_change_password = COALESCE($5, must_change_password), role = COALESCE($6, role)
        WHERE id = $1
        RETURNING ${USER_COLUMNS}`,
-      [id, input.username ?? null, input.email ?? null, passwordHash, mustChangePassword],
+      [id, input.username ?? null, input.email ?? null, passwordHash, mustChangePassword, input.role ?? null],
     );
     const row = result.rows[0];
     if (!row) {

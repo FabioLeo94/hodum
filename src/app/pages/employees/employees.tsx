@@ -18,9 +18,9 @@ import styles from "./employees.module.css";
 
 function Employees() {
   const navigate = useNavigate();
-  const isAssistantOpen =
-    useOutletContext<AssistantLayoutContext | undefined>()?.isAssistantOpen ??
-    false;
+  const outletContext = useOutletContext<AssistantLayoutContext | undefined>();
+  const isAssistantOpen = outletContext?.isAssistantOpen ?? false;
+  const setHasLocalFab = outletContext?.setHasLocalFab;
 
   usePageMeta({ title: "Dipendenti", robots: "noindex, nofollow" });
 
@@ -34,19 +34,39 @@ function Employees() {
   const [assigningEmployee, setAssigningEmployee] = useState<User | null>(null);
   const [assignError, setAssignError] = useState("");
 
-  // Pannello riservato all'owner: nessuna rotta protetta filtra già per
-  // ruolo (ProtectedRouteComponent controlla solo autenticazione e
-  // mustChangePassword), quindi la guardia va qui, stesso pattern di
-  // changePassword.tsx.
+  // Pannello riservato a owner e project manager: nessuna rotta protetta
+  // filtra già per ruolo (ProtectedRouteComponent controlla solo
+  // autenticazione e mustChangePassword), quindi la guardia va qui, stesso
+  // pattern di changePassword.tsx. Il project manager vede la pagina in
+  // modalità "sola assegnazione" (vedi canManageEmployees/canAssignProjects
+  // sotto): niente crea/modifica dipendente, solo assegna progetti.
   useEffect(() => {
     if (!isAuthenticated()) {
       navigate("/auth", { replace: true });
       return;
     }
-    if (getUser()?.role !== "owner") {
+    const role = getUser()?.role;
+    if (role !== "owner" && role !== "manager") {
       navigate("/dashboard", { replace: true });
     }
   }, []);
+
+  const viewerRole = getUser()?.role;
+  // Crea/modifica credenziali resta owner-only (task "Ruolo project
+  // manager"): il PM non gestisce i dipendenti, li vede solo per assegnare
+  // progetti.
+  const canManageEmployees = viewerRole === "owner";
+  const canAssignProjects = viewerRole === "owner" || viewerRole === "manager";
+
+  // Il FAB "+" sotto è nascosto a un project manager (canManageEmployees
+  // false): senza questo effect l'icona dell'assistente (montata nel
+  // layout, non qui) resterebbe scostata come se il FAB ci fosse, stesso
+  // principio di dashboard.tsx. Il cleanup riporta il layout al default
+  // (true) quando si esce dalla pagina.
+  useEffect(() => {
+    setHasLocalFab?.(canManageEmployees);
+    return () => setHasLocalFab?.(true);
+  }, [canManageEmployees, setHasLocalFab]);
 
   useEffect(() => {
     let cancelled = false;
@@ -54,7 +74,9 @@ function Employees() {
     listUsers()
       .then((users) => {
         if (!cancelled) {
-          setEmployees(users.filter((user) => user.role === "employee"));
+          setEmployees(
+            users.filter((user) => user.role === "employee" || user.role === "manager"),
+          );
         }
       })
       .catch((error: unknown) => {
@@ -94,6 +116,7 @@ function Employees() {
     username: string;
     email: string;
     password: string;
+    role: "employee" | "manager";
   }) {
     const owner = getUser();
     if (!owner?.companyId) {
@@ -126,6 +149,7 @@ function Employees() {
   async function handleEditEmployee(values: {
     username: string;
     password?: string;
+    role: "employee" | "manager";
   }) {
     if (!editingEmployee) return;
     try {
@@ -208,6 +232,12 @@ function Employees() {
                   <span className={styles.employeeEmail}>{employee.email}</span>
                 </div>
                 <span
+                  className={styles.employeeRoleBadge}
+                  data-role={employee.role}
+                >
+                  {employee.role === "manager" ? "Project Manager" : "Dipendente"}
+                </span>
+                <span
                   className={styles.employeeStatus}
                   data-pending={employee.mustChangePassword}
                 >
@@ -216,92 +246,105 @@ function Employees() {
                     : "Attivo"}
                 </span>
                 <div className={styles.employeeActions}>
-                  <button
-                    type="button"
-                    className={styles.iconButton}
-                    aria-label={`Modifica dipendente ${employee.username}`}
-                    onClick={() => openEditModal(employee)}
-                  >
-                    <svg
-                      viewBox="0 0 24 24"
-                      width="16"
-                      height="16"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
+                  {canManageEmployees && (
+                    <button
+                      type="button"
+                      className={styles.iconButton}
+                      aria-label={`Modifica dipendente ${employee.username}`}
+                      onClick={() => openEditModal(employee)}
                     >
-                      <path d="M12 20h9" />
-                      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
-                    </svg>
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.iconButton}
-                    aria-label={`Assegna progetti a ${employee.username}`}
-                    onClick={() => openAssignModal(employee)}
-                  >
-                    <svg
-                      viewBox="0 0 24 24"
-                      width="16"
-                      height="16"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
+                      <svg
+                        viewBox="0 0 24 24"
+                        width="16"
+                        height="16"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M12 20h9" />
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                      </svg>
+                    </button>
+                  )}
+                  {/* Assegnare progetti a un project manager non ha senso: ha
+                      già accesso a tutti i progetti della company (vedi
+                      @Security('manager') lato backend), non serve
+                      un'assegnazione esplicita come per un dipendente. */}
+                  {canAssignProjects && employee.role === "employee" && (
+                    <button
+                      type="button"
+                      className={styles.iconButton}
+                      aria-label={`Assegna progetti a ${employee.username}`}
+                      onClick={() => openAssignModal(employee)}
                     >
-                      <path d="M9 11l3 3L22 4" />
-                      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-                    </svg>
-                  </button>
+                      <svg
+                        viewBox="0 0 24 24"
+                        width="16"
+                        height="16"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M9 11l3 3L22 4" />
+                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                      </svg>
+                    </button>
+                  )}
                 </div>
               </li>
             ))}
           </ul>
         ) : null}
 
-        <button
-          type="button"
-          className={styles.fabButton}
-          data-assistant-open={isAssistantOpen}
-          aria-label="Crea nuovo dipendente"
-          onClick={openCreateModal}
-        >
-          <svg
-            className={styles.fabIcon}
-            viewBox="0 0 24 24"
-            width="24"
-            height="24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            aria-hidden="true"
-          >
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-        </button>
+        {canManageEmployees && (
+          <Fragment>
+            <button
+              type="button"
+              className={styles.fabButton}
+              data-assistant-open={isAssistantOpen}
+              aria-label="Crea nuovo dipendente"
+              onClick={openCreateModal}
+            >
+              <svg
+                className={styles.fabIcon}
+                viewBox="0 0 24 24"
+                width="24"
+                height="24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                aria-hidden="true"
+              >
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            </button>
 
-        <CreateEmployeeModalComponent
-          isOpen={isCreateModalOpen}
-          onClose={closeCreateModal}
-          onCreate={handleCreateEmployee}
-          submitError={createError}
-        />
+            <CreateEmployeeModalComponent
+              isOpen={isCreateModalOpen}
+              onClose={closeCreateModal}
+              onCreate={handleCreateEmployee}
+              submitError={createError}
+            />
 
-        {editingEmployee && (
-          <EditEmployeeModalComponent
-            key={editingEmployee.id}
-            isOpen={editingEmployee !== null}
-            onClose={closeEditModal}
-            currentUsername={editingEmployee.username}
-            onSave={handleEditEmployee}
-            submitError={editError}
-          />
+            {editingEmployee && (
+              <EditEmployeeModalComponent
+                key={editingEmployee.id}
+                isOpen={editingEmployee !== null}
+                onClose={closeEditModal}
+                currentUsername={editingEmployee.username}
+                currentRole={editingEmployee.role === "manager" ? "manager" : "employee"}
+                onSave={handleEditEmployee}
+                submitError={editError}
+              />
+            )}
+          </Fragment>
         )}
 
         {assigningEmployee && (

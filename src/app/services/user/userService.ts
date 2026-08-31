@@ -50,7 +50,7 @@ export async function changePassword(userId: string, password: string): Promise<
 // che l'owner può cambiare — password vuota/omessa lascia quella esistente.
 export async function updateEmployee(
   id: string,
-  values: { username?: string; password?: string },
+  values: { username?: string; password?: string; role?: "employee" | "manager" },
 ): Promise<User> {
   const response = await fetch(`${API_BASE_URL}/users/${id}`, {
     method: "PUT",

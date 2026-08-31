@@ -33,6 +33,9 @@ export interface CreateEmployeeInput {
   username: string;
   email: string;
   password: string;
+  // Assente = 'employee' (comportamento storico): vedi CreateEmployeeRequest
+  // in companyController.ts.
+  role?: 'employee' | 'manager';
 }
 
 // Punto 2 di .tasks/TASK.md: sostituisce il vecchio self-signup libero
@@ -101,14 +104,15 @@ export async function createEmployee(companyId: string, input: CreateEmployeeInp
 
   try {
     // must_change_password = true esplicito (non il DEFAULT globale): un
-    // dipendente riceve la password dall'owner e deve sostituirla al primo
-    // accesso, a differenza dell'owner stesso (registerCompany), che sceglie
-    // la propria password e resta a false via DEFAULT.
+    // dipendente/project manager riceve la password dall'owner e deve
+    // sostituirla al primo accesso, a differenza dell'owner stesso
+    // (registerCompany), che sceglie la propria password e resta a false via
+    // DEFAULT.
     const result = await pool.query<UserRow>(
       `INSERT INTO users (id, username, email, password, company_id, role, must_change_password)
-       VALUES ($1, $2, $3, $4, $5, 'employee', true)
+       VALUES ($1, $2, $3, $4, $5, $6, true)
        RETURNING id, username, email, password, company_id, role, must_change_password`,
-      [userId, input.username, input.email, passwordHash, companyId],
+      [userId, input.username, input.email, passwordHash, companyId, input.role ?? 'employee'],
     );
     return toUser(result.rows[0]);
   } catch (err) {
