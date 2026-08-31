@@ -3,7 +3,7 @@ import styles from "./registerFormComponent.module.css";
 import InputComponent from "../input/inputComponent";
 import ButtonComponent from "../button/buttonComponent";
 import { createUser } from "../../services/user/userService";
-import { persistSession } from "../../services/auth/authService";
+import { login, persistSession } from "../../services/auth/authService";
 import {
   validateEmail,
   validatePassword,
@@ -60,7 +60,14 @@ function RegisterFormComponent() {
     setIsSubmitting(true);
     try {
       await createUser({ username, email, password });
-      persistSession(true);
+      const token = await login(email, password);
+      if (!token) {
+        setFormError(
+          "Registrazione riuscita, ma l'accesso automatico non è andato a buon fine. Prova ad accedere manualmente.",
+        );
+        return;
+      }
+      persistSession(token, true);
       navigate("/dashboard");
     } catch (error) {
       setFormError(

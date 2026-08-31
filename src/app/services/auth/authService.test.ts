@@ -3,8 +3,9 @@ import {
   login,
   persistSession,
   isAuthenticated,
+  getToken,
   logout,
-  AUTH_STORAGE_KEY,
+  AUTH_TOKEN_KEY,
 } from "./authService";
 
 function jsonResponse(status: number, body: unknown = {}): Response {
@@ -27,14 +28,17 @@ describe("authService", () => {
   });
 
   describe("login", () => {
-    it("invia una POST JSON a /auth/login e risolve true su credenziali valide", async () => {
+    it("invia una POST JSON a /auth/login e risolve il token su credenziali valide", async () => {
       vi.mocked(fetch).mockResolvedValue(
-        jsonResponse(200, { id: "1", username: "demo", email: "demo@taskmanager.dev" }),
+        jsonResponse(200, {
+          user: { id: "1", username: "demo", email: "demo@taskmanager.dev" },
+          token: "signed-jwt-token",
+        }),
       );
 
       await expect(
         login("demo@taskmanager.dev", "demo1234"),
-      ).resolves.toBe(true);
+      ).resolves.toBe("signed-jwt-token");
 
       const [url, options] = vi.mocked(fetch).mock.calls[0];
       expect(url).toBe("http://localhost:3000/auth/login");
@@ -45,45 +49,63 @@ describe("authService", () => {
       });
     });
 
-    it("risolve false per credenziali non valide (401)", async () => {
+    it("risolve null per credenziali non valide (401)", async () => {
       vi.mocked(fetch).mockResolvedValue(
         jsonResponse(401, { message: "Email o password non corretti" }),
       );
 
-      await expect(login("demo@taskmanager.dev", "wrong")).resolves.toBe(
-        false,
-      );
+      await expect(login("demo@taskmanager.dev", "wrong")).resolves.toBeNull();
     });
   });
 
   describe("persistSession", () => {
-    it("stores true in localStorage when rememberMe is true", () => {
-      persistSession(true);
-      expect(localStorage.getItem(AUTH_STORAGE_KEY)).toBe("true");
+    it("stores the token in sessionStorage and localStorage when rememberMe is true", () => {
+      persistSession("signed-jwt-token", true);
+      expect(sessionStorage.getItem(AUTH_TOKEN_KEY)).toBe("signed-jwt-token");
+      expect(localStorage.getItem(AUTH_TOKEN_KEY)).toBe("signed-jwt-token");
     });
 
     it("does not write to localStorage when rememberMe is false", () => {
-      persistSession(false);
-      expect(localStorage.getItem(AUTH_STORAGE_KEY)).toBeNull();
+      persistSession("signed-jwt-token", false);
+      expect(sessionStorage.getItem(AUTH_TOKEN_KEY)).toBe("signed-jwt-token");
+      expect(localStorage.getItem(AUTH_TOKEN_KEY)).toBeNull();
+    });
+  });
+
+  describe("getToken", () => {
+    it("returns the token from sessionStorage when present", () => {
+      sessionStorage.setItem(AUTH_TOKEN_KEY, "session-token");
+      expect(getToken()).toBe("session-token");
+    });
+
+    it("falls back to localStorage when sessionStorage is empty", () => {
+      localStorage.setItem(AUTH_TOKEN_KEY, "local-token");
+      expect(getToken()).toBe("local-token");
+    });
+
+    it("returns null when no token is stored", () => {
+      expect(getToken()).toBeNull();
     });
   });
 
   describe("isAuthenticated", () => {
-    it("returns true when the session flag is set", () => {
-      localStorage.setItem(AUTH_STORAGE_KEY, "true");
+    it("returns true when a token is stored", () => {
+      localStorage.setItem(AUTH_TOKEN_KEY, "signed-jwt-token");
       expect(isAuthenticated()).toBe(true);
     });
 
-    it("returns false when the session flag is missing", () => {
+    it("returns false when no token is stored", () => {
       expect(isAuthenticated()).toBe(false);
     });
   });
 
   describe("logout", () => {
-    it("removes the session flag from localStorage", () => {
-      localStorage.setItem(AUTH_STORAGE_KEY, "true");
+    it("removes the token from both storages", () => {
+      sessionStorage.setItem(AUTH_TOKEN_KEY, "signed-jwt-token");
+      localStorage.setItem(AUTH_TOKEN_KEY, "signed-jwt-token");
       logout();
-      expect(localStorage.getItem(AUTH_STORAGE_KEY)).toBeNull();
+      expect(sessionStorage.getItem(AUTH_TOKEN_KEY)).toBeNull();
+      expect(localStorage.getItem(AUTH_TOKEN_KEY)).toBeNull();
     });
   });
 });

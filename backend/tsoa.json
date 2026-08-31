@@ -7,9 +7,18 @@
     "specVersion": 3,
     "name": "Hodum API",
     "description": "API backend di Hodum",
-    "version": "1.0.0"
+    "version": "1.0.0",
+    "securityDefinitions": {
+      "jwt": {
+        "type": "apiKey",
+        "name": "Authorization",
+        "in": "header",
+        "description": "Token di sessione: 'Bearer <token>' ottenuto da POST /auth/login"
+      }
+    }
   },
   "routes": {
-    "routesDir": "src/routes"
+    "routesDir": "src/routes",
+    "authenticationModule": "src/middleware/authentication.ts"
   }
 }

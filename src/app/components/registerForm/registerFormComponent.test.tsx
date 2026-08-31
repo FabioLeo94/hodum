@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import RegisterFormComponent from "./registerFormComponent";
-import { AUTH_STORAGE_KEY } from "../../services/auth/authService";
+import { AUTH_TOKEN_KEY } from "../../services/auth/authService";
 
 function jsonResponse(status: number, body: unknown): Response {
   return {
@@ -10,6 +10,25 @@ function jsonResponse(status: number, body: unknown): Response {
     status,
     json: () => Promise.resolve(body),
   } as Response;
+}
+
+// Il submit di successo fa due chiamate in sequenza: POST /users (creazione)
+// e POST /auth/login (per ottenere un token vero, vedi registerFormComponent.tsx).
+function mockCreateThenLoginSuccess(): void {
+  vi.mocked(fetch).mockImplementation((input) => {
+    const url = typeof input === "string" ? input : input.toString();
+    if (url.endsWith("/auth/login")) {
+      return Promise.resolve(
+        jsonResponse(200, {
+          user: { id: "1", username: "mario", email: "mario@example.com" },
+          token: "signed-jwt-token",
+        }),
+      );
+    }
+    return Promise.resolve(
+      jsonResponse(201, { id: "1", username: "mario", email: "mario@example.com" }),
+    );
+  });
 }
 
 function renderForm() {
@@ -114,9 +133,7 @@ describe("RegisterFormComponent", () => {
   });
 
   it("calls createUser, persists the session and navigates on success", async () => {
-    vi.mocked(fetch).mockResolvedValue(
-      jsonResponse(201, { id: "1", username: "mario", email: "mario@example.com" }),
-    );
+    mockCreateThenLoginSuccess();
     renderForm();
 
     fireEvent.change(screen.getByPlaceholderText("Username"), {
@@ -134,7 +151,7 @@ describe("RegisterFormComponent", () => {
     fireEvent.click(screen.getByText("Registrati"));
 
     await vi.waitFor(() =>
-      expect(localStorage.getItem(AUTH_STORAGE_KEY)).toBe("true"),
+      expect(localStorage.getItem(AUTH_TOKEN_KEY)).toBe("signed-jwt-token"),
     );
     expect(fetch).toHaveBeenCalledWith(
       "http://localhost:3000/users",
@@ -165,6 +182,6 @@ describe("RegisterFormComponent", () => {
     expect(
       await screen.findByText("Username o email già in uso."),
     ).toBeInTheDocument();
-    expect(localStorage.getItem(AUTH_STORAGE_KEY)).toBeNull();
+    expect(localStorage.getItem(AUTH_TOKEN_KEY)).toBeNull();
   });
 });

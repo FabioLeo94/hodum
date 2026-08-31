@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import AuthFormComponent from "./authFormComponent";
-import { AUTH_STORAGE_KEY } from "../../services/auth/authService";
+import { AUTH_TOKEN_KEY } from "../../services/auth/authService";
 
 function renderAuthForm() {
   return render(
@@ -73,7 +73,7 @@ describe("AuthFormComponent", () => {
     expect(
       await screen.findByText("Email o password non corretti."),
     ).toBeInTheDocument();
-    expect(localStorage.getItem(AUTH_STORAGE_KEY)).toBeNull();
+    expect(localStorage.getItem(AUTH_TOKEN_KEY)).toBeNull();
   });
 
   it("disables the submit button and shows a loading label while the login request is in flight", async () => {
@@ -97,7 +97,12 @@ describe("AuthFormComponent", () => {
     });
     expect(submitButton).toBeDisabled();
 
-    resolveFetch(jsonResponse(200, {}));
+    resolveFetch(
+      jsonResponse(200, {
+        user: { id: "1", username: "demo", email: "demo@taskmanager.dev" },
+        token: "signed-jwt-token",
+      }),
+    );
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "Accedi" })).not.toBeDisabled(),
     );
@@ -122,7 +127,10 @@ describe("AuthFormComponent", () => {
 
   it("persists the session on successful login when remember-me is checked", async () => {
     vi.mocked(fetch).mockResolvedValue(
-      jsonResponse(200, { id: "1", username: "demo", email: "demo@taskmanager.dev" }),
+      jsonResponse(200, {
+        user: { id: "1", username: "demo", email: "demo@taskmanager.dev" },
+        token: "signed-jwt-token",
+      }),
     );
     renderAuthForm();
     fireEvent.change(screen.getByPlaceholderText("Email"), {
@@ -135,7 +143,7 @@ describe("AuthFormComponent", () => {
     fireEvent.click(screen.getByText("Accedi"));
 
     await waitFor(() =>
-      expect(localStorage.getItem(AUTH_STORAGE_KEY)).toBe("true"),
+      expect(localStorage.getItem(AUTH_TOKEN_KEY)).toBe("signed-jwt-token"),
     );
   });
 });
