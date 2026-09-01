@@ -11,7 +11,7 @@ import {
   updateProject,
 } from "../../services/project/projectService";
 import { subscribeToProjects } from "../../services/realtime/socketService";
-import { getUser, logout } from "../../services/auth/authService";
+import { logout, useAuthUser } from "../../services/auth/authService";
 import type { Project } from "../../../shared/types/project";
 import { usePageMeta } from "../../../shared/hooks/usePageMeta";
 import styles from "./dashboard.module.css";
@@ -29,8 +29,10 @@ function Dashboard() {
   // getAllProjects) e non può creare progetti né gestirli (rinomina/elimina),
   // solo lavorare sui task al loro interno. Owner e project manager hanno
   // invece pieno accesso di gestione (stesso @Security('manager') lato
-  // backend, vedi projectController.ts).
-  const role = getUser()?.role;
+  // backend, vedi projectController.ts). useAuthUser (invece di getUser
+  // diretto) fa ri-renderizzare la dashboard quando arriva 'user:updated',
+  // così una promozione a manager sblocca subito la UI di gestione.
+  const role = useAuthUser()?.role;
   const canManage = role === "owner" || role === "manager";
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);

@@ -13,7 +13,7 @@ import {
   setAssignedProjects,
 } from "../../services/user/userService";
 import { createEmployee } from "../../services/company/companyService";
-import { getUser, isAuthenticated, logout } from "../../services/auth/authService";
+import { getUser, isAuthenticated, logout, useAuthUser } from "../../services/auth/authService";
 import type { User } from "../../services/auth/authService";
 import { usePageMeta } from "../../../shared/hooks/usePageMeta";
 import styles from "./employees.module.css";
@@ -55,7 +55,10 @@ function Employees() {
     // motivo di auth.tsx.
   }, [navigate]);
 
-  const viewerRole = getUser()?.role;
+  // useAuthUser (invece di getUser diretto) fa ri-renderizzare la pagina
+  // quando arriva 'user:updated': un project manager appena promosso vede
+  // subito "Assegna progetti" senza dover disconnettere e riconnettere.
+  const viewerRole = useAuthUser()?.role;
   // Crea/modifica credenziali resta owner-only (task "Ruolo project
   // manager"): il PM non gestisce i dipendenti, li vede solo per assegnare
   // progetti.

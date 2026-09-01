@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from "react";
 import { API_BASE_URL } from "../httpClient";
 
 // Il token JWT sostituisce il vecchio flag booleano: la sessione ora sa
@@ -44,14 +45,71 @@ export async function login(
   return body;
 }
 
+// Sottoscrittori di useAuthUser sotto: getUser() legge dallo storage, non da
+// uno state React, quindi un componente che lo chiama in render (pattern
+// diffuso in questo progetto, es. topbarComponent) non si ri-renderizza da
+// solo quando lo storage cambia altrove (un'altra tab, o un evento socket
+// 'user:updated' - vedi socketService.ts). notifyUserChange chiude questo
+// buco senza introdurre una libreria di state management.
+const userChangeListeners = new Set<() => void>();
+
+function notifyUserChange(): void {
+  for (const listener of userChangeListeners) {
+    listener();
+  }
+}
+
 // Scrive lo user sotto AUTH_USER_KEY, mirror di dove vive già il token: se
 // il token è in localStorage (rememberMe true) lo user lo segue lì, altrimenti
 // resta solo in sessionStorage. Usata sia al login/registrazione sia dopo un
-// cambio password riuscito, che aggiorna mustChangePassword senza un nuovo login.
+// cambio password riuscito, che aggiorna mustChangePassword senza un nuovo
+// login, sia dall'handler di 'user:updated' quando è l'owner a modificare
+// questo utente (es. promozione a project manager) da un'altra sessione.
 export function updateStoredUser(user: User): void {
   sessionStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
   if (localStorage.getItem(AUTH_TOKEN_KEY) !== null) {
     localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+  }
+  notifyUserChange();
+}
+
+// Hook di lettura reattiva: da usare al posto di getUser() ovunque il
+// risultato guidi cosa viene mostrato (ruolo, mustChangePassword), così un
+// 'user:updated' ricevuto mentre l'utente è già sulla pagina aggiorna la UI
+// subito invece che alla prossima navigazione/riconnessione.
+export function useAuthUser(): User | null {
+  return useSyncExternalStore(subscribeUserChange, getUserSnapshot);
+}
+
+function subscribeUserChange(listener: () => void): () => void {
+  userChangeListeners.add(listener);
+  return () => userChangeListeners.delete(listener);
+}
+
+// getSnapshot di useSyncExternalStore deve ritornare un riferimento stabile
+// finché il valore non cambia davvero, altrimenti React rientra in un loop
+// di ri-render infinito ("The result of getSnapshot should be cached").
+// getUser() sotto fa un JSON.parse a ogni chiamata, quindi ritorna sempre un
+// oggetto nuovo anche a parità di contenuto: questa cache confronta la
+// stringa grezza e riusa l'oggetto già parsato quando non è cambiata nulla.
+let lastRawUser: string | null = null;
+let lastParsedUser: User | null = null;
+
+function getUserSnapshot(): User | null {
+  const raw = sessionStorage.getItem(AUTH_USER_KEY) ?? localStorage.getItem(AUTH_USER_KEY);
+  if (raw === lastRawUser) {
+    return lastParsedUser;
+  }
+  lastRawUser = raw;
+  lastParsedUser = raw === null ? null : parseUser(raw);
+  return lastParsedUser;
+}
+
+function parseUser(raw: string): User | null {
+  try {
+    return JSON.parse(raw) as User;
+  } catch {
+    return null;
   }
 }
 
@@ -69,14 +127,7 @@ export function getToken(): string | null {
 
 export function getUser(): User | null {
   const raw = sessionStorage.getItem(AUTH_USER_KEY) ?? localStorage.getItem(AUTH_USER_KEY);
-  if (raw === null) {
-    return null;
-  }
-  try {
-    return JSON.parse(raw) as User;
-  } catch {
-    return null;
-  }
+  return raw === null ? null : parseUser(raw);
 }
 
 // Header da fondere in ogni fetch verso una rotta @Security('jwt') (vedi
@@ -100,4 +151,5 @@ export function logout(): void {
   localStorage.removeItem(AUTH_TOKEN_KEY);
   sessionStorage.removeItem(AUTH_USER_KEY);
   localStorage.removeItem(AUTH_USER_KEY);
+  notifyUserChange();
 }

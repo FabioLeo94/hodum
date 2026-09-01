@@ -1,7 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router";
-import { getUser } from "../../services/auth/authService";
+import { useAuthUser } from "../../services/auth/authService";
 import { getProjectName, listProjectsSummary } from "../../services/project/projectService";
 import type { ProjectSummary } from "../../services/project/projectService";
 import styles from "./topbarComponent.module.css";
@@ -28,8 +28,11 @@ function TopbarComponent({ onLogout }: Prop) {
   // taskList in 5 punti diversi): stesso storage già usato da
   // ProtectedRouteComponent per la stessa decisione. Il project manager vede
   // "Dipendenti" come l'owner (per assegnare progetti), ma la pagina stessa
-  // gli nasconde crea/modifica dipendente (vedi employees.tsx).
-  const role = getUser()?.role;
+  // gli nasconde crea/modifica dipendente (vedi employees.tsx). useAuthUser
+  // (invece di getUser diretto) fa ri-renderizzare questo componente quando
+  // arriva 'user:updated' (es. l'owner promuove questo utente a manager
+  // mentre è già sulla pagina), senza dover disconnettere e riconnettere.
+  const role = useAuthUser()?.role;
   const canSeeEmployees = role === "owner" || role === "manager";
   const { pathname } = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);

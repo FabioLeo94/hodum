@@ -7,6 +7,7 @@ import type { Server as HttpServer } from 'node:http';
 import { DefaultEventsMap, Server, type Socket } from 'socket.io';
 import type { Project } from '../models/project';
 import type { Task } from '../models/task';
+import type { User } from '../models/user';
 import { getProjectById, ProjectNotFoundError } from '../services/projectService';
 import { getUserById, UserNotFoundError } from '../services/userService';
 import { verifySessionToken } from '../services/tokenService';
@@ -18,6 +19,11 @@ interface ServerToClientEvents {
   'project:created': (project: Project) => void;
   'project:updated': (project: Project) => void;
   'project:deleted': (payload: { projectId: string }) => void;
+  // Task "aggiornamento ruolo in tempo reale": un solo destinatario (la room
+  // personale sotto), mai un broadcast di company come project:* — un utente
+  // non deve poter dedurre ruolo/mustChangePassword di un collega dal fatto
+  // di essere connesso.
+  'user:updated': (user: User) => void;
 }
 
 interface ClientToServerEvents {
@@ -26,9 +32,13 @@ interface ClientToServerEvents {
 }
 
 // Valorizzato dalla middleware di autenticazione in initRealtime, prima che
-// 'connection' scatti: ogni handler sotto legge companyId da qui invece di
-// doverlo ridomandare al client (che potrebbe mentire).
+// 'connection' scatti: ogni handler sotto legge companyId/userId da qui
+// invece di doverli ridomandare al client (che potrebbe mentire). userId
+// serve alla room personale (vedi userRoom sotto), usata per notificare a un
+// singolo utente le modifiche fatte su di lui dall'owner (es. promozione a
+// project manager) senza attendere una riconnessione.
 interface SocketData {
+  userId: string;
   companyId: string | null;
 }
 
@@ -50,14 +60,21 @@ function companyRoom(companyId: string): string {
   return `company:${companyId}`;
 }
 
+// Room individuale: un solo socket (o più, se lo stesso utente ha più tab
+// aperte) ci entra, mai altri utenti della stessa company. Ci arriva solo
+// 'user:updated' (vedi emitUserUpdated sotto).
+function userRoom(userId: string): string {
+  return `user:${userId}`;
+}
+
 // Risolve l'identità dal token JWT passato in handshake.auth.token (stesso
 // token di sessione usato per le richieste REST, vedi expressAuthentication
 // in middleware/authentication.ts). A differenza di quella funzione non
 // applica controlli di ruolo (qui non esistono rotte "owner-only"): basta
-// sapere a quale company appartiene il socket per scopare correttamente le
-// room. Un socket senza token valido non emette mai 'connection': la
-// connessione viene rifiutata dalla middleware sotto.
-async function resolveCompanyId(socket: Socket): Promise<string | null> {
+// sapere chi è l'utente e a quale company appartiene per scopare
+// correttamente le room. Un socket senza token valido non emette mai
+// 'connection': la connessione viene rifiutata dalla middleware sotto.
+async function resolveSocketIdentity(socket: Socket): Promise<{ userId: string; companyId: string | null }> {
   const token = socket.handshake.auth?.token;
   if (typeof token !== 'string' || token.length === 0) {
     throw new Error('Token di sessione mancante');
@@ -67,7 +84,7 @@ async function resolveCompanyId(socket: Socket): Promise<string | null> {
 
   try {
     const user = await getUserById(sub);
-    return user.companyId;
+    return { userId: user.id, companyId: user.companyId };
   } catch (err) {
     if (err instanceof UserNotFoundError) {
       // Stesso trattamento di expressAuthentication: non propaghiamo il
@@ -122,8 +139,9 @@ export function initRealtime(httpServer: HttpServer): RealtimeServer {
   // 'connect_error'), mai un throw: una rejection non gestita qui
   // abbatterebbe il processo, esattamente come nei singoli handler sotto.
   io.use((socket, next) => {
-    resolveCompanyId(socket)
-      .then((companyId) => {
+    resolveSocketIdentity(socket)
+      .then(({ userId, companyId }) => {
+        socket.data.userId = userId;
         socket.data.companyId = companyId;
         next();
       })
@@ -133,6 +151,12 @@ export function initRealtime(httpServer: HttpServer): RealtimeServer {
   });
 
   io.on('connection', (socket) => {
+    // Room personale: qui arriva 'user:updated' quando l'owner modifica
+    // questo stesso utente (es. promozione a project manager), così la sua UI
+    // si aggiorna subito invece di restare disallineata fino alla prossima
+    // riconnessione/login.
+    socket.join(userRoom(socket.data.userId));
+
     // Company room: qui viaggiano i broadcast project:created/updated/deleted
     // (vedi emitProject* sotto). Nessuna room se companyId è null (utente non
     // ancora agganciato a un'azienda, stato transitorio): non ha comunque
@@ -190,4 +214,12 @@ export function emitProjectUpdated(project: Project, companyId: string): void {
 
 export function emitProjectDeleted(projectId: string, companyId: string): void {
   getIo()?.to(companyRoom(companyId)).emit('project:deleted', { projectId });
+}
+
+// Room personale, non company: a differenza di emitProject*, questo evento
+// non deve mai raggiungere altri utenti della stessa azienda, solo l'utente
+// modificato (il chiamante è quasi sempre l'owner che agisce su un
+// dipendente, vedi updateUser in userService.ts).
+export function emitUserUpdated(user: User): void {
+  getIo()?.to(userRoom(user.id)).emit('user:updated', user);
 }

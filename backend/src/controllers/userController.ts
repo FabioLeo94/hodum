@@ -161,13 +161,16 @@ export class UserController extends Controller {
       // true, stesso comportamento della creazione dipendente (createEmployee
       // in companyService.ts): il dipendente deve sceglierne una propria al
       // prossimo accesso, l'owner non deve comunicargliene una valida per sempre.
+      // Condizionato anche a body.password !== undefined: se l'owner modifica
+      // altri campi (username, email, ruolo) senza toccare la password, questa
+      // non è stata compromessa e non va richiesto un cambio al dipendente.
       return await updateUser(id, {
         ...body,
         // Scartato nel self-service (isOwnerEditingEmployee false) anche se
         // presente nel body: un utente non deve poter promuovere sé stesso
         // cambiando il proprio ruolo.
         role: isOwnerEditingEmployee ? body.role : undefined,
-        forceChangePassword: isOwnerEditingEmployee,
+        forceChangePassword: isOwnerEditingEmployee && body.password !== undefined,
       });
     } catch (err) {
       if (err instanceof UserNotFoundError) {

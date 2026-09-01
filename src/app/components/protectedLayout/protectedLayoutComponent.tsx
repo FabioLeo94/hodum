@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Outlet } from "react-router";
 import AssistantDrawerComponent from "../assistantDrawer/assistantDrawerComponent";
+import { subscribeToOwnUserUpdates } from "../../services/realtime/socketService";
 import styles from "./protectedLayoutComponent.module.css";
 
 // Esposto via useOutletContext dalle pagine annidate: isAssistantOpen serve a
@@ -24,6 +25,12 @@ function ProtectedLayoutComponent() {
   // True di default: la maggior parte delle pagine (task-list, dipendenti) ha
   // sempre un FAB locale e non ha bisogno di dichiararlo esplicitamente.
   const [hasLocalFab, setHasLocalFab] = useState(true);
+
+  // Sottoscritto una sola volta per l'intera sessione protetta (questo
+  // componente non si smonta tra una pagina e l'altra, vedi commento sopra):
+  // aggiorna lo user reattivo (useAuthUser) quando l'owner modifica questo
+  // stesso utente da un'altra sessione, es. promozione a project manager.
+  useEffect(() => subscribeToOwnUserUpdates(), []);
 
   return (
     <>

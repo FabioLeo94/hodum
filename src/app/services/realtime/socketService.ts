@@ -1,7 +1,7 @@
 import { io, type Socket } from "socket.io-client";
 import type { Task, TaskStatus } from "../../../shared/types/project";
 import { API_BASE_URL } from "../httpClient";
-import { getToken } from "../auth/authService";
+import { getToken, getUser, updateStoredUser, type User } from "../auth/authService";
 
 interface TaskEventDto {
   id: string;
@@ -25,6 +25,9 @@ interface ServerToClientEvents {
   "project:created": (project: ProjectEventDto) => void;
   "project:updated": (project: ProjectEventDto) => void;
   "project:deleted": (payload: { projectId: string }) => void;
+  // Recapitato solo alla room personale dell'utente modificato (vedi io.ts
+  // lato backend): mai un dato di un altro utente della company.
+  "user:updated": (user: User) => void;
 }
 
 interface ClientToServerEvents {
@@ -134,5 +137,31 @@ export function subscribeToProjects(handlers: ProjectEventHandlers): () => void 
     client.off("project:created", handleCreated);
     client.off("project:updated", handleUpdated);
     client.off("project:deleted", handleDeleted);
+  };
+}
+
+// Sottoscrizione singola e persistente (montata in ProtectedLayoutComponent,
+// mai smontata durante la navigazione tra pagine protette): quando l'owner
+// modifica questo stesso utente (es. promozione a project manager),
+// aggiorna lo storage locale così ogni lettura reattiva (useAuthUser) si
+// ri-renderizza subito, senza attendere una disconnessione/riconnessione o
+// un nuovo login.
+export function subscribeToOwnUserUpdates(): () => void {
+  const client = getSocket();
+
+  const handleUpdated = (user: User) => {
+    // Guardia difensiva: la room 'user:<id>' lato server dovrebbe già
+    // garantire che qui arrivi solo il proprio utente, ma se per qualche
+    // motivo lo storage locale fosse vuoto (es. evento in transito durante un
+    // logout) non scriviamo comunque uno user senza id da confrontare.
+    if (getUser()?.id === user.id) {
+      updateStoredUser(user);
+    }
+  };
+
+  client.on("user:updated", handleUpdated);
+
+  return () => {
+    client.off("user:updated", handleUpdated);
   };
 }

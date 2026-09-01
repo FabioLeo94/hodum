@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import { DatabaseError } from 'pg';
 import { pool } from '../db/pool';
 import type { User, UserRole } from '../models/user';
+import { emitUserUpdated } from '../realtime/io';
 
 // Cost factor per bcrypt: 12 round è il compromesso standard attuale tra
 // resistenza a brute-force e tempo di hashing lato server.
@@ -139,7 +140,17 @@ export async function updateUser(id: string, input: UpdateUserInput): Promise<Us
     if (!row) {
       throw new UserNotFoundError(id);
     }
-    return toUser(row);
+    const user = toUser(row);
+    // Task "aggiornamento ruolo in tempo reale": senza questo evento un
+    // dipendente promosso/retrocesso dall'owner (o con altri dati toccati)
+    // vede la propria UI aggiornarsi solo alla prossima riconnessione/login,
+    // perché il client aggiorna lo user in storage in risposta alla PROPRIA
+    // richiesta, non a quella fatta da un altro utente (l'owner) sulla sua
+    // riga. Va sempre a una sola room personale (vedi emitUserUpdated), mai
+    // in broadcast di company: nessun collega deve poter dedurre ruolo o
+    // mustChangePassword altrui dal semplice fatto di essere connesso.
+    emitUserUpdated(user);
+    return user;
   } catch (err) {
     if (err instanceof DatabaseError && err.code === '23505') {
       throw mapUserUniqueViolation(err);
