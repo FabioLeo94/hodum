@@ -38,10 +38,54 @@
   font-weight: 700;
 }
 
+.headerControls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--m-md);
+}
+
 .sortControl {
   display: flex;
   align-items: center;
   gap: var(--m-sm);
+}
+
+/* Segmented control neutro (stesso principio di .sortSelect: è un controllo
+   della vista, non uno stato del task, quindi niente tinta semantica). */
+.viewSwitch {
+  display: inline-flex;
+  padding: 2px;
+  background-color: var(--bg-field);
+  border-radius: var(--radious-xl);
+}
+
+.viewSwitchButton {
+  padding: var(--p-xs) var(--p-md);
+  border: none;
+  border-radius: var(--radious-xl);
+  background-color: transparent;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.viewSwitchButton:hover {
+  color: var(--text-primary);
+}
+
+.viewSwitchButton:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+.viewSwitchButton[aria-pressed="true"] {
+  background-color: var(--bg-primary);
+  color: var(--text-on-primary);
 }
 
 .sortLabel {
@@ -297,7 +341,8 @@
   .taskRow,
   .dragHandle,
   .emptyRow,
-  .sortSelect {
+  .sortSelect,
+  .viewSwitchButton {
     transition: none;
   }
 }

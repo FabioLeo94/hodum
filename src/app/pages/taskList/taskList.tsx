@@ -15,11 +15,15 @@ import TopbarComponent from "../../components/topbar/topbarComponent";
 import TaskFormModalComponent from "../../components/taskFormModal/taskFormModalComponent";
 import TaskStatusSelectComponent from "../../components/taskStatusSelect/taskStatusSelectComponent";
 import PrioritySelectComponent from "../../components/prioritySelect/prioritySelectComponent";
+import TaskKanbanBoardComponent from "../../components/taskKanbanBoard/taskKanbanBoardComponent";
 import type { AssistantLayoutContext } from "../../components/protectedLayout/protectedLayoutComponent";
 import { usePageMeta } from "../../../shared/hooks/usePageMeta";
+import {
+  STATUS_ORDER,
+  STATUS_GROUP_LABELS,
+  groupTasksByStatus,
+} from "../../../shared/constants/taskStatus";
 import styles from "./taskList.module.css";
-
-const STATUS_ORDER: readonly TaskStatus[] = ["progress", "review", "completed", "rejected"];
 
 // L'ordinamento resta per fascia di stato (raggruppamento consolidato, drag&drop
 // incluso): questo controllo riordina solo ALL'INTERNO di ciascun gruppo, non lo
@@ -33,12 +37,7 @@ function sortTasksByPriority(tasks: Task[], order: PrioritySortOrder): Task[] {
   return [...tasks].sort((a, b) => (a.priority - b.priority) * direction);
 }
 
-const STATUS_LABELS: Record<TaskStatus, string> = {
-  progress: "In corso",
-  review: "In review",
-  completed: "Completati",
-  rejected: "Rifiutati",
-};
+type ViewMode = "list" | "kanban";
 
 const STATUS_STYLES: Record<TaskStatus, string> = {
   progress: styles.groupHeaderProgress,
@@ -46,19 +45,6 @@ const STATUS_STYLES: Record<TaskStatus, string> = {
   completed: styles.groupHeaderCompleted,
   rejected: styles.groupHeaderRejected,
 };
-
-function groupTasksByStatus(tasks: Task[]): Record<TaskStatus, Task[]> {
-  const groups: Record<TaskStatus, Task[]> = {
-    progress: [],
-    review: [],
-    completed: [],
-    rejected: [],
-  };
-  for (const task of tasks) {
-    groups[task.status].push(task);
-  }
-  return groups;
-}
 
 // Condivisa tra il salvataggio di una modifica e il cambio di stato: entrambi
 // devono rimpiazzare in place lo stesso task nella lista senza toccare gli altri.
@@ -106,6 +92,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
   const [inlineUpdateError, setInlineUpdateError] = useState("");
   const [dragOverStatus, setDragOverStatus] = useState<TaskStatus | null>(null);
   const [prioritySort, setPrioritySort] = useState<PrioritySortOrder>("none");
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
 
   usePageMeta({
     title: project ? project.name : "Progetto",
@@ -341,143 +328,174 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
       <div className={styles.taskListContainer}>
         <header className={styles.taskListHeader}>
           <h1 className={styles.taskListTitle}>{project.name}</h1>
-          <label className={styles.sortControl}>
-            <span className={styles.sortLabel}>Ordina per priorità</span>
-            <select
-              className={styles.sortSelect}
-              value={prioritySort}
-              onChange={(event) =>
-                setPrioritySort(event.target.value as PrioritySortOrder)
-              }
-            >
-              <option value="none">Nessun ordinamento</option>
-              <option value="urgent-first">Più urgenti prima</option>
-              <option value="urgent-last">Meno urgenti prima</option>
-            </select>
-          </label>
-        </header>
-        <div className={styles.taskTableCard}>
-          <table className={styles.taskTable}>
-            <caption className={styles.srOnly}>
-              Task del progetto {project.name}, raggruppati per stato
-            </caption>
-            <thead>
-              <tr>
-                <th className={styles.colTitle} scope="col">
-                  Titolo
-                </th>
-                <th className={styles.colDescription} scope="col">
-                  Descrizione
-                </th>
-                <th className={styles.colStatus} scope="col">
-                  Stato
-                </th>
-                <th className={styles.colPriority} scope="col">
-                  Priorità
-                </th>
-              </tr>
-            </thead>
-            {STATUS_ORDER.map((status) => {
-              const tasks = sortTasksByPriority(groupedTasks[status], prioritySort);
-              return (
-                <tbody
-                  key={status}
-                  className={
-                    dragOverStatus === status ? styles.dragOverGroup : undefined
+          <div className={styles.headerControls}>
+            {viewMode === "list" && (
+              <label className={styles.sortControl}>
+                <span className={styles.sortLabel}>Ordina per priorità</span>
+                <select
+                  className={styles.sortSelect}
+                  value={prioritySort}
+                  onChange={(event) =>
+                    setPrioritySort(event.target.value as PrioritySortOrder)
                   }
-                  onDragOver={(event) => handleGroupDragOver(event, status)}
-                  onDragLeave={handleGroupDragLeave}
-                  onDrop={(event) => handleGroupDrop(event, status)}
                 >
-                  <tr>
-                    <th
-                      className={`${styles.groupHeaderCell} ${STATUS_STYLES[status]}`}
-                      colSpan={4}
-                      scope="colgroup"
-                    >
-                      {STATUS_LABELS[status]} ({tasks.length})
-                    </th>
-                  </tr>
-                  {tasks.length === 0 ? (
+                  <option value="none">Nessun ordinamento</option>
+                  <option value="urgent-first">Più urgenti prima</option>
+                  <option value="urgent-last">Meno urgenti prima</option>
+                </select>
+              </label>
+            )}
+            <div className={styles.viewSwitch} role="group" aria-label="Modalità di visualizzazione">
+              <button
+                type="button"
+                className={styles.viewSwitchButton}
+                aria-pressed={viewMode === "list"}
+                onClick={() => setViewMode("list")}
+              >
+                Lista
+              </button>
+              <button
+                type="button"
+                className={styles.viewSwitchButton}
+                aria-pressed={viewMode === "kanban"}
+                onClick={() => setViewMode("kanban")}
+              >
+                Kanban
+              </button>
+            </div>
+          </div>
+        </header>
+        {viewMode === "kanban" ? (
+          <TaskKanbanBoardComponent
+            groupedTasks={groupedTasks}
+            onStatusChange={handleStatusChange}
+            onPriorityChange={handlePriorityChange}
+            onOpenTask={openEditModal}
+          />
+        ) : (
+          <div className={styles.taskTableCard}>
+            <table className={styles.taskTable}>
+              <caption className={styles.srOnly}>
+                Task del progetto {project.name}, raggruppati per stato
+              </caption>
+              <thead>
+                <tr>
+                  <th className={styles.colTitle} scope="col">
+                    Titolo
+                  </th>
+                  <th className={styles.colDescription} scope="col">
+                    Descrizione
+                  </th>
+                  <th className={styles.colStatus} scope="col">
+                    Stato
+                  </th>
+                  <th className={styles.colPriority} scope="col">
+                    Priorità
+                  </th>
+                </tr>
+              </thead>
+              {STATUS_ORDER.map((status) => {
+                const tasks = sortTasksByPriority(groupedTasks[status], prioritySort);
+                return (
+                  <tbody
+                    key={status}
+                    className={
+                      dragOverStatus === status ? styles.dragOverGroup : undefined
+                    }
+                    onDragOver={(event) => handleGroupDragOver(event, status)}
+                    onDragLeave={handleGroupDragLeave}
+                    onDrop={(event) => handleGroupDrop(event, status)}
+                  >
                     <tr>
-                      <td
-                        className={styles.emptyRow}
-                        data-drop-target={dragOverStatus === status}
+                      <th
+                        className={`${styles.groupHeaderCell} ${STATUS_STYLES[status]}`}
                         colSpan={4}
+                        scope="colgroup"
                       >
-                        {dragOverStatus === status
-                          ? "Rilascia qui per spostare il task"
-                          : "Nessun task"}
-                      </td>
+                        {STATUS_GROUP_LABELS[status]} ({tasks.length})
+                      </th>
                     </tr>
-                  ) : (
-                    tasks.map((task) => (
-                      <tr
-                        key={task.id}
-                        className={styles.taskRow}
-                        draggable
-                        onDragStart={(event) => handleDragStart(event, task.id)}
-                        onDragEnd={handleGroupDragLeave}
-                      >
-                        <td>
-                          <div className={styles.titleCell}>
-                            <span
-                              className={styles.dragHandle}
-                              aria-hidden="true"
-                              title="Trascina per cambiare stato"
-                            >
-                              <svg
-                                width="10"
-                                height="16"
-                                viewBox="0 0 10 16"
-                                fill="currentColor"
-                              >
-                                <circle cx="2" cy="2" r="1.5" />
-                                <circle cx="8" cy="2" r="1.5" />
-                                <circle cx="2" cy="8" r="1.5" />
-                                <circle cx="8" cy="8" r="1.5" />
-                                <circle cx="2" cy="14" r="1.5" />
-                                <circle cx="8" cy="14" r="1.5" />
-                              </svg>
-                            </span>
-                            <button
-                              type="button"
-                              className={styles.taskTitleButton}
-                              onClick={() => openEditModal(task)}
-                            >
-                              {task.title}
-                            </button>
-                          </div>
-                        </td>
-                        <td className={styles.descriptionCell} title={task.description}>
-                          {task.description}
-                        </td>
-                        <td>
-                          <TaskStatusSelectComponent
-                            status={task.status}
-                            taskTitle={task.title}
-                            onChange={(newStatus) =>
-                              handleStatusChange(task.id, newStatus)
-                            }
-                          />
-                        </td>
-                        <td>
-                          <PrioritySelectComponent
-                            priority={task.priority}
-                            taskTitle={task.title}
-                            onChange={(newPriority) =>
-                              handlePriorityChange(task.id, newPriority)
-                            }
-                          />
+                    {tasks.length === 0 ? (
+                      <tr>
+                        <td
+                          className={styles.emptyRow}
+                          data-drop-target={dragOverStatus === status}
+                          colSpan={4}
+                        >
+                          {dragOverStatus === status
+                            ? "Rilascia qui per spostare il task"
+                            : "Nessun task"}
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              );
-            })}
-          </table>
-        </div>
+                    ) : (
+                      tasks.map((task) => (
+                        <tr
+                          key={task.id}
+                          className={styles.taskRow}
+                          draggable
+                          onDragStart={(event) => handleDragStart(event, task.id)}
+                          onDragEnd={handleGroupDragLeave}
+                        >
+                          <td>
+                            <div className={styles.titleCell}>
+                              <span
+                                className={styles.dragHandle}
+                                aria-hidden="true"
+                                title="Trascina per cambiare stato"
+                              >
+                                <svg
+                                  width="10"
+                                  height="16"
+                                  viewBox="0 0 10 16"
+                                  fill="currentColor"
+                                >
+                                  <circle cx="2" cy="2" r="1.5" />
+                                  <circle cx="8" cy="2" r="1.5" />
+                                  <circle cx="2" cy="8" r="1.5" />
+                                  <circle cx="8" cy="8" r="1.5" />
+                                  <circle cx="2" cy="14" r="1.5" />
+                                  <circle cx="8" cy="14" r="1.5" />
+                                </svg>
+                              </span>
+                              <button
+                                type="button"
+                                className={styles.taskTitleButton}
+                                onClick={() => openEditModal(task)}
+                              >
+                                {task.title}
+                              </button>
+                            </div>
+                          </td>
+                          <td className={styles.descriptionCell} title={task.description}>
+                            {task.description}
+                          </td>
+                          <td>
+                            <TaskStatusSelectComponent
+                              status={task.status}
+                              taskTitle={task.title}
+                              onChange={(newStatus) =>
+                                handleStatusChange(task.id, newStatus)
+                              }
+                            />
+                          </td>
+                          <td>
+                            <PrioritySelectComponent
+                              priority={task.priority}
+                              taskTitle={task.title}
+                              onChange={(newPriority) =>
+                                handlePriorityChange(task.id, newPriority)
+                              }
+                            />
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                );
+              })}
+            </table>
+          </div>
+        )}
         {inlineUpdateError && (
           <p role="alert" className={styles.statusUpdateError}>
             {inlineUpdateError}

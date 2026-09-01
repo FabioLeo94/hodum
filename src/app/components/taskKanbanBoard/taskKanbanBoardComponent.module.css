@@ -1,0 +1,215 @@
+.board {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--m-lg);
+  overflow-x: auto;
+  padding-bottom: var(--p-xs);
+}
+
+.column {
+  display: flex;
+  flex: 1 0 260px;
+  flex-direction: column;
+  min-width: 260px;
+  max-width: 340px;
+  background-color: var(--bg-surface);
+  border-radius: var(--radious-sm) var(--radious-sm) var(--radious-lg) var(--radious-lg);
+  box-shadow: 0 0 16px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  transition:
+    background-color 150ms ease,
+    outline-color 150ms ease;
+}
+
+.columnDragOver {
+  background-color: color-mix(in srgb, var(--bg-primary) 12%, var(--bg-surface));
+  outline: 2px dashed var(--bg-primary);
+  outline-offset: -2px;
+}
+
+.columnHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--p-sm) var(--p-md);
+  background-color: var(--bg-field);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Cerchio (stadio se il numero supera una cifra) col conteggio task: dimensioni
+   in em per scalare col font invece di un px fisso, sfondo tinto a bassa
+   opacità (deopacizzato, non colore pieno) per non essere invasivo. Il colore
+   semantico è impostato dalle varianti .columnCount* sotto. */
+.columnCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.6em;
+  height: 1.6em;
+  padding: 0 var(--p-xs);
+  border-radius: var(--radious-xl);
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1;
+  /* .columnHeader imposta letter-spacing/text-transform per l'etichetta
+     maiuscola: su un singolo numero lo spazio aggiunto dopo il glifo dal
+     letter-spacing ereditato sbilanciava il centraggio del flex verso
+     sinistra. Il numero non va comunque maiuscolato. */
+  letter-spacing: normal;
+  text-transform: none;
+  /* Il flex centra il line-box, non l'inchiostro del glifo: i font riservano
+     sotto la baseline uno spazio per i discendenti (g, y, p) che le cifre non
+     usano, quindi un numero centrato "geometricamente" appare comunque un po'
+     più in alto del centro ottico del cerchio. Correzione manuale, dipendente
+     dal font (--font-display): da ritoccare se si cambia font o se serve un
+     valore diverso a occhio. */
+  transform: translateY(1px);
+}
+
+.columnHeaderProgress {
+  color: var(--color-info);
+}
+
+.columnHeaderReview {
+  color: var(--color-warning);
+}
+
+.columnHeaderCompleted {
+  color: var(--color-success);
+}
+
+.columnHeaderRejected {
+  /* Stesso schiarimento di .groupHeaderRejected in taskList.module.css: testo
+     su --bg-field solido richiede ~86% di bianco per la soglia AA 4.5:1. */
+  color: color-mix(in srgb, var(--color-danger) 86%, white);
+}
+
+.columnCountProgress {
+  /* Sfondo: tinta 18% di --color-info su --bg-field solido (stesso composito
+     usato in taskStatusSelectComponent.module.css) da' un colore risultante
+     ~(45,68,87). --color-info puro sopra da' un contrasto di ~3.49:1, sotto
+     la soglia AA 4.5:1 per testo piccolo. Schiarito al 75% (25% bianco),
+     derivato dal token, per raggiungere ~4.66:1. */
+  color: color-mix(in srgb, var(--color-info) 75%, white);
+  background-color: color-mix(in srgb, var(--color-info) 18%, transparent);
+}
+
+.columnCountReview {
+  /* --color-warning puro sopra la tinta 18% su --bg-field da' ~4.97:1, gia'
+     conforme AA: nessuno schiarimento necessario. */
+  color: var(--color-warning);
+  background-color: color-mix(in srgb, var(--color-warning) 18%, transparent);
+}
+
+.columnCountCompleted {
+  /* --color-success puro sopra la tinta 18% su --bg-field da' ~4.99:1, gia'
+     conforme AA: nessuno schiarimento necessario. */
+  color: var(--color-success);
+  background-color: color-mix(in srgb, var(--color-success) 18%, transparent);
+}
+
+.columnCountRejected {
+  /* Stesso ragionamento di .columnCountProgress: --color-danger puro sopra la
+     tinta 18% su --bg-field da' ~3.27:1. Schiarito al 70% (30% bianco),
+     derivato dal token, per raggiungere ~4.64:1. */
+  color: color-mix(in srgb, var(--color-danger) 70%, white);
+  background-color: color-mix(in srgb, var(--color-danger) 18%, transparent);
+}
+
+.columnBody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--m-sm);
+  padding: var(--p-md);
+  min-height: 120px;
+  overflow-y: auto;
+}
+
+.emptyColumn {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-style: italic;
+  text-align: center;
+  padding: var(--p-md) 0;
+  transition:
+    color 150ms ease,
+    font-style 150ms ease;
+}
+
+.emptyColumn[data-drop-target="true"] {
+  color: var(--bg-primary);
+  font-style: normal;
+  font-weight: 600;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-xs);
+  padding: var(--p-md);
+  background-color: var(--bg-field);
+  border-radius: var(--radious-md);
+  cursor: grab;
+  transition: background-color 150ms ease;
+}
+
+.card:hover {
+  background-color: color-mix(in srgb, var(--bg-field) 60%, var(--bg-main));
+}
+
+.cardTitle {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cardTitle:hover {
+  text-decoration: underline;
+}
+
+.cardTitle:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+  border-radius: var(--radious-xs);
+}
+
+.cardDescription {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.cardFooter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--m-xs);
+  margin-top: var(--m-xs);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .column,
+  .card,
+  .emptyColumn {
+    transition: none;
+  }
+}
+
+@media (max-width: 400px) {
+  .column {
+    flex-basis: 220px;
+    min-width: 220px;
+  }
+}

@@ -1,0 +1,146 @@
+import { useState } from "react";
+import type { DragEvent } from "react";
+import type { Task, TaskStatus } from "../../../shared/types/project";
+import { STATUS_ORDER, STATUS_GROUP_LABELS } from "../../../shared/constants/taskStatus";
+import TaskStatusSelectComponent from "../taskStatusSelect/taskStatusSelectComponent";
+import PrioritySelectComponent from "../prioritySelect/prioritySelectComponent";
+import styles from "./taskKanbanBoardComponent.module.css";
+
+const COLUMN_STYLES: Record<TaskStatus, string> = {
+  progress: styles.columnHeaderProgress,
+  review: styles.columnHeaderReview,
+  completed: styles.columnHeaderCompleted,
+  rejected: styles.columnHeaderRejected,
+};
+
+const COLUMN_COUNT_STYLES: Record<TaskStatus, string> = {
+  progress: styles.columnCountProgress,
+  review: styles.columnCountReview,
+  completed: styles.columnCountCompleted,
+  rejected: styles.columnCountRejected,
+};
+
+// Cerca senza allocare un array intermedio (niente flatMap): scorre i gruppi
+// nell'ordine di STATUS_ORDER e si ferma al primo match.
+function findTaskById(
+  groupedTasks: Record<TaskStatus, Task[]>,
+  taskId: string,
+): Task | undefined {
+  for (const status of STATUS_ORDER) {
+    const found = groupedTasks[status].find((candidate) => candidate.id === taskId);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+interface TaskKanbanBoardComponentProps {
+  groupedTasks: Record<TaskStatus, Task[]>;
+  onStatusChange: (taskId: string, status: TaskStatus) => void;
+  onPriorityChange: (taskId: string, priority: number) => void;
+  onOpenTask: (task: Task) => void;
+}
+
+// Il drag & drop tra colonne è incapsulato qui (stato dragOverStatus locale):
+// il chiamante riceve solo l'esito (onStatusChange), come farebbe con un
+// select di stato, e non deve conoscere i dettagli dell'interazione HTML5
+// Drag API. Stesso pattern nativo già usato dalla vista lista (taskList.tsx).
+function TaskKanbanBoardComponent({
+  groupedTasks,
+  onStatusChange,
+  onPriorityChange,
+  onOpenTask,
+}: TaskKanbanBoardComponentProps) {
+  const [dragOverStatus, setDragOverStatus] = useState<TaskStatus | null>(null);
+
+  function handleCardDragStart(event: DragEvent<HTMLDivElement>, taskId: string) {
+    event.dataTransfer.setData("text/plain", taskId);
+    event.dataTransfer.effectAllowed = "move";
+  }
+
+  function handleColumnDragOver(event: DragEvent<HTMLDivElement>, status: TaskStatus) {
+    event.preventDefault();
+    setDragOverStatus(status);
+  }
+
+  function handleColumnDragLeave() {
+    setDragOverStatus(null);
+  }
+
+  function handleColumnDrop(event: DragEvent<HTMLDivElement>, status: TaskStatus) {
+    event.preventDefault();
+    setDragOverStatus(null);
+    const taskId = event.dataTransfer.getData("text/plain");
+    const task = findTaskById(groupedTasks, taskId);
+    if (task && task.status !== status) {
+      onStatusChange(taskId, status);
+    }
+  }
+
+  return (
+    <div className={styles.board} role="group" aria-label="Task raggruppati per stato, vista Kanban">
+      {STATUS_ORDER.map((status) => {
+        const tasks = groupedTasks[status];
+        return (
+          <div
+            key={status}
+            className={`${styles.column} ${dragOverStatus === status ? styles.columnDragOver : ""}`}
+            onDragOver={(event) => handleColumnDragOver(event, status)}
+            onDragLeave={handleColumnDragLeave}
+            onDrop={(event) => handleColumnDrop(event, status)}
+          >
+            <div className={`${styles.columnHeader} ${COLUMN_STYLES[status]}`}>
+              <span>{STATUS_GROUP_LABELS[status]}</span>
+              <span className={`${styles.columnCount} ${COLUMN_COUNT_STYLES[status]}`}>
+                {tasks.length}
+              </span>
+            </div>
+            <div className={styles.columnBody}>
+              {tasks.length === 0 ? (
+                <p className={styles.emptyColumn} data-drop-target={dragOverStatus === status}>
+                  {dragOverStatus === status ? "Rilascia qui" : "Nessun task"}
+                </p>
+              ) : (
+                tasks.map((task) => (
+                  <div
+                    key={task.id}
+                    className={styles.card}
+                    draggable
+                    onDragStart={(event) => handleCardDragStart(event, task.id)}
+                    onDragEnd={handleColumnDragLeave}
+                  >
+                    <button
+                      type="button"
+                      className={styles.cardTitle}
+                      onClick={() => onOpenTask(task)}
+                    >
+                      {task.title}
+                    </button>
+                    {task.description && (
+                      <p className={styles.cardDescription} title={task.description}>
+                        {task.description}
+                      </p>
+                    )}
+                    <div className={styles.cardFooter}>
+                      <TaskStatusSelectComponent
+                        status={task.status}
+                        taskTitle={task.title}
+                        onChange={(newStatus) => onStatusChange(task.id, newStatus)}
+                      />
+                      <PrioritySelectComponent
+                        priority={task.priority}
+                        taskTitle={task.title}
+                        onChange={(newPriority) => onPriorityChange(task.id, newPriority)}
+                      />
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+export default TaskKanbanBoardComponent;
