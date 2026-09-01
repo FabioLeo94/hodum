@@ -2,7 +2,9 @@ import { useId, useState } from "react";
 import ModalBaseComponent from "../modalBase/modalBaseComponent";
 import InputComponent from "../input/inputComponent";
 import ButtonComponent from "../button/buttonComponent";
+import type { EmployeeRole } from "../../services/auth/authService";
 import { validatePassword } from "../../services/validation/validationService";
+import { useAsyncSubmit } from "../../../shared/hooks/useAsyncSubmit";
 import styles from "./editEmployeeModalComponent.module.css";
 
 export interface EditEmployeeFormValues {
@@ -13,14 +15,14 @@ export interface EditEmployeeFormValues {
   // Promozione/retrocessione project manager <-> dipendente (task "Ruolo
   // project manager"): sempre presente, a differenza di password, perché il
   // select ha sempre un valore selezionato.
-  role: "employee" | "manager";
+  role: EmployeeRole;
 }
 
 interface Prop {
   isOpen: boolean;
   onClose: () => void;
   currentUsername: string;
-  currentRole: "employee" | "manager";
+  currentRole: EmployeeRole;
   onSave: (values: EditEmployeeFormValues) => void | Promise<void>;
   submitError?: string;
 }
@@ -39,9 +41,9 @@ function EditEmployeeModalComponent({
   const [username, setUsername] = useState(currentUsername);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [role, setRole] = useState<"employee" | "manager">(currentRole);
+  const [role, setRole] = useState<EmployeeRole>(currentRole);
   const [submitAttempted, setSubmitAttempted] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { isSubmitting, submit } = useAsyncSubmit();
   const roleFieldId = useId();
 
   const usernameError =
@@ -77,7 +79,6 @@ function EditEmployeeModalComponent({
   }
 
   async function handleSave() {
-    if (isSubmitting) return;
     setSubmitAttempted(true);
 
     const trimmedUsername = username.trim();
@@ -87,20 +88,14 @@ function EditEmployeeModalComponent({
 
     if (!isValid) return;
 
-    setIsSubmitting(true);
-    try {
+    await submit(async () => {
       await onSave({
         username: trimmedUsername,
         password: password === "" ? undefined : password,
         role,
       });
       resetForm();
-    } catch {
-      // onSave è responsabile di segnalare l'errore tramite submitError;
-      // qui si intercetta solo per evitare una unhandled rejection e permettere il retry.
-    } finally {
-      setIsSubmitting(false);
-    }
+    });
   }
 
   return (
@@ -150,7 +145,7 @@ function EditEmployeeModalComponent({
             id={roleFieldId}
             className={styles.roleSelect}
             value={role}
-            onChange={(event) => setRole(event.target.value as "employee" | "manager")}
+            onChange={(event) => setRole(event.target.value as EmployeeRole)}
           >
             <option value="employee">Dipendente</option>
             <option value="manager">Project Manager</option>

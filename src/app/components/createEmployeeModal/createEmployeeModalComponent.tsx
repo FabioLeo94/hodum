@@ -2,17 +2,19 @@ import { useId, useState } from "react";
 import ModalBaseComponent from "../modalBase/modalBaseComponent";
 import InputComponent from "../input/inputComponent";
 import ButtonComponent from "../button/buttonComponent";
+import type { EmployeeRole } from "../../services/auth/authService";
 import {
   validateEmail,
   validatePassword,
 } from "../../services/validation/validationService";
+import { useAsyncSubmit } from "../../../shared/hooks/useAsyncSubmit";
 import styles from "./createEmployeeModalComponent.module.css";
 
 export interface CreateEmployeeFormValues {
   username: string;
   email: string;
   password: string;
-  role: "employee" | "manager";
+  role: EmployeeRole;
 }
 
 interface Prop {
@@ -32,9 +34,9 @@ function CreateEmployeeModalComponent({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [role, setRole] = useState<"employee" | "manager">("employee");
+  const [role, setRole] = useState<EmployeeRole>("employee");
   const [submitAttempted, setSubmitAttempted] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { isSubmitting, submit } = useAsyncSubmit();
   const roleFieldId = useId();
 
   const usernameError =
@@ -71,7 +73,6 @@ function CreateEmployeeModalComponent({
   }
 
   async function handleCreate() {
-    if (isSubmitting) return;
     setSubmitAttempted(true);
 
     const isValid =
@@ -82,16 +83,10 @@ function CreateEmployeeModalComponent({
 
     if (!isValid) return;
 
-    setIsSubmitting(true);
-    try {
+    await submit(async () => {
       await onCreate({ username: username.trim(), email, password, role });
       resetForm();
-    } catch {
-      // onCreate è responsabile di segnalare l'errore tramite submitError;
-      // qui si intercetta solo per evitare una unhandled rejection e permettere il retry.
-    } finally {
-      setIsSubmitting(false);
-    }
+    });
   }
 
   return (
@@ -151,7 +146,7 @@ function CreateEmployeeModalComponent({
             id={roleFieldId}
             className={styles.roleSelect}
             value={role}
-            onChange={(event) => setRole(event.target.value as "employee" | "manager")}
+            onChange={(event) => setRole(event.target.value as EmployeeRole)}
           >
             <option value="employee">Dipendente</option>
             <option value="manager">Project Manager</option>

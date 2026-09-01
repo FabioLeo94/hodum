@@ -6,6 +6,7 @@ import {
   type ProjectSummary,
 } from "../../services/project/projectService";
 import { getAssignedProjectIds } from "../../services/user/userService";
+import { useAsyncSubmit } from "../../../shared/hooks/useAsyncSubmit";
 import styles from "./assignProjectsModalComponent.module.css";
 
 interface Prop {
@@ -29,7 +30,7 @@ function AssignProjectsModalComponent({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { isSubmitting, submit } = useAsyncSubmit();
 
   // Il chiamante rimonta questo componente (via `key`) ogni volta che si
   // apre, stesso pattern delle altre modali: qui basta un effect al mount,
@@ -74,16 +75,9 @@ function AssignProjectsModalComponent({
   }
 
   async function handleSave() {
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-    try {
+    await submit(async () => {
       await onSave(selectedIds);
-    } catch {
-      // onSave è responsabile di segnalare l'errore tramite submitError;
-      // qui si intercetta solo per evitare una unhandled rejection e permettere il retry.
-    } finally {
-      setIsSubmitting(false);
-    }
+    });
   }
 
   return (

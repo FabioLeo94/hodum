@@ -2,6 +2,7 @@ import { useState } from "react";
 import ModalBaseComponent from "../modalBase/modalBaseComponent";
 import InputComponent from "../input/inputComponent";
 import ButtonComponent from "../button/buttonComponent";
+import { useAsyncSubmit } from "../../../shared/hooks/useAsyncSubmit";
 import styles from "./renameProjectModalComponent.module.css";
 
 interface Prop {
@@ -24,7 +25,7 @@ function RenameProjectModalComponent({
   // iniziale è sempre il nome corrente senza un effect di risincronizzazione.
   const [name, setName] = useState(currentName);
   const [submitAttempted, setSubmitAttempted] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { isSubmitting, submit } = useAsyncSubmit();
 
   const nameError =
     submitAttempted && name.trim() === ""
@@ -37,21 +38,14 @@ function RenameProjectModalComponent({
   }
 
   async function handleRename() {
-    if (isSubmitting) return;
     setSubmitAttempted(true);
     const trimmedName = name.trim();
     if (trimmedName === "") return;
 
-    setIsSubmitting(true);
-    try {
+    await submit(async () => {
       await onRename(trimmedName);
       setSubmitAttempted(false);
-    } catch {
-      // onRename è responsabile di segnalare l'errore tramite submitError;
-      // qui si intercetta solo per evitare una unhandled rejection e permettere il retry.
-    } finally {
-      setIsSubmitting(false);
-    }
+    });
   }
 
   return (

@@ -3,6 +3,7 @@ import ModalBaseComponent from "../modalBase/modalBaseComponent";
 import InputComponent from "../input/inputComponent";
 import TextareaComponent from "../textarea/textareaComponent";
 import ButtonComponent from "../button/buttonComponent";
+import { useAsyncSubmit } from "../../../shared/hooks/useAsyncSubmit";
 import styles from "./taskFormModalComponent.module.css";
 
 interface Prop {
@@ -48,7 +49,7 @@ function TaskFormModalComponent({
   const [title, setTitle] = useState(initialTitle ?? "");
   const [description, setDescription] = useState(initialDescription ?? "");
   const [submitAttempted, setSubmitAttempted] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { isSubmitting, submit } = useAsyncSubmit();
 
   const copy = MODE_COPY[mode];
 
@@ -65,23 +66,16 @@ function TaskFormModalComponent({
   }
 
   async function handleSubmit() {
-    if (isSubmitting) return;
     setSubmitAttempted(true);
     const trimmedTitle = title.trim();
     if (trimmedTitle === "") return;
 
-    setIsSubmitting(true);
-    try {
+    await submit(async () => {
       await onSubmit(trimmedTitle, description.trim());
       setTitle("");
       setDescription("");
       setSubmitAttempted(false);
-    } catch {
-      // onSubmit è responsabile di segnalare l'errore tramite submitError;
-      // qui si intercetta solo per evitare una unhandled rejection e permettere il retry.
-    } finally {
-      setIsSubmitting(false);
-    }
+    });
   }
 
   return (

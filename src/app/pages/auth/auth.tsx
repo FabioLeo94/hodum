@@ -15,7 +15,11 @@ function Auth() {
     if (isAuthenticated()) {
       navigate("/dashboard");
     }
-  }, []);
+    // navigate è stabile per la durata del mount su questa rotta (cambia
+    // identità solo se cambia il pathname corrente, cosa che qui smonterebbe
+    // comunque il componente): includerla soddisfa exhaustive-deps senza
+    // introdurre riesecuzioni spurie.
+  }, [navigate]);
 
   const isLogin = mode === "login";
 

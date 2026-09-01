@@ -16,7 +16,9 @@ function ChangePassword() {
     if (user && !user.mustChangePassword) {
       navigate("/dashboard", { replace: true });
     }
-  }, []);
+    // navigate è stabile per la durata del mount su questa rotta, stesso
+    // motivo di auth.tsx.
+  }, [navigate]);
 
   usePageMeta({
     title: "Cambio password obbligatorio",

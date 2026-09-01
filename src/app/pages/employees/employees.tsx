@@ -49,7 +49,9 @@ function Employees() {
     if (role !== "owner" && role !== "manager") {
       navigate("/dashboard", { replace: true });
     }
-  }, []);
+    // navigate è stabile per la durata del mount su questa rotta, stesso
+    // motivo di auth.tsx.
+  }, [navigate]);
 
   const viewerRole = getUser()?.role;
   // Crea/modifica credenziali resta owner-only (task "Ruolo project

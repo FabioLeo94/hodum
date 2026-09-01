@@ -3,7 +3,6 @@ import { useId } from "react";
 import styles from "./inputComponent.module.css";
 
 interface Prop {
-  key?: string;
   type: HTMLInputTypeAttribute;
   label: string;
   value?: string;

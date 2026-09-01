@@ -2,6 +2,7 @@ import { useState } from "react";
 import ModalBaseComponent from "../modalBase/modalBaseComponent";
 import InputComponent from "../input/inputComponent";
 import ButtonComponent from "../button/buttonComponent";
+import { useAsyncSubmit } from "../../../shared/hooks/useAsyncSubmit";
 import styles from "./createProjectModalComponent.module.css";
 
 interface Prop {
@@ -19,7 +20,7 @@ function CreateProjectModalComponent({
 }: Prop) {
   const [name, setName] = useState("");
   const [submitAttempted, setSubmitAttempted] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { isSubmitting, submit } = useAsyncSubmit();
 
   const nameError =
     submitAttempted && name.trim() === ""
@@ -33,22 +34,15 @@ function CreateProjectModalComponent({
   }
 
   async function handleCreate() {
-    if (isSubmitting) return;
     setSubmitAttempted(true);
     const trimmedName = name.trim();
     if (trimmedName === "") return;
 
-    setIsSubmitting(true);
-    try {
+    await submit(async () => {
       await onCreate(trimmedName);
       setName("");
       setSubmitAttempted(false);
-    } catch {
-      // onCreate è responsabile di segnalare l'errore tramite submitError;
-      // qui si intercetta solo per evitare una unhandled rejection e permettere il retry.
-    } finally {
-      setIsSubmitting(false);
-    }
+    });
   }
 
   return (

@@ -1,6 +1,6 @@
-import { useState } from "react";
 import ModalBaseComponent from "../modalBase/modalBaseComponent";
 import ButtonComponent from "../button/buttonComponent";
+import { useAsyncSubmit } from "../../../shared/hooks/useAsyncSubmit";
 import styles from "./deleteProjectModalComponent.module.css";
 
 interface Prop {
@@ -18,19 +18,12 @@ function DeleteProjectModalComponent({
   onConfirm,
   submitError,
 }: Prop) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { isSubmitting, submit } = useAsyncSubmit();
 
   async function handleConfirm() {
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-    try {
+    await submit(async () => {
       await onConfirm();
-    } catch {
-      // onConfirm è responsabile di segnalare l'errore tramite submitError;
-      // qui si intercetta solo per evitare una unhandled rejection e permettere il retry.
-    } finally {
-      setIsSubmitting(false);
-    }
+    });
   }
 
   return (
