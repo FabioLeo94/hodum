@@ -127,7 +127,10 @@ export async function createProject(input: CreateProjectInput, companyId: string
     [input.name, isActive, companyId],
   );
   const project = toProject(result.rows[0]);
-  emitProjectCreated(project);
+  // companyId è già stato ristretto a "string" dal guard sopra (MissingCompanyError
+  // se null): l'evento realtime deve raggiungere solo la company del progetto
+  // appena creato, non ogni client connesso (vedi realtime/io.ts).
+  emitProjectCreated(project, companyId);
   return project;
 }
 
@@ -162,7 +165,13 @@ export async function updateProject(
     throw new ProjectNotFoundError(id);
   }
   const project = toProject(row);
-  emitProjectUpdated(project);
+  // Una riga trovata implica companyId non null: WHERE company_id = $2 non può
+  // combaciare con NULL (company_id è NOT NULL), quindi se la query ha
+  // restituito qualcosa companyId era per forza un valore reale. Il cast
+  // esplicito evita di allargare la firma di emitProjectUpdated a
+  // "string | null" solo per questo unico chiamante (vedi stesso ragionamento
+  // in projectAssignmentService.ts riga ~81).
+  emitProjectUpdated(project, companyId as string);
   return project;
 }
 
@@ -177,5 +186,7 @@ export async function deleteProject(id: string, companyId: string | null): Promi
   if (result.rowCount === 0) {
     throw new ProjectNotFoundError(id);
   }
-  emitProjectDeleted(id);
+  // Stesso ragionamento di updateProject: rowCount > 0 implica companyId non
+  // null (company_id è NOT NULL, non può combaciare con un parametro NULL).
+  emitProjectDeleted(id, companyId as string);
 }

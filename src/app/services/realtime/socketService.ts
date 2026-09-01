@@ -1,6 +1,7 @@
 import { io, type Socket } from "socket.io-client";
 import type { Task, TaskStatus } from "../../../shared/types/project";
 import { API_BASE_URL } from "../httpClient";
+import { getToken } from "../auth/authService";
 
 interface TaskEventDto {
   id: string;
@@ -37,7 +38,12 @@ let socket: Socket<ServerToClientEvents, ClientToServerEvents> | undefined;
 // subscribe (non ad ogni pagina), stesso host:porta dell'API REST.
 function getSocket(): Socket<ServerToClientEvents, ClientToServerEvents> {
   if (!socket) {
-    socket = io(API_BASE_URL);
+    // Funzione anziché oggetto: rivalutata a ogni (ri)connessione, così un
+    // token rinnovato dopo login/logout raggiunge il server anche se il
+    // socket condiviso è già stato aperto in precedenza.
+    socket = io(API_BASE_URL, {
+      auth: (cb) => cb({ token: getToken() }),
+    });
   }
   return socket;
 }

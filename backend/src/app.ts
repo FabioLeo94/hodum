@@ -45,25 +45,34 @@ export async function createApp(): Promise<Express> {
     }),
   );
 
-  // La spec viene generata da `npm run tsoa:gen` in build/swagger.json (gitignored).
-  // Letta ad ogni richiesta (file piccolo, nessuna cache) così riflette l'ultima
-  // generazione senza richiedere il riavvio del processo in sviluppo.
-  const specPath = join(__dirname, '..', 'build', 'swagger.json');
+  // /docs e /swagger.json espongono la mappa completa delle rotte interne
+  // (path, forma di request/response, quali richiedono 'owner'/'manager'):
+  // informazione utile a chi sviluppa, ma superficie di ricognizione gratuita
+  // per chi attacca in produzione. Stesso interruttore NODE_ENV già usato
+  // dall'error handler sotto per lo stesso motivo (non esporre dettagli
+  // interni fuori da sviluppo): se non impostata a "production", entrambe le
+  // rotte restano montate come prima.
+  if (process.env.NODE_ENV !== 'production') {
+    // La spec viene generata da `npm run tsoa:gen` in build/swagger.json (gitignored).
+    // Letta ad ogni richiesta (file piccolo, nessuna cache) così riflette l'ultima
+    // generazione senza richiedere il riavvio del processo in sviluppo.
+    const specPath = join(__dirname, '..', 'build', 'swagger.json');
 
-  app.get('/swagger.json', (_req: Request, res: Response) => {
-    try {
-      res.type('application/json').send(readFileSync(specPath, 'utf-8'));
-    } catch {
-      res
-        .status(500)
-        .json({ message: 'Spec OpenAPI non trovata: esegui "npm run tsoa:gen" prima di avviare il server.' });
-    }
-  });
+    app.get('/swagger.json', (_req: Request, res: Response) => {
+      try {
+        res.type('application/json').send(readFileSync(specPath, 'utf-8'));
+      } catch {
+        res
+          .status(500)
+          .json({ message: 'Spec OpenAPI non trovata: esegui "npm run tsoa:gen" prima di avviare il server.' });
+      }
+    });
 
-  // Scalar va montato prima di RegisterRoutes: se in futuro un controller TSOA
-  // definisse una rotta generica che potrebbe intercettare /docs, l'ordine di
-  // montaggio decide chi risponde per primo.
-  await mountDocs(app);
+    // Scalar va montato prima di RegisterRoutes: se in futuro un controller TSOA
+    // definisse una rotta generica che potrebbe intercettare /docs, l'ordine di
+    // montaggio decide chi risponde per primo.
+    await mountDocs(app);
+  }
 
   RegisterRoutes(app);
 
