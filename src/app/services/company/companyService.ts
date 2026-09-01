@@ -1,5 +1,6 @@
 import { API_BASE_URL, readErrorMessage } from "../httpClient";
 import { authHeader } from "../auth/authService";
+import type { EmployeeRole, User } from "../auth/authService";
 
 export interface RegisterCompanyInput {
   companyName: string;
@@ -14,17 +15,10 @@ export interface RegisteredCompany {
   ownerId: string;
 }
 
-export interface RegisteredUser {
-  id: string;
-  username: string;
-  email: string;
-  companyId: string | null;
-  role: "owner" | "manager" | "employee" | null;
-  mustChangePassword: boolean;
-}
-
 export interface RegisterCompanyResult {
-  user: RegisteredUser;
+  // Stessa forma di un utente autenticato qualunque (vedi User in
+  // authService.ts): chi si registra diventa owner della company appena creata.
+  user: User;
   company: RegisteredCompany;
   // Token già firmato dal backend (vedi companyController.ts): la
   // registrazione non richiede più una POST /auth/login separata subito dopo.
@@ -60,7 +54,7 @@ export interface CreateEmployeeInput {
   password: string;
   // Assente = dipendente (comportamento storico): vedi CreateEmployeeRequest
   // in backend/src/controllers/companyController.ts.
-  role?: "employee" | "manager";
+  role?: EmployeeRole;
 }
 
 // Nessun self-signup per i dipendenti (backend/src/controllers/companyController.ts,
@@ -68,7 +62,7 @@ export interface CreateEmployeeInput {
 export async function createEmployee(
   companyId: string,
   input: CreateEmployeeInput,
-): Promise<RegisteredUser> {
+): Promise<User> {
   const response = await fetch(`${API_BASE_URL}/companies/${companyId}/employees`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeader() },
@@ -86,5 +80,5 @@ export async function createEmployee(
     throw new Error(message ?? "Creazione del dipendente non riuscita. Riprova più tardi.");
   }
 
-  return (await response.json()) as RegisteredUser;
+  return (await response.json()) as User;
 }

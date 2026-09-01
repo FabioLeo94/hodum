@@ -5,12 +5,19 @@ import { API_BASE_URL } from "../httpClient";
 export const AUTH_TOKEN_KEY = "authToken";
 export const AUTH_USER_KEY = "authUser";
 
+// "employee"/"manager" sono gli unici ruoli assegnabili a un dipendente (task
+// "Ruolo project manager"): "owner" esiste solo come titolare della company,
+// mai come valore selezionabile in una form. Riesportati da qui perché User
+// resta la fonte di verità per la forma di un utente autenticato.
+export type EmployeeRole = "employee" | "manager";
+export type UserRole = "owner" | EmployeeRole;
+
 export interface User {
   id: string;
   username: string;
   email: string;
   companyId: string | null;
-  role: "owner" | "manager" | "employee" | null;
+  role: UserRole | null;
   mustChangePassword: boolean;
 }
 

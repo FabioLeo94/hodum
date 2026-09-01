@@ -1,5 +1,5 @@
 import { API_BASE_URL, readErrorMessage } from "../httpClient";
-import { authHeader, type User } from "../auth/authService";
+import { authHeader, type EmployeeRole, type User } from "../auth/authService";
 
 interface ProjectDto {
   id: string;
@@ -50,7 +50,7 @@ export async function changePassword(userId: string, password: string): Promise<
 // che l'owner può cambiare — password vuota/omessa lascia quella esistente.
 export async function updateEmployee(
   id: string,
-  values: { username?: string; password?: string; role?: "employee" | "manager" },
+  values: { username?: string; password?: string; role?: EmployeeRole },
 ): Promise<User> {
   const response = await fetch(`${API_BASE_URL}/users/${id}`, {
     method: "PUT",

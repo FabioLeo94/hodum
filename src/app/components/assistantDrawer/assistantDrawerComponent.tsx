@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
-import type { FormEvent } from "react";
+import type { SubmitEvent } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { sendAssistantMessage } from "../../services/assistant/assistantService";
 import type { AssistantMessage, PageContext } from "../../services/assistant/assistantService";
@@ -162,7 +162,7 @@ function AssistantDrawerComponent({ isOpen, hasLocalFab, onToggle }: Prop) {
     }
   }, [messages]);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     const trimmed = input.trim();
     if (!trimmed || isSending) return;

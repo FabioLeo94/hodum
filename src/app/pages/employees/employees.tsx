@@ -2,7 +2,9 @@ import { Fragment, useEffect, useState } from "react";
 import { useNavigate, useOutletContext } from "react-router";
 import TopbarComponent from "../../components/topbar/topbarComponent";
 import CreateEmployeeModalComponent from "../../components/createEmployeeModal/createEmployeeModalComponent";
+import type { CreateEmployeeFormValues } from "../../components/createEmployeeModal/createEmployeeModalComponent";
 import EditEmployeeModalComponent from "../../components/editEmployeeModal/editEmployeeModalComponent";
+import type { EditEmployeeFormValues } from "../../components/editEmployeeModal/editEmployeeModalComponent";
 import AssignProjectsModalComponent from "../../components/assignProjectsModal/assignProjectsModalComponent";
 import type { AssistantLayoutContext } from "../../components/protectedLayout/protectedLayoutComponent";
 import {
@@ -114,12 +116,7 @@ function Employees() {
     setIsCreateModalOpen(false);
   }
 
-  async function handleCreateEmployee(values: {
-    username: string;
-    email: string;
-    password: string;
-    role: "employee" | "manager";
-  }) {
+  async function handleCreateEmployee(values: CreateEmployeeFormValues) {
     const owner = getUser();
     if (!owner?.companyId) {
       setCreateError("Sessione non valida. Effettua nuovamente l'accesso.");
@@ -148,11 +145,7 @@ function Employees() {
     setEditingEmployee(null);
   }
 
-  async function handleEditEmployee(values: {
-    username: string;
-    password?: string;
-    role: "employee" | "manager";
-  }) {
+  async function handleEditEmployee(values: EditEmployeeFormValues) {
     if (!editingEmployee) return;
     try {
       const updated = await updateEmployee(editingEmployee.id, values);

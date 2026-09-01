@@ -20,7 +20,7 @@ function AuthFormComponent() {
       ? "Inserire una email valida."
       : "";
 
-  async function handleSubmit(event: React.SubmitEvent) {
+  async function handleSubmit(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     if (isSubmitting) {
       return;
