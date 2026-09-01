@@ -3,13 +3,24 @@ import ModalBaseComponent from "../modalBase/modalBaseComponent";
 import InputComponent from "../input/inputComponent";
 import TextareaComponent from "../textarea/textareaComponent";
 import ButtonComponent from "../button/buttonComponent";
+import TaskStatusSelectComponent from "../taskStatusSelect/taskStatusSelectComponent";
+import PrioritySelectComponent from "../prioritySelect/prioritySelectComponent";
+import type { TaskStatus } from "../../../shared/types/project";
 import { useAsyncSubmit } from "../../../shared/hooks/useAsyncSubmit";
 import styles from "./taskFormModalComponent.module.css";
+
+const DEFAULT_STATUS: TaskStatus = "progress";
+const DEFAULT_PRIORITY = 5;
 
 interface Prop {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (title: string, description: string) => void | Promise<void>;
+  onSubmit: (
+    title: string,
+    description: string,
+    status: TaskStatus,
+    priority: number,
+  ) => void | Promise<void>;
   submitError?: string;
   mode?: "create" | "edit";
   initialTitle?: string;
@@ -48,6 +59,8 @@ function TaskFormModalComponent({
   // effect, oltre a un giro di render in più).
   const [title, setTitle] = useState(initialTitle ?? "");
   const [description, setDescription] = useState(initialDescription ?? "");
+  const [status, setStatus] = useState<TaskStatus>(DEFAULT_STATUS);
+  const [priority, setPriority] = useState(DEFAULT_PRIORITY);
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const { isSubmitting, submit } = useAsyncSubmit();
 
@@ -61,6 +74,8 @@ function TaskFormModalComponent({
   function handleClose() {
     setTitle("");
     setDescription("");
+    setStatus(DEFAULT_STATUS);
+    setPriority(DEFAULT_PRIORITY);
     setSubmitAttempted(false);
     onClose();
   }
@@ -71,9 +86,11 @@ function TaskFormModalComponent({
     if (trimmedTitle === "") return;
 
     await submit(async () => {
-      await onSubmit(trimmedTitle, description.trim());
+      await onSubmit(trimmedTitle, description.trim(), status, priority);
       setTitle("");
       setDescription("");
+      setStatus(DEFAULT_STATUS);
+      setPriority(DEFAULT_PRIORITY);
       setSubmitAttempted(false);
     });
   }
@@ -122,6 +139,26 @@ function TaskFormModalComponent({
           rows={4}
         />
       </div>
+      {mode === "create" && (
+        <div className={styles.fieldSpacing}>
+          <label className={styles.selectField}>
+            <span className={styles.selectLabel}>Stato</span>
+            <TaskStatusSelectComponent
+              status={status}
+              onChange={setStatus}
+              taskTitle={title.trim() || "nuovo task"}
+            />
+          </label>
+          <label className={`${styles.selectField} ${styles.fieldSpacing}`}>
+            <span className={styles.selectLabel}>Priorità</span>
+            <PrioritySelectComponent
+              priority={priority}
+              onChange={setPriority}
+              taskTitle={title.trim() || "nuovo task"}
+            />
+          </label>
+        </div>
+      )}
       {submitError && (
         <p role="alert" className={styles.submitError}>
           {submitError}

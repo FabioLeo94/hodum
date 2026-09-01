@@ -62,6 +62,14 @@ export function isValidPriority(value: number): boolean {
   return Number.isInteger(value) && value >= 1 && value <= 10;
 }
 
+// Stesso ruolo di isValidPriority ma per lo slug di stato: valida che il
+// valore ricevuto dal client sia una delle chiavi note di SLUG_TO_STATUS_NAME
+// prima di usarlo in query, invece di lasciarlo risolvere a `undefined` (e
+// quindi a un parametro NULL silenzioso) più a valle.
+export function isValidTaskStatus(value: unknown): value is TaskStatus {
+  return typeof value === 'string' && value in SLUG_TO_STATUS_NAME;
+}
+
 function toTask(row: TaskRow): Task {
   const status = STATUS_NAME_TO_SLUG[row.status_name];
   if (!status) {
@@ -106,6 +114,8 @@ export async function listTasksByProject(projectId: string, companyId?: string |
 export interface CreateTaskInput {
   title: string;
   description?: string;
+  status?: TaskStatus;
+  priority?: number;
 }
 
 export async function createTask(projectId: string, input: CreateTaskInput, companyId?: string | null): Promise<Task> {
@@ -114,11 +124,25 @@ export async function createTask(projectId: string, input: CreateTaskInput, comp
   // NULL ma non FK-validato qui) invece di rispondere 404.
   await getProjectById(projectId, companyId);
 
-  // Niente colonna status nell'INSERT: usa il DEFAULT del DB (id di "in
-  // progress", vedi migration 0004), che è già lo stato iniziale voluto.
+  // Stesso pattern COALESCE di updateTask: status/priority sono opzionali in
+  // ingresso, quando non forniti l'INSERT deve comunque produrre lo stesso
+  // stato iniziale di prima (id di "in progress", priority 5) invece di
+  // lasciare che sia il DEFAULT di colonna a deciderlo — qui serve esplicito
+  // perché ora la colonna è sempre valorizzata dalla query, non più omessa.
+  // Il parametro $4 è NULL quando status non è fornito: `name = NULL` non
+  // matcha mai righe, quindi la subquery esterna del COALESCE cade sul
+  // fallback "in progress".
   const result = await pool.query<{ id: string }>(
-    'INSERT INTO tasks (project_id, title, description) VALUES ($1, $2, $3) RETURNING id',
-    [projectId, input.title, input.description ?? null],
+    `INSERT INTO tasks (project_id, title, description, status, priority)
+     VALUES (
+       $1,
+       $2,
+       $3,
+       COALESCE((SELECT id FROM task_status WHERE name = $4), (SELECT id FROM task_status WHERE name = 'in progress')),
+       COALESCE($5, 5)
+     )
+     RETURNING id`,
+    [projectId, input.title, input.description ?? null, input.status ? SLUG_TO_STATUS_NAME[input.status] : null, input.priority ?? null],
   );
   const task = await getTaskById(result.rows[0].id);
   emitTaskCreated(task);

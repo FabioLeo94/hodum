@@ -9,6 +9,21 @@
   margin-top: var(--m-lg);
 }
 
+.selectField {
+  display: flex;
+  align-items: center;
+  gap: var(--m-sm);
+}
+
+.selectLabel {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 .submitError {
   composes: submitError from "../../../shared/styles/modalForm.module.css";
 }

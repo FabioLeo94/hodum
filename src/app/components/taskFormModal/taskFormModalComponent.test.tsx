@@ -74,7 +74,12 @@ describe("TaskFormModalComponent", () => {
     fireEvent.click(screen.getByText("Crea task"));
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
-    expect(onSubmit).toHaveBeenCalledWith("Task Nuovo", "Descrizione");
+    expect(onSubmit).toHaveBeenCalledWith(
+      "Task Nuovo",
+      "Descrizione",
+      "progress",
+      5,
+    );
   });
 
   it("calls onSubmit with an empty description when it is left blank", async () => {
@@ -94,7 +99,12 @@ describe("TaskFormModalComponent", () => {
     fireEvent.click(screen.getByText("Crea task"));
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
-    expect(onSubmit).toHaveBeenCalledWith("Task senza descrizione", "");
+    expect(onSubmit).toHaveBeenCalledWith(
+      "Task senza descrizione",
+      "",
+      "progress",
+      5,
+    );
   });
 
   it("calls onSubmit when the form is submitted (e.g. pressing Enter in the title field), not only on button click", async () => {
@@ -112,7 +122,57 @@ describe("TaskFormModalComponent", () => {
     fireEvent.submit(input.closest("form")!);
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
-    expect(onSubmit).toHaveBeenCalledWith("Task da tastiera", "");
+    expect(onSubmit).toHaveBeenCalledWith(
+      "Task da tastiera",
+      "",
+      "progress",
+      5,
+    );
+  });
+
+  it("renders status and priority selects with their defaults", () => {
+    render(
+      <TaskFormModalComponent
+        isOpen
+        onClose={() => {}}
+        onSubmit={() => {}}
+      />,
+    );
+
+    expect(
+      screen.getByRole("combobox", { name: "Stato di nuovo task" }),
+    ).toHaveValue("progress");
+    expect(
+      screen.getByRole("combobox", { name: "Priorità di nuovo task" }),
+    ).toHaveValue("5");
+  });
+
+  it("calls onSubmit with the status and priority chosen via the selects", async () => {
+    const onSubmit = vi.fn();
+    render(
+      <TaskFormModalComponent
+        isOpen
+        onClose={() => {}}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    fireEvent.change(
+      screen.getByPlaceholderText("Es. Sistemare il bug di login"),
+      { target: { value: "Task Nuovo" } },
+    );
+    fireEvent.change(
+      screen.getByRole("combobox", { name: "Stato di Task Nuovo" }),
+      { target: { value: "review" } },
+    );
+    fireEvent.change(
+      screen.getByRole("combobox", { name: "Priorità di Task Nuovo" }),
+      { target: { value: "1" } },
+    );
+    fireEvent.click(screen.getByText("Crea task"));
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    expect(onSubmit).toHaveBeenCalledWith("Task Nuovo", "", "review", 1);
   });
 
   it("calls onClose when the cancel button is clicked", () => {
@@ -214,6 +274,12 @@ describe("TaskFormModalComponent", () => {
       expect(
         screen.getByRole("button", { name: "Salva modifiche" }),
       ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("combobox", { name: /^Stato di/ }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("combobox", { name: /^Priorità di/ }),
+      ).not.toBeInTheDocument();
     });
 
     it("calls onSubmit with the edited values, not the initial ones", async () => {
@@ -245,6 +311,8 @@ describe("TaskFormModalComponent", () => {
       expect(onSubmit).toHaveBeenCalledWith(
         "Task modificato",
         "Descrizione modificata",
+        "progress",
+        5,
       );
     });
 

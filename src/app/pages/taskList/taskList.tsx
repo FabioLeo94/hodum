@@ -189,12 +189,17 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
     setTaskModal(null);
   }
 
-  async function handleTaskFormSubmit(title: string, description: string) {
+  async function handleTaskFormSubmit(
+    title: string,
+    description: string,
+    status: TaskStatus,
+    priority: number,
+  ) {
     try {
       const editingTask = taskModal?.mode === "edit" ? taskModal.task : null;
       const savedTask = editingTask
         ? await updateTask(progettoId, editingTask.id, title, description)
-        : await createTask(progettoId, title, description);
+        : await createTask(progettoId, title, description, status, priority);
 
       setProject((current) => {
         if (!current) return current;

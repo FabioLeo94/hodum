@@ -116,7 +116,9 @@ describe("TaskList", () => {
     renderAt("/dashboard/1/task-list");
 
     expect(await screen.findByRole("heading", { name: "Progetto Demo" })).toBeInTheDocument();
-    expect(screen.getByText("Stato")).toBeInTheDocument();
+    expect(
+      screen.getByRole("columnheader", { name: "Stato" }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("combobox", { name: "Stato di FIX: rendering auth form" }),
     ).toHaveValue("progress");
@@ -146,7 +148,9 @@ describe("TaskList", () => {
     renderAt("/dashboard/1/task-list");
 
     expect(await screen.findByRole("heading", { name: "Progetto Demo" })).toBeInTheDocument();
-    expect(screen.getByText("Priorità")).toBeInTheDocument();
+    expect(
+      screen.getByRole("columnheader", { name: "Priorità" }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("combobox", { name: "Priorità di FIX: rendering auth form" }),
     ).toHaveValue("2");

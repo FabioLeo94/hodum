@@ -149,11 +149,13 @@ export async function createTask(
   projectId: string,
   title: string,
   description?: string,
+  status?: TaskStatus,
+  priority?: number,
 ): Promise<Task> {
   const response = await fetch(`${API_BASE_URL}/projects/${projectId}/tasks`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeader() },
-    body: JSON.stringify({ title, description }),
+    body: JSON.stringify({ title, description, status, priority }),
   });
   if (!response.ok) {
     const message = await readErrorMessage(response);

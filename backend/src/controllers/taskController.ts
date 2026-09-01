@@ -6,6 +6,7 @@ import {
   createTask,
   deleteTask,
   isValidPriority,
+  isValidTaskStatus,
   listTasksByProject,
   ProjectNotFoundError,
   TaskNotFoundError,
@@ -25,6 +26,8 @@ interface TaskErrorResponse {
 export interface CreateTaskRequest {
   title: string;
   description?: string;
+  status?: TaskStatus;
+  priority?: number;
 }
 
 export interface UpdateTaskStatusRequest {
@@ -69,7 +72,7 @@ export class TaskController extends Controller {
   @Security('jwt')
   @SuccessResponse(201, 'Task creato')
   @Response<TaskErrorResponse>(404, 'Project non trovato')
-  @Response<TaskErrorResponse>(422, 'title mancante o vuoto')
+  @Response<TaskErrorResponse>(422, 'title vuoto, priority o status non validi')
   public async createTask(
     @Path() projectId: string,
     @Body() body: CreateTaskRequest,
@@ -82,11 +85,25 @@ export class TaskController extends Controller {
       this.setStatus(422);
       return { message: 'title non può essere vuoto' };
     }
+    // Stessa validazione e stesso messaggio dell'endpoint PATCH priority: la
+    // regola di dominio è la stessa, cambia solo il momento in cui si applica.
+    if (body.priority !== undefined && !isValidPriority(body.priority)) {
+      this.setStatus(422);
+      return { message: 'priority deve essere un intero tra 1 (alta) e 10 (bassa)' };
+    }
+    if (body.status !== undefined && !isValidTaskStatus(body.status)) {
+      this.setStatus(422);
+      return { message: 'status non valido' };
+    }
 
     const user = getAuthenticatedUser(request);
     try {
       await assertProjectAccessible(projectId, user);
-      const task = await createTask(projectId, { title: body.title, description: body.description }, user.companyId);
+      const task = await createTask(
+        projectId,
+        { title: body.title, description: body.description, status: body.status, priority: body.priority },
+        user.companyId,
+      );
       this.setStatus(201);
       return task;
     } catch (err) {
