@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/lint-edited-file.cjs",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/lint-edited-file.cjs\"",
             "statusMessage": "Linting edited file..."
           }
         ]
