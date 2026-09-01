@@ -207,7 +207,7 @@
 .logo {
   justify-self: center;
   color: var(--text-primary);
-  font-size: 1.05rem;
+  font-size: 2rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   white-space: nowrap;
