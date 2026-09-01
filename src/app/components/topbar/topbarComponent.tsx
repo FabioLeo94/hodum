@@ -207,8 +207,10 @@ function TopbarComponent({ onLogout }: Prop) {
     setIsProjectsMenuOpen(false);
   }
 
-  // Estratta perché lo stesso link/span attivo serve sia per Dashboard che
-  // per Dipendenti, ora non più contigui nel markup (Progetti va tra i due).
+  // Dashboard e Dipendenti condividono lo stesso span/link attivo, ma ora
+  // vivono in due gruppi separati della topbar (nav primaria a sinistra,
+  // Dipendenti accanto all'account a destra): la funzione resta unica per
+  // coerenza di stato/stile, non per contiguità nel markup.
   function renderNavItem(item: NavItem) {
     return pathname === item.to ? (
       <span key={item.to} className={styles.navItemActive} aria-current="page">
@@ -223,127 +225,144 @@ function TopbarComponent({ onLogout }: Prop) {
 
   return (
     <header className={styles.topbar}>
-      <nav className={styles.nav} aria-label="Navigazione principale">
-        {NAV_ITEMS.map(renderNavItem)}
+      <div className={styles.leftGroup}>
+        <span className={styles.logo}>
+          <span className={styles.logoMark}>H</span>odum
+        </span>
 
-        <div className={styles.projectsMenuArea} ref={projectsContainerRef}>
+        <nav className={styles.nav} aria-label="Navigazione principale">
+          {NAV_ITEMS.map(renderNavItem)}
+
+          <div className={styles.projectsMenuArea} ref={projectsContainerRef}>
+            <button
+              ref={projectsButtonRef}
+              type="button"
+              className={styles.navItem}
+              data-active={Boolean(activeProjectId)}
+              aria-haspopup="menu"
+              aria-expanded={isProjectsMenuOpen}
+              aria-controls={projectsMenuId}
+              onClick={() => setIsProjectsMenuOpen((current) => !current)}
+            >
+              Progetti
+              {/* Nome del progetto aperto integrato nel bottone (al posto del
+                  tag ambra indipendente di prima): un solo elemento
+                  interattivo invece di due, il peso tipografico maggiore
+                  distingue il nome dal resto anche senza percepire il colore. */}
+              {activeProjectLabel && (
+                <span className={styles.projectsButtonProjectName}>
+                  {" — "}
+                  {activeProjectLabel}
+                </span>
+              )}
+              <svg
+                className={styles.chevronIcon}
+                data-open={isProjectsMenuOpen}
+                viewBox="0 0 24 24"
+                width="14"
+                height="14"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+
+            {isProjectsMenuOpen &&
+              createPortal(
+                <div
+                  ref={projectsPanelRef}
+                  id={projectsMenuId}
+                  role="menu"
+                  aria-label="Progetti"
+                  className={styles.projectsMenu}
+                >
+                  {isLoadingProjects ? (
+                    <p className={styles.projectsMenuStatus}>Caricamento...</p>
+                  ) : projectsError ? (
+                    <p className={styles.projectsMenuStatus} role="alert">
+                      {projectsError}
+                    </p>
+                  ) : projects && projects.length === 0 ? (
+                    <p className={styles.projectsMenuStatus}>Nessun progetto</p>
+                  ) : (
+                    projects?.map((project, index) => (
+                      <Link
+                        key={project.id}
+                        ref={index === 0 ? firstProjectItemRef : undefined}
+                        role="menuitem"
+                        className={styles.projectsMenuItem}
+                        to={`/dashboard/${project.id}/task-list`}
+                        aria-current={project.id === activeProjectId ? "true" : undefined}
+                        onClick={handleProjectLinkClick}
+                      >
+                        {project.name}
+                      </Link>
+                    ))
+                  )}
+                </div>,
+                document.body,
+              )}
+          </div>
+        </nav>
+      </div>
+
+      <div className={styles.rightGroup}>
+        {canSeeEmployees && (
+          <>
+            {renderNavItem({ to: "/employees", label: "Dipendenti" })}
+            {/* Separatore puramente visivo: segnala che "Dipendenti" è
+                amministrativo, non parte della nav primaria a sinistra. */}
+            <span className={styles.separator} aria-hidden="true" />
+          </>
+        )}
+
+        <div className={styles.accountArea} ref={containerRef}>
           <button
-            ref={projectsButtonRef}
+            ref={accountButtonRef}
             type="button"
-            className={styles.navItem}
-            data-active={Boolean(activeProjectId)}
+            className={styles.accountButton}
+            aria-label="Menu account"
             aria-haspopup="menu"
-            aria-expanded={isProjectsMenuOpen}
-            aria-controls={projectsMenuId}
-            onClick={() => setIsProjectsMenuOpen((current) => !current)}
+            aria-expanded={isMenuOpen}
+            aria-controls={menuId}
+            onClick={() => setIsMenuOpen((current) => !current)}
           >
-            Progetti
             <svg
-              className={styles.chevronIcon}
-              data-open={isProjectsMenuOpen}
+              className={styles.accountIcon}
               viewBox="0 0 24 24"
-              width="14"
-              height="14"
+              width="22"
+              height="22"
               fill="none"
               stroke="currentColor"
-              strokeWidth="2.5"
+              strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
               aria-hidden="true"
             >
-              <path d="M6 9l6 6 6-6" />
+              <circle cx="12" cy="8" r="3.5" />
+              <path d="M4.5 20c0-4.14 3.36-6.5 7.5-6.5s7.5 2.36 7.5 6.5" />
             </svg>
           </button>
 
-          {isProjectsMenuOpen &&
-            createPortal(
-              <div
-                ref={projectsPanelRef}
-                id={projectsMenuId}
-                role="menu"
-                aria-label="Progetti"
-                className={styles.projectsMenu}
+          {isMenuOpen && (
+            <div id={menuId} role="menu" className={styles.menu}>
+              <button
+                ref={logoutItemRef}
+                type="button"
+                role="menuitem"
+                className={styles.menuItem}
+                onClick={handleLogoutClick}
               >
-                {isLoadingProjects ? (
-                  <p className={styles.projectsMenuStatus}>Caricamento...</p>
-                ) : projectsError ? (
-                  <p className={styles.projectsMenuStatus} role="alert">
-                    {projectsError}
-                  </p>
-                ) : projects && projects.length === 0 ? (
-                  <p className={styles.projectsMenuStatus}>Nessun progetto</p>
-                ) : (
-                  projects?.map((project, index) => (
-                    <Link
-                      key={project.id}
-                      ref={index === 0 ? firstProjectItemRef : undefined}
-                      role="menuitem"
-                      className={styles.projectsMenuItem}
-                      to={`/dashboard/${project.id}/task-list`}
-                      aria-current={project.id === activeProjectId ? "true" : undefined}
-                      onClick={handleProjectLinkClick}
-                    >
-                      {project.name}
-                    </Link>
-                  ))
-                )}
-              </div>,
-              document.body,
-            )}
+                Disconnetti
+              </button>
+            </div>
+          )}
         </div>
-
-        {activeProjectLabel && (
-          <span className={styles.activeProjectLabel}>{activeProjectLabel}</span>
-        )}
-
-        {canSeeEmployees && renderNavItem({ to: "/employees", label: "Dipendenti" })}
-      </nav>
-
-      <span className={styles.logo}>
-        <span className={styles.logoMark}>H</span>odum
-      </span>
-
-      <div className={styles.accountArea} ref={containerRef}>
-        <button
-          ref={accountButtonRef}
-          type="button"
-          className={styles.accountButton}
-          aria-label="Menu account"
-          aria-haspopup="menu"
-          aria-expanded={isMenuOpen}
-          aria-controls={menuId}
-          onClick={() => setIsMenuOpen((current) => !current)}
-        >
-          <svg
-            className={styles.accountIcon}
-            viewBox="0 0 24 24"
-            width="22"
-            height="22"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <circle cx="12" cy="8" r="3.5" />
-            <path d="M4.5 20c0-4.14 3.36-6.5 7.5-6.5s7.5 2.36 7.5 6.5" />
-          </svg>
-        </button>
-
-        {isMenuOpen && (
-          <div id={menuId} role="menu" className={styles.menu}>
-            <button
-              ref={logoutItemRef}
-              type="button"
-              role="menuitem"
-              className={styles.menuItem}
-              onClick={handleLogoutClick}
-            >
-              Disconnetti
-            </button>
-          </div>
-        )}
       </div>
     </header>
   );

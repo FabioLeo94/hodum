@@ -1,15 +1,36 @@
+/* Flex asimmetrico invece della vecchia grid 1fr/auto/1fr: quella prometteva
+   una simmetria che il contenuto non aveva (nav pesante a sinistra, solo
+   un'icona a destra), col logo "centrato" percettivamente spostato. Qui il
+   logo è un wordmark fisso a sinistra, la nav primaria lo segue subito dopo
+   (stesso gruppo, letti come un blocco unico "brand + dove sono"), mentre
+   Dipendenti e l'account restano a destra come azioni/voci di sistema. */
 .topbar {
   position: sticky;
   top: 0;
   z-index: 10;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: var(--m-lg);
   height: 60px;
   padding: 0 var(--p-lg);
   background-color: var(--bg-surface);
   border-bottom: 1px solid var(--bg-field);
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+}
+
+.leftGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--m-lg);
+  min-width: 0;
+}
+
+.rightGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--m-md);
+  flex-shrink: 0;
 }
 
 .nav {
@@ -75,6 +96,17 @@
 
 .projectsMenuArea {
   position: relative;
+}
+
+/* Nome del progetto aperto, integrato nel testo del bottone "Progetti"
+   (sostituisce il vecchio tag ambra indipendente accanto alla nav). Stessa
+   tinta di prima (--color-warning, già usata altrove per stati "in
+   revisione"/priorità media) per restare distinguibile da .navItem[data-active]
+   che usa il menta, più peso tipografico maggiore così il nome non dipende
+   dal solo colore per farsi notare. */
+.projectsButtonProjectName {
+  color: var(--color-warning);
+  font-weight: 700;
 }
 
 .chevronIcon {
@@ -156,34 +188,14 @@
   color: var(--color-danger);
 }
 
-/* Etichetta di contesto (nome del progetto aperto), non un link e non uno
-   stato di navigazione: colore ambra (--color-warning, già nella palette,
-   usato altrove per stati "in revisione"/priorità media) invece della menta
-   già occupata da .navItemActive, così le due categorie restano
-   distinguibili anche per chi non percepisce bene il colore. Il bordo e la
-   forma a pillola (non un riempimento pieno come i badge di stato) più il
-   pallino non affidano il significato al solo colore. */
-.activeProjectLabel {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--m-xs);
-  color: var(--color-warning);
-  font-size: 0.78rem;
-  font-weight: 600;
-  white-space: nowrap;
-  padding: var(--p-xs) var(--p-md) var(--p-xs) var(--p-sm);
-  border: 1px solid color-mix(in srgb, var(--color-warning) 40%, transparent);
-  border-radius: var(--radious-xl);
-  background-color: color-mix(in srgb, var(--color-warning) 10%, transparent);
-}
-
-.activeProjectLabel::before {
-  content: "";
+/* Separatore verticale sottile tra "Dipendenti" e l'account: segnala che è
+   una voce amministrativa/di sistema, non parte della nav primaria a
+   sinistra, senza il peso di un bordo o di uno sfondo diverso. */
+.separator {
+  width: 1px;
+  height: 24px;
   flex-shrink: 0;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: var(--color-warning);
+  background-color: var(--bg-field);
 }
 
 /* La voce attiva non è cliccabile (è uno <span>, non un <Link>): la
@@ -204,10 +216,14 @@
   cursor: default;
 }
 
+/* Dimensione ridotta rispetto alla vecchia versione centrata (2rem): da
+   wordmark "hero" isolato diventa l'apertura di un gruppo che include anche
+   la nav, e a 60px di altezza doveva lasciarle spazio per respirare accanto
+   senza dominare la riga. */
 .logo {
-  justify-self: center;
+  flex-shrink: 0;
   color: var(--text-primary);
-  font-size: 2rem;
+  font-size: 1.4rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   white-space: nowrap;
@@ -221,7 +237,6 @@
 
 .accountArea {
   position: relative;
-  justify-self: end;
 }
 
 .accountButton {
@@ -335,8 +350,20 @@
     padding: 0 var(--p-md);
   }
 
+  .leftGroup {
+    gap: var(--m-md);
+  }
+
+  .rightGroup {
+    gap: var(--m-sm);
+  }
+
   .nav {
     gap: var(--m-sm);
+  }
+
+  .logo {
+    font-size: 1.15rem;
   }
 
   .navItem,
@@ -345,9 +372,19 @@
     padding: var(--p-xs) var(--p-sm);
   }
 
-  .activeProjectLabel {
-    padding: var(--p-xs) var(--p-sm) var(--p-xs) var(--p-xs);
-    font-size: 0.72rem;
+  /* Il segmento "— Nome progetto" resta nel flusso del bottone (non a capo
+     grazie a white-space: nowrap ereditato da .navItem): a questa larghezza
+     conviene rimpicciolirlo invece di lasciarlo spingere .nav oltre lo
+     spazio residuo, che scorrerebbe già di suo con più voci. */
+  .projectsButtonProjectName {
+    font-size: 0.78rem;
+  }
+
+  /* Con la nav e Dipendenti già stretti in poco spazio, il separatore verso
+     l'account è il primo elemento sacrificabile: non porta informazione, solo
+     un confine visivo che a queste larghezze pesa più di quanto renda. */
+  .separator {
+    display: none;
   }
 
   .chevronIcon {

@@ -269,20 +269,24 @@ describe("TopbarComponent", () => {
       expect(fetch).not.toHaveBeenCalled();
     });
 
-    it("mostra il nome del progetto quando risolto", async () => {
+    it("mostra il nome del progetto quando risolto, integrato nel bottone Progetti", async () => {
       vi.mocked(fetch).mockResolvedValue(
         jsonResponse(200, { id: "1", name: "Progetto Alpha", isActive: true }),
       );
       renderTopbar(() => {}, "/dashboard/1/task-list");
 
-      expect(await screen.findByText("Progetto Alpha")).toBeInTheDocument();
+      expect(
+        await screen.findByRole("button", { name: /Progetti\s*—\s*Progetto Alpha/ }),
+      ).toBeInTheDocument();
     });
 
     it("mostra un placeholder mentre il nome è in corso di risoluzione", () => {
       vi.mocked(fetch).mockReturnValue(new Promise(() => {}));
       renderTopbar(() => {}, "/dashboard/1/task-list");
 
-      expect(screen.getByText("Progetto")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /Progetti\s*—\s*Progetto$/ }),
+      ).toBeInTheDocument();
     });
   });
 });
