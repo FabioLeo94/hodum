@@ -271,34 +271,15 @@
 }
 
 .notFoundState {
-  display: flex;
-  flex-direction: column;
-  gap: var(--m-sm);
-  max-width: 360px;
-  padding: var(--p-xl);
-  border-left: 3px solid transparent;
-  border-radius: var(--radious-lg);
-  background-color: var(--bg-surface);
-  box-shadow: 0 0 16px rgba(0, 0, 0, 0.35);
-}
-
-.notFoundState[data-variant="error"] {
-  border-left-color: var(--color-danger);
+  composes: messageCard from "../../../shared/styles/messageCard.module.css";
 }
 
 .errorMessage {
-  color: var(--text-primary);
-  font-weight: 600;
-}
-
-.notFoundState[data-variant="error"] .errorMessage {
-  color: var(--color-danger);
+  composes: messageCardTitle from "../../../shared/styles/messageCard.module.css";
 }
 
 .notFoundText {
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  line-height: 1.5;
+  composes: messageCardText from "../../../shared/styles/messageCard.module.css";
 }
 
 /* Stile condiviso con dashboard.module.css (stesso FAB "+" nelle due pagine):

@@ -1,0 +1,37 @@
+/* Card di messaggio (stato vuoto, errore di caricamento, risorsa non
+   trovata) condivisa da dashboard, taskList ed employees tramite
+   `composes`: stesso riquadro con bordo sinistro che si tinge di rosso
+   nella variante d'errore (`[data-variant="error"]` sullo stesso elemento
+   che porta la classe composta). */
+.messageCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--m-sm);
+  max-width: 360px;
+  padding: var(--p-xl);
+  border-left: 3px solid transparent;
+  border-radius: var(--radious-lg);
+  background-color: var(--bg-surface);
+  box-shadow: 0 0 16px rgba(0, 0, 0, 0.35);
+}
+
+.messageCard[data-variant="error"] {
+  border-left-color: var(--color-danger);
+}
+
+.messageCardTitle {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.messageCard[data-variant="error"] .messageCardTitle {
+  color: var(--color-danger);
+}
+
+.messageCardText {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}

@@ -1,41 +1,25 @@
 .description {
-  margin-bottom: var(--m-lg);
-  color: var(--text-muted);
-  font-size: 0.9rem;
-  line-height: 1.5;
+  composes: description from "../../../shared/styles/employeeForm.module.css";
 }
 
 .fields {
-  display: flex;
-  flex-direction: column;
-  gap: var(--m-lg);
+  composes: fields from "../../../shared/styles/employeeForm.module.css";
 }
 
 .roleField {
-  display: flex;
-  flex-direction: column;
-  gap: var(--m-xs);
+  composes: roleField from "../../../shared/styles/employeeForm.module.css";
 }
 
 .roleLabel {
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  font-weight: 600;
+  composes: roleLabel from "../../../shared/styles/employeeForm.module.css";
 }
 
 .roleSelect {
-  composes: fieldBase from "../../../shared/styles/fieldBase.module.css";
-  cursor: pointer;
+  composes: roleSelect from "../../../shared/styles/employeeForm.module.css";
 }
 
-/* Coppia password/conferma: gap interno più stretto per leggerle come
-   un'unica unità, più un margine sopra che somma al gap di .fields
-   (16px + 8px = 24px) per staccarla dai campi anagrafici. */
 .passwordGroup {
-  display: flex;
-  flex-direction: column;
-  gap: var(--m-md);
-  margin-top: var(--m-md);
+  composes: passwordGroup from "../../../shared/styles/employeeForm.module.css";
 }
 
 .submitError {
