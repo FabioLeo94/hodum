@@ -1,0 +1,31 @@
+-- add indici users company id e companies owner id
+-- Due colonne referenzianti di FK senza indice, stessa lacuna già chiusa
+-- altrove nel progetto (tasks.project_id in 0003, projects.company_id in
+-- 0015): Postgres non crea automaticamente un indice sulla colonna
+-- referenziante di una FK.
+--
+-- users.company_id: userService.listUsers e userController filtrano
+-- "WHERE company_id = $1 ORDER BY username" a ogni richiesta scoped alla
+-- company del chiamante (isolamento multi-tenant, il pattern di query più
+-- comune di questo schema). Verificato con EXPLAIN (ANALYZE, BUFFERS) sul
+-- database corrente (15 righe in users): oggi produce un Seq Scan, ininfluente
+-- a questo volume ma un problema strutturale non appena una company supera
+-- qualche centinaio di dipendenti o il totale utenti cresce nel tempo.
+--
+-- companies.owner_id: nessuna query applicativa filtra per owner_id oggi, ma
+-- ogni DELETE FROM users deve verificare questa FK (companies_owner_id_fk,
+-- 0013, senza ON DELETE: cancellare il proprietario di un'azienda deve
+-- fallire esplicitamente con 23503, non essere permesso) e senza indice quel
+-- controllo fa un seq scan su companies a ogni cancellazione di utente.
+--
+-- Verificato prima di scrivere questa migration: 15 righe in users, 10 in
+-- companies. CREATE INDEX diretto (non CONCURRENTLY): a questo volume il lock
+-- ACCESS EXCLUSIVE preso da CREATE INDEX dura pochi millisecondi, non
+-- giustifica rinunciare alla transazione per file che CONCURRENTLY
+-- richiederebbe (vedi db/migrate.ts). Su un database già cresciuto,
+-- ripetere la verifica del conteggio righe con lo stesso criterio prima di
+-- applicarla, e passare a CREATE INDEX CONCURRENTLY in un file separato se le
+-- tabelle non sono più piccole.
+
+CREATE INDEX users_company_id_idx ON users (company_id);
+CREATE INDEX companies_owner_id_idx ON companies (owner_id);

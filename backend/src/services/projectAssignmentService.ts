@@ -104,10 +104,16 @@ export async function setProjectAssignments(
       'DELETE FROM project_assignments WHERE user_id = $1 AND NOT (project_id = ANY($2::uuid[]))',
       [employeeId, uniqueIds],
     );
-    for (const projectId of uniqueIds) {
+    if (uniqueIds.length > 0) {
+      // Un solo round-trip invece di uno per progetto (N+1): stessa semantica
+      // di prima (ON CONFLICT DO NOTHING per le coppie già presenti dopo la
+      // DELETE sopra), un solo statement invece di uniqueIds.length INSERT
+      // separati nella stessa transazione.
       await client.query(
-        'INSERT INTO project_assignments (project_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-        [projectId, employeeId],
+        `INSERT INTO project_assignments (project_id, user_id)
+         SELECT pid, $1 FROM unnest($2::uuid[]) AS pid
+         ON CONFLICT DO NOTHING`,
+        [employeeId, uniqueIds],
       );
     }
 

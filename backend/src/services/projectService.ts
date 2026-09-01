@@ -49,13 +49,13 @@ export function toProject(row: ProjectRow): Project {
 // qual caso queste query non devono restituire nulla, non "tutti i progetti"
 // (company_id su projects è NOT NULL, quindi `= NULL` non combacia mai).
 //
-// companyId è invece omesso (undefined) dalle chiamate interne fatte da
-// taskService.ts e assistantService.ts, che oggi non hanno ancora accesso
-// all'utente autenticato: quelle chiamate restano un existence-check non
-// filtrato per company, esattamente come prima di questa migration. Chiudere
-// anche quel varco è il punto 4 del task ("Guardia di autorizzazione
-// trasversale", esplicitamente su projects **e tasks**) — qui (punto 3) si
-// scopa solo l'endpoint /projects, non a caso quello nominato dal task.
+// companyId resta un parametro opzionale (undefined) solo per usi interni che
+// devono deliberatamente vedere tutte le company (nessuno oggi: sia
+// taskService.ts sia assistantService.ts inoltrano sempre il companyId
+// dell'utente autenticato fino a qui, chiudendo il varco cross-tenant di cui
+// parlava questo commento — punto 4 del task "Guardia di autorizzazione
+// trasversale", completato). Se in futuro compare una nuova chiamata che
+// omette companyId, verificare che sia intenzionale e non una dimenticanza.
 // assignedToUserId (task "Gestione del dipendente"): se presente, restringe
 // ulteriormente ai soli progetti assegnati a quell'utente in
 // project_assignments, tramite JOIN invece del semplice filtro su
