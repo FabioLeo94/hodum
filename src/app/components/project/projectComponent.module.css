@@ -45,9 +45,8 @@
     transform: none;
   }
 
-  .progressSegment,
-  .progressSegment::after,
-  .progressSegment::before {
+  .donutSegment,
+  .donutCenterText {
     transition: none;
   }
 }
@@ -77,117 +76,146 @@
   white-space: nowrap;
 }
 
-.progressBar {
-  display: flex;
-  align-items: flex-end;
-  width: 100%;
-  height: 8px;
-  border-radius: var(--radious-xs);
-  background-color: var(--bg-field);
-}
-
-.progressSegment {
+/* Donut: sostituisce la barra lineare segmentata. Dimensione fissa (140px)
+   pensata per il contenitore a 220px di .projectsGrid: centrata, lascia
+   margini laterali regolari e porta l'altezza complessiva della card vicino
+   alla sua larghezza, per un ingombro più quadrato che rettangolare. */
+.donutWrapper {
   position: relative;
+  z-index: 2;
+  align-self: center;
+  width: 140px;
+  height: 140px;
+  margin-top: var(--m-xs);
+  cursor: pointer;
+}
+
+.donutSvg {
+  display: block;
+  width: 100%;
   height: 100%;
-  min-width: 2px;
+  /* Porta il punto di partenza dell'arco dalle ore 3 (default SVG) alle ore
+     12, così il primo segmento (completati) parte sempre dall'alto. */
+  transform: rotate(-90deg);
+}
+
+.donutTrack {
+  stroke: var(--bg-field);
+}
+
+.donutTrackEmpty {
+  stroke: var(--text-muted);
+  opacity: 0.25;
+}
+
+.donutSegment {
   cursor: default;
-  transition: opacity 200ms ease;
+  transition:
+    opacity 200ms ease,
+    filter 200ms ease;
 }
 
-.progressSegment:first-child {
-  border-top-left-radius: var(--radious-xs);
-  border-bottom-left-radius: var(--radious-xs);
+.donutSegment:hover {
+  filter: brightness(1.15);
 }
 
-.progressSegment:last-child {
-  border-top-right-radius: var(--radious-xs);
-  border-bottom-right-radius: var(--radious-xs);
-}
-
-.progressBar:has(.progressSegment:hover) .progressSegment:not(:hover) {
+.donutSvg:has(.donutSegment:hover) .donutSegment:not(:hover) {
   opacity: 0.5;
 }
 
-.progressSegment:hover {
-  z-index: 3;
+.donutSegmentCompleted {
+  stroke: var(--color-success);
 }
 
-.progressSegment::after {
-  content: attr(data-tooltip);
+.donutSegmentInProgress {
+  stroke: var(--color-info);
+}
+
+.donutSegmentReview {
+  stroke: var(--color-warning);
+}
+
+.donutSegmentRejected {
+  stroke: var(--color-danger);
+}
+
+.donutCenter {
   position: absolute;
-  top: calc(100% + var(--m-md) + 5px);
-  left: 50%;
-  transform: translate(-50%, -4px);
-  padding: var(--p-sm) var(--p-md);
-  border-radius: var(--radious-sm);
-  background-color: var(--bg-field);
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+/* Stato di riposo ("N task totali") e stato hover per-segmento sono
+   sovrapposti nello stesso punto e commutati via opacity, guidati dall'hover
+   sull'arco SVG corrispondente tramite :has(). Nessun JS per lo swap. */
+.donutCenterText {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--m-xs);
+  padding: 0 var(--p-md);
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.donutCenterDefault {
+  opacity: 1;
+}
+
+.donutWrapper:has(.donutSegmentCompleted:hover) .donutCenterDefault,
+.donutWrapper:has(.donutSegmentInProgress:hover) .donutCenterDefault,
+.donutWrapper:has(.donutSegmentReview:hover) .donutCenterDefault,
+.donutWrapper:has(.donutSegmentRejected:hover) .donutCenterDefault {
+  opacity: 0;
+}
+
+.donutWrapper:has(.donutSegmentCompleted:hover) .donutCenterCompleted {
+  opacity: 1;
+}
+
+.donutWrapper:has(.donutSegmentInProgress:hover) .donutCenterInProgress {
+  opacity: 1;
+}
+
+.donutWrapper:has(.donutSegmentReview:hover) .donutCenterReview {
+  opacity: 1;
+}
+
+.donutWrapper:has(.donutSegmentRejected:hover) .donutCenterRejected {
+  opacity: 1;
+}
+
+.donutCenterValue {
   color: var(--text-primary);
-  font-size: 0.75rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.donutCenterLabel {
+  max-width: 84px;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 0.68rem;
   font-weight: 600;
   letter-spacing: 0.01em;
+  line-height: 1.2;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
   white-space: nowrap;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
-  opacity: 0;
-  pointer-events: none;
-  transition: transform 150ms ease;
-  z-index: 2;
 }
 
-.progressSegment::before {
-  content: "";
-  position: absolute;
-  top: calc(100% + var(--m-md) + 1px);
-  left: 50%;
-  width: 8px;
-  height: 8px;
-  background-color: var(--bg-field);
-  transform: translate(-50%, -4px) rotate(45deg);
-  opacity: 0;
-  pointer-events: none;
-  transition: transform 150ms ease;
-  z-index: 1;
-}
-
-.progressSegment:hover::after {
-  opacity: 1;
-  transform: translate(-50%, 0);
-}
-
-.progressSegment:hover::before {
-  opacity: 1;
-  transform: translate(-50%, 0) rotate(45deg);
-}
-
-.progressCompleted {
-  background-color: var(--color-success);
-}
-
-.progressCompleted::before {
-  background-color: var(--color-success);
-}
-
-.progressInProgress {
-  background-color: var(--color-info);
-}
-
-.progressInProgress::before {
-  background-color: var(--color-info);
-}
-
-.progressReview {
-  background-color: var(--color-warning);
-}
-
-.progressReview::before {
-  background-color: var(--color-warning);
-}
-
-.progressRejected {
-  background-color: var(--color-danger);
-}
-
-.progressRejected::before {
-  background-color: var(--color-danger);
+.donutCenterEmpty {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
 }
 
 .hoverActions {

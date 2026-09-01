@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useId, useRef, useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import type { Project } from "../../../shared/types/project";
 import RenameProjectModalComponent from "../renameProjectModal/renameProjectModalComponent";
 import DeleteProjectModalComponent from "../deleteProjectModal/deleteProjectModalComponent";
@@ -16,6 +16,12 @@ interface Prop extends Project {
 
 type ActiveModal = "rename" | "delete" | null;
 
+// Raggio e spessore del donut in unità di viewBox (0-100): definiscono uno
+// spessore dell'anello proporzionalmente simile alla vecchia barra lineare,
+// ma con più superficie per essere leggibile come grafico a sé.
+const DONUT_RADIUS = 42;
+const DONUT_STROKE_WIDTH = 14;
+
 function ProjectComponent({
   id,
   name,
@@ -24,6 +30,7 @@ function ProjectComponent({
   onDeleteProject,
   canManage,
 }: Prop) {
+  const navigate = useNavigate();
   const [activeModal, setActiveModal] = useState<ActiveModal>(null);
   const [renameError, setRenameError] = useState("");
   const [deleteError, setDeleteError] = useState("");
@@ -81,30 +88,44 @@ function ProjectComponent({
       label: "Completati",
       count: completedCount,
       percent: completedPercent,
-      className: styles.progressCompleted,
+      donutClassName: styles.donutSegmentCompleted,
+      centerClassName: styles.donutCenterCompleted,
     },
     {
       key: "progress",
       label: "In corso",
       count: progressCount,
       percent: inProgressPercent,
-      className: styles.progressInProgress,
+      donutClassName: styles.donutSegmentInProgress,
+      centerClassName: styles.donutCenterInProgress,
     },
     {
       key: "review",
       label: "In review",
       count: reviewCount,
       percent: reviewPercent,
-      className: styles.progressReview,
+      donutClassName: styles.donutSegmentReview,
+      centerClassName: styles.donutCenterReview,
     },
     {
       key: "rejected",
       label: "Rifiutati",
       count: rejectedCount,
       percent: rejectedPercent,
-      className: styles.progressRejected,
+      donutClassName: styles.donutSegmentRejected,
+      centerClassName: styles.donutCenterRejected,
     },
   ].filter((segment) => segment.percent > 0);
+
+  // Offset cumulativo (in %, 0-100) di ogni arco lungo la circonferenza:
+  // ogni <circle> usa pathLength=100, quindi dasharray/dashoffset possono
+  // esprimersi direttamente in percentuale senza calcolare la circonferenza reale.
+  let cumulativePercent = 0;
+  const donutSegments = segments.map((segment) => {
+    const donutSegment = { ...segment, offset: cumulativePercent };
+    cumulativePercent += segment.percent;
+    return donutSegment;
+  });
 
   const cardLabel =
     segments.length === 0
@@ -168,15 +189,72 @@ function ProjectComponent({
         </span>
         <span className={styles.taskTotal}>{totalTasks} task</span>
       </div>
-      <div className={styles.progressBar} aria-hidden="true">
-        {segments.map((segment) => (
-          <div
-            key={segment.key}
-            className={`${styles.progressSegment} ${segment.className}`}
-            style={{ width: `${segment.percent}%` }}
-            data-tooltip={`${segment.count} ${segment.label}`}
+      {/* Il donut sta sopra .cardLink (z-index) per ricevere l'hover sui
+          singoli segmenti: l'onClick replica la navigazione del link
+          sottostante così il click continua a funzionare su tutta la card. */}
+      <div
+        className={styles.donutWrapper}
+        aria-hidden="true"
+        onClick={() => navigate(`/dashboard/${id}/task-list`)}
+      >
+        <svg className={styles.donutSvg} viewBox="0 0 100 100">
+          <circle
+            className={
+              totalTasks === 0 ? styles.donutTrackEmpty : styles.donutTrack
+            }
+            cx="50"
+            cy="50"
+            r={DONUT_RADIUS}
+            strokeWidth={DONUT_STROKE_WIDTH}
+            fill="none"
+            pathLength={100}
           />
-        ))}
+          {totalTasks > 0 &&
+            donutSegments.map((segment) => (
+              <circle
+                key={segment.key}
+                className={`${styles.donutSegment} ${segment.donutClassName}`}
+                cx="50"
+                cy="50"
+                r={DONUT_RADIUS}
+                strokeWidth={DONUT_STROKE_WIDTH}
+                fill="none"
+                pathLength={100}
+                strokeDasharray={`${segment.percent} ${100 - segment.percent}`}
+                strokeDashoffset={-segment.offset}
+              />
+            ))}
+        </svg>
+
+        <div className={styles.donutCenter}>
+          {totalTasks === 0 ? (
+            <span className={styles.donutCenterEmpty}>Nessun task</span>
+          ) : (
+            <>
+              <span
+                className={`${styles.donutCenterText} ${styles.donutCenterDefault}`}
+              >
+                <strong className={styles.donutCenterValue}>
+                  {totalTasks}
+                </strong>
+                <span className={styles.donutCenterLabel}>task totali</span>
+              </span>
+              {donutSegments.map((segment) => (
+                <span
+                  key={segment.key}
+                  className={`${styles.donutCenterText} ${segment.centerClassName}`}
+                >
+                  <strong className={styles.donutCenterValue}>
+                    {segment.count}
+                  </strong>
+                  <span className={styles.donutCenterLabel}>
+                    {segment.label}
+                  </span>
+                </span>
+              ))}
+            </>
+          )}
+        </div>
       </div>
 
       {canManage && (
