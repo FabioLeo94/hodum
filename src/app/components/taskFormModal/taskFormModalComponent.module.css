@@ -1,3 +1,56 @@
+/* Layout a due colonne per la modalità edit (form + pannello commenti).
+   align-items resta al default (stretch): il form in edit condivide
+   l'altezza fissa della colonna commenti, e la descrizione (fillHeight, vedi
+   .fieldSpacingFill) usa quello spazio invece di lasciarlo vuoto in fondo. */
+.editLayout {
+  display: flex;
+  gap: var(--m-xl);
+}
+
+.formColumn {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.commentsColumn {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  /* Altezza definita, non solo minima: il pannello commenti (lista
+     scrollabile + composer fisso in basso) ha bisogno di un contenitore
+     realmente delimitato, altrimenti .list (flex:1, overflow-y:auto) non
+     scrolla mai al proprio interno e a crescere è l'intera .content della
+     modale, vanificando "lista scrollabile / composer fisso" a favore di
+     uno scroll unico e indifferenziato. */
+  height: min(480px, 55vh);
+  border-left: 1px solid var(--bg-field);
+  padding-left: var(--m-xl);
+}
+
+/* Sotto i ~700px (stesso breakpoint di --assistant-panel-width in
+   src/index.css) le due colonne non hanno più spazio orizzontale per essere
+   usabili: si impilano, con il pannello commenti sotto e un'altezza fissa
+   così .list (overflow-y: auto) scrolla al suo interno invece di schiacciarsi
+   o di far scrollare l'intera modale. */
+@media (max-width: 700px) {
+  .editLayout {
+    flex-direction: column;
+  }
+
+  .commentsColumn {
+    flex: none;
+    height: 360px;
+    border-left: none;
+    border-top: 1px solid var(--bg-field);
+    padding-top: var(--m-xl);
+    padding-left: 0;
+  }
+}
+
 .description {
   margin-bottom: var(--m-lg);
   color: var(--text-muted);
@@ -7,6 +60,20 @@
 
 .fieldSpacing {
   margin-top: var(--m-lg);
+}
+
+/* Contenitore della descrizione in edit mode: oltre alla spaziatura di
+   .fieldSpacing, si espande (flex: 1) per occupare tutto lo spazio verticale
+   che avanza fra titolo e data dentro .formColumn (ora una colonna flex ad
+   altezza piena, vedi sopra). min-height: 0 lascia che il figlio (la
+   textarea fillHeight) si comprima invece di forzare il contenitore oltre
+   lo spazio disponibile. */
+.fieldSpacingFill {
+  margin-top: var(--m-lg);
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .selectField {

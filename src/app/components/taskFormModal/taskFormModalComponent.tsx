@@ -5,6 +5,7 @@ import TextareaComponent from "../textarea/textareaComponent";
 import ButtonComponent from "../button/buttonComponent";
 import TaskStatusSelectComponent from "../taskStatusSelect/taskStatusSelectComponent";
 import PrioritySelectComponent from "../prioritySelect/prioritySelectComponent";
+import TaskCommentsPanelComponent from "../taskCommentsPanel/taskCommentsPanelComponent";
 import type { TaskStatus } from "../../../shared/types/project";
 import { useAsyncSubmit } from "../../../shared/hooks/useAsyncSubmit";
 import styles from "./taskFormModalComponent.module.css";
@@ -14,17 +15,23 @@ const DEFAULT_PRIORITY = 5;
 
 interface Prop {
   isOpen: boolean;
+  projectId: string;
+  // Presente solo in modalità "edit" (il task non esiste ancora in "create"):
+  // determina anche se il pannello commenti viene mostrato.
+  taskId?: string;
   onClose: () => void;
   onSubmit: (
     title: string,
     description: string,
     status: TaskStatus,
     priority: number,
+    dueDate: string | null,
   ) => void | Promise<void>;
   submitError?: string;
   mode?: "create" | "edit";
   initialTitle?: string;
   initialDescription?: string;
+  initialDueDate?: string | null;
 }
 
 const MODE_COPY = {
@@ -45,12 +52,15 @@ const MODE_COPY = {
 
 function TaskFormModalComponent({
   isOpen,
+  projectId,
+  taskId,
   onClose,
   onSubmit,
   submitError,
   mode = "create",
   initialTitle,
   initialDescription,
+  initialDueDate,
 }: Prop) {
   // Inizializzati solo al mount di questa istanza: il chiamante è responsabile
   // di rimontare il componente (via `key`) ogni volta che la modale si riapre,
@@ -61,6 +71,9 @@ function TaskFormModalComponent({
   const [description, setDescription] = useState(initialDescription ?? "");
   const [status, setStatus] = useState<TaskStatus>(DEFAULT_STATUS);
   const [priority, setPriority] = useState(DEFAULT_PRIORITY);
+  // Stringa vuota rappresenta "nessuna scadenza" nell'input HTML nativo
+  // type="date": normalizzata a null solo al submit (vedi handleSubmit).
+  const [dueDate, setDueDate] = useState(initialDueDate ?? "");
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const { isSubmitting, submit } = useAsyncSubmit();
 
@@ -76,6 +89,7 @@ function TaskFormModalComponent({
     setDescription("");
     setStatus(DEFAULT_STATUS);
     setPriority(DEFAULT_PRIORITY);
+    setDueDate("");
     setSubmitAttempted(false);
     onClose();
   }
@@ -86,36 +100,18 @@ function TaskFormModalComponent({
     if (trimmedTitle === "") return;
 
     await submit(async () => {
-      await onSubmit(trimmedTitle, description.trim(), status, priority);
+      await onSubmit(trimmedTitle, description.trim(), status, priority, dueDate === "" ? null : dueDate);
       setTitle("");
       setDescription("");
       setStatus(DEFAULT_STATUS);
       setPriority(DEFAULT_PRIORITY);
+      setDueDate("");
       setSubmitAttempted(false);
     });
   }
 
-  return (
-    <ModalBaseComponent
-      isOpen={isOpen}
-      onClose={handleClose}
-      title={copy.title}
-      onSubmit={handleSubmit}
-      primaryAction={
-        <ButtonComponent onClick={() => {}} disabled={isSubmitting}>
-          {isSubmitting ? copy.confirmPendingLabel : copy.confirmLabel}
-        </ButtonComponent>
-      }
-      secondaryActions={
-        <button
-          type="button"
-          className={styles.cancelButton}
-          onClick={handleClose}
-        >
-          Annulla
-        </button>
-      }
-    >
+  const formFields = (
+    <>
       <p className={styles.description}>{copy.description}</p>
       <InputComponent
         type="text"
@@ -127,8 +123,14 @@ function TaskFormModalComponent({
         autoComplete="off"
         autoFocus
         error={titleError}
+        showLabel
       />
-      <div className={styles.fieldSpacing}>
+      {/* In edit mode la descrizione riempie lo spazio verticale disponibile
+          fra titolo e data (fillHeight): ha senso solo lì, dove il form
+          condivide l'altezza fissa della colonna commenti accanto (vedi
+          .editLayout/.formColumn in taskFormModalComponent.module.css). In
+          create mode non c'è un'altezza di riferimento, resta a rows fisse. */}
+      <div className={mode === "edit" ? styles.fieldSpacingFill : styles.fieldSpacing}>
         <TextareaComponent
           name="taskDescription"
           label="Descrizione del task"
@@ -137,6 +139,18 @@ function TaskFormModalComponent({
           onChange={(event) => setDescription(event.target.value)}
           autoComplete="off"
           rows={4}
+          showLabel
+          fillHeight={mode === "edit"}
+        />
+      </div>
+      <div className={styles.fieldSpacing}>
+        <InputComponent
+          type="date"
+          name="taskDueDate"
+          label="Data di scadenza"
+          value={dueDate}
+          onChange={(event) => setDueDate(event.target.value)}
+          showLabel
         />
       </div>
       {mode === "create" && (
@@ -163,6 +177,43 @@ function TaskFormModalComponent({
         <p role="alert" className={styles.submitError}>
           {submitError}
         </p>
+      )}
+    </>
+  );
+
+  return (
+    <ModalBaseComponent
+      isOpen={isOpen}
+      onClose={handleClose}
+      title={copy.title}
+      size={mode === "edit" ? "wide" : "default"}
+      onSubmit={handleSubmit}
+      primaryAction={
+        <ButtonComponent onClick={() => {}} disabled={isSubmitting}>
+          {isSubmitting ? copy.confirmPendingLabel : copy.confirmLabel}
+        </ButtonComponent>
+      }
+      secondaryActions={
+        <button
+          type="button"
+          className={styles.cancelButton}
+          onClick={handleClose}
+        >
+          Annulla
+        </button>
+      }
+    >
+      {/* In create mode il task non esiste ancora e non ha commenti: colonna
+          singola, nessun pannello. taskId è opzionale solo per questo. */}
+      {mode === "edit" && taskId !== undefined ? (
+        <div className={styles.editLayout}>
+          <div className={styles.formColumn}>{formFields}</div>
+          <div className={styles.commentsColumn}>
+            <TaskCommentsPanelComponent projectId={projectId} taskId={taskId} />
+          </div>
+        </div>
+      ) : (
+        formFields
       )}
     </ModalBaseComponent>
   );

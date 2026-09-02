@@ -13,4 +13,16 @@ export interface Task {
   description: string;
   status: TaskStatus;
   priority: number;
+  // Stringa YYYY-MM-DD, o null se il task non ha una scadenza impostata.
+  dueDate: string | null;
+}
+
+export interface TaskComment {
+  id: string;
+  taskId: string;
+  authorId: string;
+  authorUsername: string;
+  body: string;
+  createdAt: string;
+  edited: boolean;
 }

@@ -1,0 +1,406 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.heading {
+  margin: 0 0 var(--m-md);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  /* --m-sm (4px) bastava a separare autore/corpo/timestamp *dentro* una
+     bolla, ma tra due commenti diversi rendeva il log troppo compresso, con
+     bolle quasi a contatto. --m-md dà un respiro visivo che segna il confine
+     tra un messaggio e l'altro senza diluire la densità "log". */
+  gap: var(--m-md);
+  /* Bordini appena percettibili sopra e sotto la history, per separarla
+     visivamente dall'heading e dal composer: stesso token (--bg-field) già
+     usato altrove nella modal task come divisore sottile fra colonne. */
+  border-top: 1px solid var(--bg-field);
+  border-bottom: 1px solid var(--bg-field);
+  padding-block: var(--p-sm);
+}
+
+/* Stato di caricamento/vuoto: centrati nello spazio disponibile della lista
+   (margin: auto su un flex item lo centra su entrambi gli assi) invece di
+   restare ancorati in alto, più leggibili come "stato dell'intero pannello"
+   piuttosto che come la prima riga di un elenco. */
+.status,
+.empty {
+  align-self: center;
+  margin: auto;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+/* Errore di caricamento: stesso trattamento tipografico/posizionale dello
+   stato vuoto, ma con il colore semantico di errore così resta leggibile
+   senza essere un blocco d'allarme invasivo (niente sfondo/bordo, solo il
+   colore + il testo esplicito già comunicano lo stato). */
+.loadError {
+  align-self: center;
+  margin: auto;
+  color: var(--color-danger);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.bubble {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-sm);
+  padding: var(--p-md);
+  /* Angolo "a nuvoletta": tre angoli arrotondati, quello adiacente al lato di
+     provenienza (sinistra per i messaggi altrui) resta squadrato. */
+  border-radius: var(--radious-md) var(--radious-md) var(--radious-md)
+    var(--radious-xs);
+  background-color: var(--bg-field);
+  align-self: flex-start;
+  min-width: 50%;
+  max-width: 85%;
+}
+
+.bubble[data-own="true"] {
+  align-self: flex-end;
+  border-radius: var(--radious-md) var(--radious-md) var(--radious-xs)
+    var(--radious-md);
+  background-color: var(--bg-primary);
+  color: var(--text-on-primary);
+}
+
+.authorRow {
+  display: flex;
+  align-items: center;
+  gap: var(--m-sm);
+}
+
+.author {
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* Corpo del commento centrato verticalmente nello spazio della bolla che
+   avanza tra header (autore) e footer (timestamp): flex:1 su questo
+   contenitore + align-items:center lo centra sull'asse verticale quando la
+   bolla ha più altezza del testo; padding-block sul .body dà comunque
+   respiro anche quando non c'è spazio extra da distribuire. */
+.bodyWrapper {
+  display: flex;
+  flex: 1;
+  align-items: center;
+}
+
+.body {
+  margin: 0;
+  padding-block: var(--p-sm);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+.timestamp {
+  align-self: flex-end;
+  font-size: 0.7rem;
+  opacity: 0.75;
+}
+
+/* Su sfondo --bg-primary (bolle proprie) il testo scuro attenuato al 75%
+   scende vicino alla soglia AA (~4.6:1 contro le 4.5:1 richieste per testo
+   piccolo); un'attenuazione più lieve tiene un margine di sicurezza senza
+   perdere la gerarchia visiva rispetto al corpo del messaggio. */
+.bubble[data-own="true"] .timestamp {
+  opacity: 0.85;
+}
+
+.editedFlag {
+  font-style: italic;
+}
+
+/* Menu "altre azioni" (tre puntini) di ogni bolla propria: stesso pattern
+   kebab/popover di projectComponent, spinto a destra dell'authorRow via
+   margin-left:auto invece che posizionato in absolute, così non rischia di
+   sovrapporsi al corpo del commento sottostante. */
+.kebabArea {
+  position: relative;
+  margin-left: auto;
+}
+
+.kebabButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: inherit;
+  opacity: 0.7;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    opacity 150ms ease;
+}
+
+.kebabButton:hover {
+  opacity: 1;
+  background-color: color-mix(in srgb, currentColor 15%, transparent);
+}
+
+.kebabButton:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.kebabButton[aria-expanded="true"] {
+  opacity: 1;
+  background-color: color-mix(in srgb, currentColor 15%, transparent);
+}
+
+.popoverMenu {
+  position: absolute;
+  top: calc(100% + var(--m-sm));
+  right: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  min-width: 150px;
+  padding: var(--p-sm);
+  border-radius: var(--radious-md);
+  background-color: var(--bg-field);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  animation: popoverPopIn 140ms ease both;
+}
+
+.popoverItem {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--m-sm);
+  padding: var(--p-sm) var(--p-md);
+  border: none;
+  border-radius: var(--radious-sm);
+  background: none;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  transition: background-color 150ms ease;
+}
+
+.popoverItem:hover {
+  background-color: var(--bg-surface);
+}
+
+.popoverItem:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: -2px;
+}
+
+.popoverItem:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.popoverItemDanger {
+  color: var(--color-danger);
+}
+
+/* Bottone "Elimina" armato: il click non apre più un prompt separato, il
+   bottone stesso mostra una barra che scorre a ritroso per 5s. Un secondo
+   click su questo stesso bottone entro quel tempo conferma l'eliminazione;
+   qualunque altro modo di chiudere il menù (click altrove, Escape, apertura
+   di un altro menù/modifica) lo disarma senza eliminare nulla. */
+.popoverItemArmed {
+  background-color: color-mix(in srgb, var(--color-danger) 14%, transparent);
+}
+
+.deleteCountdownBar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 3px;
+  background-color: var(--color-danger);
+  transform-origin: left;
+  animation: deleteCountdown 5s linear forwards;
+}
+
+@keyframes deleteCountdown {
+  from {
+    transform: scaleX(1);
+  }
+
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes popoverPopIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.editCancelButton:disabled,
+.editSaveButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.editForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-sm);
+}
+
+.editActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--m-sm);
+}
+
+.editCancelButton {
+  padding: var(--p-xs) var(--p-md);
+  border: none;
+  border-radius: var(--radious-sm);
+  background: none;
+  color: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  opacity: 0.85;
+  transition: opacity 150ms ease;
+}
+
+.editCancelButton:hover {
+  opacity: 1;
+}
+
+.editSaveButton {
+  padding: var(--p-xs) var(--p-md);
+  border: none;
+  border-radius: var(--radious-sm);
+  background-color: var(--bg-primary);
+  color: var(--text-on-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.editSaveButton:hover {
+  background-color: color-mix(in srgb, var(--bg-primary) 88%, white 12%);
+}
+
+.editSaveButton:focus-visible,
+.editCancelButton:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.actionError {
+  margin: 0;
+  color: var(--color-danger);
+  font-size: 0.75rem;
+}
+
+.bubble[data-own="true"] .actionError {
+  color: var(--text-on-primary);
+}
+
+/* Il bottone di invio vive dentro l'area di testo (posizionato in absolute
+   in basso a destra) invece che a fianco: position:relative qui è
+   l'ancoraggio per quel posizionamento. */
+.composer {
+  position: relative;
+  margin-top: var(--m-md);
+}
+
+/* Spazio a destra del testo digitato, altrimenti finirebbe sotto al bottone
+   di invio sovrapposto. */
+.composerTextarea {
+  padding-right: 44px;
+}
+
+.sendButton {
+  position: absolute;
+  right: var(--p-xs);
+  bottom: var(--p-xs);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: var(--radious-sm);
+  background-color: var(--bg-primary);
+  color: var(--text-on-primary);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    transform 100ms ease;
+}
+
+.sendButton:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--bg-primary) 88%, white 12%);
+}
+
+.sendButton:active:not(:disabled) {
+  transform: scale(0.93);
+}
+
+.sendButton:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+.sendButton:disabled {
+  background-color: var(--bg-field);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.sendError {
+  margin-top: var(--m-sm);
+  color: var(--color-danger);
+  font-size: 0.85rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editSaveButton,
+  .editCancelButton,
+  .kebabButton,
+  .popoverItem,
+  .sendButton {
+    transition: none;
+  }
+
+  .popoverMenu {
+    animation: none;
+  }
+
+  .deleteCountdownBar {
+    animation: none;
+  }
+}

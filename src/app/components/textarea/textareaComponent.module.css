@@ -8,11 +8,45 @@
   composes: srOnly from "../../../shared/styles/fieldBase.module.css";
 }
 
+.label {
+  composes: fieldLabel from "../../../shared/styles/fieldBase.module.css";
+}
+
 .textareaBase {
   composes: fieldBase from "../../../shared/styles/fieldBase.module.css";
-  min-height: 96px;
+  /* Proporzionale a "rows" (var --textarea-rows, impostata inline dal
+     componente in base alla prop) invece di un valore fisso: 96px andava
+     bene solo per la descrizione task (rows=4, l'unico uso quando è stato
+     scritto); una textarea compatta come il composer dei commenti (rows=2)
+     non deve restare comunque alta il doppio di quanto le sue righe
+     richiedono. 1.5em per riga replica line-height, il resto il padding
+     verticale + il bordo di fieldBase. */
+  min-height: calc(var(--textarea-rows, 4) * 1.5em + 2 * var(--p-sm) + 4px);
   line-height: 1.5;
-  resize: vertical;
+  /* Niente resize a mano: l'altezza è decisa dal design (righe fisse con
+     scroll interno, o fillHeight), un handle di ridimensionamento lasciato
+     all'utente la renderebbe incoerente con quella scelta. */
+  resize: none;
+}
+
+.textareaWrapperFill {
+  /* Si espande nel contenitore flex del genitore (es. il campo descrizione
+     nella modal task) invece di sizzarsi sul proprio contenuto. */
+  flex: 1;
+  min-height: 0;
+}
+
+.textareaBaseFill {
+  /* Sostituisce l'altezza a righe fisse di .textareaBase: qui è il flex del
+     wrapper (a sua volta espanso nel genitore) a determinare quanto spazio
+     verticale reale è disponibile. min-height resta un pavimento (non 0):
+     senza un antenato che stia effettivamente stretchando in altezza (es.
+     sotto i 700px, dove .editLayout si impila e non c'è più un'altezza
+     condivisa da riempire) flex:1 non avrebbe spazio extra da distribuire e
+     il campo collasserebbe quasi a zero. */
+  flex: 1;
+  min-height: 96px;
+  height: auto;
 }
 
 .textareaBaseError {

@@ -1,4 +1,4 @@
-import type { Project, Task, TaskStatus } from "../../../shared/types/project";
+import type { Project, Task, TaskComment, TaskStatus } from "../../../shared/types/project";
 import { authFetch, authHeader } from "../auth/authService";
 import { API_BASE_URL, readErrorMessage } from "../httpClient";
 
@@ -15,6 +15,7 @@ interface TaskDto {
   description: string | null;
   status: TaskStatus;
   priority: number;
+  dueDate: string | null;
 }
 
 function toTask(dto: TaskDto): Task {
@@ -24,6 +25,7 @@ function toTask(dto: TaskDto): Task {
     description: dto.description ?? "",
     status: dto.status,
     priority: dto.priority,
+    dueDate: dto.dueDate ?? null,
   };
 }
 
@@ -151,11 +153,12 @@ export async function createTask(
   description?: string,
   status?: TaskStatus,
   priority?: number,
+  dueDate?: string | null,
 ): Promise<Task> {
   const response = await authFetch(`${API_BASE_URL}/projects/${projectId}/tasks`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeader() },
-    body: JSON.stringify({ title, description, status, priority }),
+    body: JSON.stringify({ title, description, status, priority, dueDate }),
   });
   if (!response.ok) {
     const message = await readErrorMessage(response);
@@ -170,13 +173,14 @@ export async function updateTask(
   taskId: string,
   title: string,
   description: string,
+  dueDate: string | null,
 ): Promise<Task> {
   const response = await authFetch(
     `${API_BASE_URL}/projects/${projectId}/tasks/${taskId}`,
     {
       method: "PUT",
       headers: { "Content-Type": "application/json", ...authHeader() },
-      body: JSON.stringify({ title, description }),
+      body: JSON.stringify({ title, description, dueDate }),
     },
   );
   if (!response.ok) {
@@ -206,6 +210,106 @@ export async function updateTaskStatus(
   }
   const task = (await response.json()) as TaskDto;
   return toTask(task);
+}
+
+interface TaskCommentDto {
+  id: string;
+  taskId: string;
+  projectId: string;
+  authorId: string;
+  authorUsername: string;
+  body: string;
+  createdAt: string;
+  edited: boolean;
+}
+
+// projectId è ridondante lato dominio frontend: il pannello commenti riceve
+// già projectId/taskId come prop dal chiamante, coerente con come toTask
+// scarta i campi del DTO non rilevanti per Task.
+function toTaskComment(dto: TaskCommentDto): TaskComment {
+  return {
+    id: dto.id,
+    taskId: dto.taskId,
+    authorId: dto.authorId,
+    authorUsername: dto.authorUsername,
+    body: dto.body,
+    createdAt: dto.createdAt,
+    edited: dto.edited,
+  };
+}
+
+export async function listTaskComments(projectId: string, taskId: string): Promise<TaskComment[]> {
+  const response = await authFetch(
+    `${API_BASE_URL}/projects/${projectId}/tasks/${taskId}/comments`,
+    { headers: authHeader() },
+  );
+  if (!response.ok) {
+    const message = await readErrorMessage(response);
+    throw new Error(message ?? "Impossibile caricare i commenti del task.");
+  }
+  const comments = (await response.json()) as TaskCommentDto[];
+  return comments.map(toTaskComment);
+}
+
+export async function createTaskComment(
+  projectId: string,
+  taskId: string,
+  body: string,
+): Promise<TaskComment> {
+  const response = await authFetch(
+    `${API_BASE_URL}/projects/${projectId}/tasks/${taskId}/comments`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeader() },
+      body: JSON.stringify({ body }),
+    },
+  );
+  if (!response.ok) {
+    const message = await readErrorMessage(response);
+    throw new Error(message ?? "Impossibile inviare il commento.");
+  }
+  const comment = (await response.json()) as TaskCommentDto;
+  return toTaskComment(comment);
+}
+
+export async function updateTaskComment(
+  projectId: string,
+  taskId: string,
+  commentId: string,
+  body: string,
+): Promise<TaskComment> {
+  const response = await authFetch(
+    `${API_BASE_URL}/projects/${projectId}/tasks/${taskId}/comments/${commentId}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...authHeader() },
+      body: JSON.stringify({ body }),
+    },
+  );
+  if (!response.ok) {
+    const message = await readErrorMessage(response);
+    throw new Error(message ?? "Impossibile modificare il commento.");
+  }
+  const comment = (await response.json()) as TaskCommentDto;
+  return toTaskComment(comment);
+}
+
+export async function deleteTaskComment(
+  projectId: string,
+  taskId: string,
+  commentId: string,
+): Promise<void> {
+  const response = await authFetch(
+    `${API_BASE_URL}/projects/${projectId}/tasks/${taskId}/comments/${commentId}`,
+    {
+      method: "DELETE",
+      headers: authHeader(),
+    },
+  );
+  if (!response.ok) {
+    const message = await readErrorMessage(response);
+    throw new Error(message ?? "Impossibile eliminare il commento.");
+  }
 }
 
 export async function updateTaskPriority(

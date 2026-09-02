@@ -1,0 +1,234 @@
+.calendar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-lg);
+  color: var(--text-primary);
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--m-md);
+}
+
+.navGroup {
+  display: flex;
+  gap: var(--m-xs);
+}
+
+.navButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radious-md);
+  background-color: var(--bg-field);
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.navButton:hover {
+  background-color: color-mix(in srgb, var(--bg-field) 60%, var(--bg-main));
+}
+
+.navButton:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+.monthTitle {
+  flex: 1;
+  min-width: 140px;
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.todayButton {
+  padding: var(--p-xs) var(--p-md);
+  border-radius: var(--radious-xl);
+  background-color: var(--bg-field);
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.todayButton:hover {
+  background-color: var(--bg-primary);
+  color: var(--text-on-primary);
+}
+
+.todayButton:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+.gridScroll {
+  overflow-x: auto;
+}
+
+/* Colonna etichetta settimana + sette colonne uguali per i giorni. Il gap di
+   1px sul colore di sfondo del container (--bg-field) disegna le linee della
+   griglia, ogni cella porta il proprio colore pieno sopra. */
+.grid {
+  display: grid;
+  grid-template-columns: minmax(84px, auto) repeat(7, minmax(88px, 1fr));
+  gap: 1px;
+  min-width: 640px;
+  background-color: var(--bg-field);
+  border-radius: var(--radious-lg);
+  overflow: hidden;
+  box-shadow: 0 0 16px rgba(0, 0, 0, 0.35);
+}
+
+.weekLabelHeaderCell,
+.weekdayHeaderCell {
+  background-color: var(--bg-field);
+  padding: var(--p-sm) var(--p-xs);
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.weekLabelCell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg-field);
+  padding: var(--p-xs);
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* align-items: flex-start (via flex-direction: column, default) tiene
+   numero del giorno e pallini ancorati in alto: la cella si espande in
+   altezza quando i pallini vanno a capo (wrap libero, nessun limite), senza
+   centrare verticalmente il contenuto. */
+.dayCell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-xs);
+  padding: var(--p-sm);
+  background-color: var(--bg-surface);
+  min-height: 64px;
+  transition: background-color 150ms ease;
+}
+
+.dayCell[data-muted="true"] {
+  background-color: var(--bg-main);
+  opacity: 0.55;
+}
+
+.dayCell[data-today="true"] {
+  background-color: color-mix(in srgb, var(--bg-primary) 16%, var(--bg-surface));
+  box-shadow: inset 0 0 0 2px var(--bg-primary);
+}
+
+.dayNumber {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.dayCell[data-today="true"] .dayNumber {
+  color: var(--bg-primary);
+  font-weight: 700;
+}
+
+.dots {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: var(--m-xs);
+}
+
+.dot {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  padding: 0;
+  cursor: pointer;
+  transition: transform 150ms ease;
+}
+
+.dot:hover {
+  transform: scale(1.3);
+}
+
+.dot:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+.dotProgress {
+  background-color: var(--color-info);
+}
+
+.dotReview {
+  background-color: var(--color-warning);
+}
+
+.dotCompleted {
+  background-color: var(--color-success);
+}
+
+.dotRejected {
+  background-color: var(--color-danger);
+}
+
+/* Bordo + shadow verso il nero (tema unico, sempre scuro) per non
+   confondersi con lo sfondo della cella: il colore del bordo distingue "in
+   scadenza" (giallo) da "in ritardo" (rosso). */
+.dotDueSoon {
+  box-shadow:
+    0 0 0 2px var(--color-warning),
+    0 1px 3px rgba(0, 0, 0, 0.65);
+}
+
+.dotOverdue {
+  box-shadow:
+    0 0 0 2px var(--color-danger),
+    0 1px 3px rgba(0, 0, 0, 0.65);
+}
+
+.dotExclamation {
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.dotDueSoon .dotExclamation {
+  color: var(--color-warning);
+}
+
+.dotOverdue .dotExclamation {
+  color: var(--color-danger);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navButton,
+  .todayButton,
+  .dayCell,
+  .dot {
+    transition: none;
+  }
+}

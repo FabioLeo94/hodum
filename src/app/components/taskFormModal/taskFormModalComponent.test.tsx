@@ -7,6 +7,7 @@ describe("TaskFormModalComponent", () => {
     render(
       <TaskFormModalComponent
         isOpen={false}
+        projectId="project-1"
         onClose={() => {}}
         onSubmit={() => {}}
       />,
@@ -21,6 +22,7 @@ describe("TaskFormModalComponent", () => {
     render(
       <TaskFormModalComponent
         isOpen
+        projectId="project-1"
         onClose={() => {}}
         onSubmit={() => {}}
       />,
@@ -40,6 +42,7 @@ describe("TaskFormModalComponent", () => {
     render(
       <TaskFormModalComponent
         isOpen
+        projectId="project-1"
         onClose={() => {}}
         onSubmit={onSubmit}
       />,
@@ -58,6 +61,7 @@ describe("TaskFormModalComponent", () => {
     render(
       <TaskFormModalComponent
         isOpen
+        projectId="project-1"
         onClose={() => {}}
         onSubmit={onSubmit}
       />,
@@ -79,6 +83,7 @@ describe("TaskFormModalComponent", () => {
       "Descrizione",
       "progress",
       5,
+      null,
     );
   });
 
@@ -87,6 +92,7 @@ describe("TaskFormModalComponent", () => {
     render(
       <TaskFormModalComponent
         isOpen
+        projectId="project-1"
         onClose={() => {}}
         onSubmit={onSubmit}
       />,
@@ -104,6 +110,7 @@ describe("TaskFormModalComponent", () => {
       "",
       "progress",
       5,
+      null,
     );
   });
 
@@ -112,6 +119,7 @@ describe("TaskFormModalComponent", () => {
     render(
       <TaskFormModalComponent
         isOpen
+        projectId="project-1"
         onClose={() => {}}
         onSubmit={onSubmit}
       />,
@@ -127,6 +135,7 @@ describe("TaskFormModalComponent", () => {
       "",
       "progress",
       5,
+      null,
     );
   });
 
@@ -134,6 +143,7 @@ describe("TaskFormModalComponent", () => {
     render(
       <TaskFormModalComponent
         isOpen
+        projectId="project-1"
         onClose={() => {}}
         onSubmit={() => {}}
       />,
@@ -152,6 +162,7 @@ describe("TaskFormModalComponent", () => {
     render(
       <TaskFormModalComponent
         isOpen
+        projectId="project-1"
         onClose={() => {}}
         onSubmit={onSubmit}
       />,
@@ -172,7 +183,37 @@ describe("TaskFormModalComponent", () => {
     fireEvent.click(screen.getByText("Crea task"));
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
-    expect(onSubmit).toHaveBeenCalledWith("Task Nuovo", "", "review", 1);
+    expect(onSubmit).toHaveBeenCalledWith("Task Nuovo", "", "review", 1, null);
+  });
+
+  it("calls onSubmit with the due date chosen in the date field", async () => {
+    const onSubmit = vi.fn();
+    render(
+      <TaskFormModalComponent
+        isOpen
+        projectId="project-1"
+        onClose={() => {}}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    fireEvent.change(
+      screen.getByPlaceholderText("Es. Sistemare il bug di login"),
+      { target: { value: "Task Nuovo" } },
+    );
+    fireEvent.change(screen.getByLabelText("Data di scadenza"), {
+      target: { value: "2026-09-10" },
+    });
+    fireEvent.click(screen.getByText("Crea task"));
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    expect(onSubmit).toHaveBeenCalledWith(
+      "Task Nuovo",
+      "",
+      "progress",
+      5,
+      "2026-09-10",
+    );
   });
 
   it("calls onClose when the cancel button is clicked", () => {
@@ -180,6 +221,7 @@ describe("TaskFormModalComponent", () => {
     render(
       <TaskFormModalComponent
         isOpen
+        projectId="project-1"
         onClose={onClose}
         onSubmit={() => {}}
       />,
@@ -200,6 +242,7 @@ describe("TaskFormModalComponent", () => {
     render(
       <TaskFormModalComponent
         isOpen
+        projectId="project-1"
         onClose={() => {}}
         onSubmit={onSubmit}
       />,
@@ -230,6 +273,7 @@ describe("TaskFormModalComponent", () => {
     render(
       <TaskFormModalComponent
         isOpen
+        projectId="project-1"
         onClose={() => {}}
         onSubmit={onSubmit}
       />,
@@ -256,7 +300,8 @@ describe("TaskFormModalComponent", () => {
           mode="edit"
           initialTitle="Task esistente"
           initialDescription="Descrizione esistente"
-          onClose={() => {}}
+          projectId="project-1"
+        onClose={() => {}}
           onSubmit={() => {}}
         />,
       );
@@ -282,6 +327,53 @@ describe("TaskFormModalComponent", () => {
       ).not.toBeInTheDocument();
     });
 
+    it("pre-fills the due date field with initialDueDate", () => {
+      render(
+        <TaskFormModalComponent
+          isOpen
+          mode="edit"
+          initialTitle="Task esistente"
+          initialDueDate="2026-09-10"
+          projectId="project-1"
+          onClose={() => {}}
+          onSubmit={() => {}}
+        />,
+      );
+
+      expect(screen.getByLabelText("Data di scadenza")).toHaveValue(
+        "2026-09-10",
+      );
+    });
+
+    it("calls onSubmit with null after clearing a pre-filled due date", async () => {
+      const onSubmit = vi.fn();
+      render(
+        <TaskFormModalComponent
+          isOpen
+          mode="edit"
+          initialTitle="Task esistente"
+          initialDueDate="2026-09-10"
+          projectId="project-1"
+          onClose={() => {}}
+          onSubmit={onSubmit}
+        />,
+      );
+
+      fireEvent.change(screen.getByLabelText("Data di scadenza"), {
+        target: { value: "" },
+      });
+      fireEvent.click(screen.getByText("Salva modifiche"));
+
+      await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+      expect(onSubmit).toHaveBeenCalledWith(
+        "Task esistente",
+        "",
+        "progress",
+        5,
+        null,
+      );
+    });
+
     it("calls onSubmit with the edited values, not the initial ones", async () => {
       const onSubmit = vi.fn();
       render(
@@ -290,7 +382,8 @@ describe("TaskFormModalComponent", () => {
           mode="edit"
           initialTitle="Task esistente"
           initialDescription="Descrizione esistente"
-          onClose={() => {}}
+          projectId="project-1"
+        onClose={() => {}}
           onSubmit={onSubmit}
         />,
       );
@@ -313,6 +406,7 @@ describe("TaskFormModalComponent", () => {
         "Descrizione modificata",
         "progress",
         5,
+        null,
       );
     });
 
@@ -329,7 +423,8 @@ describe("TaskFormModalComponent", () => {
           isOpen
           mode="edit"
           initialTitle="Task esistente"
-          onClose={() => {}}
+          projectId="project-1"
+        onClose={() => {}}
           onSubmit={onSubmit}
         />,
       );

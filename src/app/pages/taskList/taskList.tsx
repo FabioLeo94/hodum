@@ -16,6 +16,7 @@ import TaskFormModalComponent from "../../components/taskFormModal/taskFormModal
 import TaskStatusSelectComponent from "../../components/taskStatusSelect/taskStatusSelectComponent";
 import PrioritySelectComponent from "../../components/prioritySelect/prioritySelectComponent";
 import TaskKanbanBoardComponent from "../../components/taskKanbanBoard/taskKanbanBoardComponent";
+import TaskCalendarComponent from "../../components/taskCalendar/taskCalendarComponent";
 import type { AssistantLayoutContext } from "../../components/protectedLayout/protectedLayoutComponent";
 import { usePageMeta } from "../../../shared/hooks/usePageMeta";
 import {
@@ -37,7 +38,7 @@ function sortTasksByPriority(tasks: Task[], order: PrioritySortOrder): Task[] {
   return [...tasks].sort((a, b) => (a.priority - b.priority) * direction);
 }
 
-type ViewMode = "list" | "kanban";
+type ViewMode = "list" | "kanban" | "calendar";
 
 const VIEW_MODE_KEY = "taskList.viewMode";
 
@@ -47,7 +48,8 @@ const VIEW_MODE_KEY = "taskList.viewMode";
 function readViewModePreference(): ViewMode {
   try {
     const stored = localStorage.getItem(VIEW_MODE_KEY);
-    return stored === "kanban" ? "kanban" : "list";
+    if (stored === "kanban" || stored === "calendar") return stored;
+    return "list";
   } catch {
     return "list";
   }
@@ -204,12 +206,13 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
     description: string,
     status: TaskStatus,
     priority: number,
+    dueDate: string | null,
   ) {
     try {
       const editingTask = taskModal?.mode === "edit" ? taskModal.task : null;
       const savedTask = editingTask
-        ? await updateTask(progettoId, editingTask.id, title, description)
-        : await createTask(progettoId, title, description, status, priority);
+        ? await updateTask(progettoId, editingTask.id, title, description, dueDate)
+        : await createTask(progettoId, title, description, status, priority, dueDate);
 
       setProject((current) => {
         if (!current) return current;
@@ -385,6 +388,14 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
               >
                 Kanban
               </button>
+              <button
+                type="button"
+                className={styles.viewSwitchButton}
+                aria-pressed={viewMode === "calendar"}
+                onClick={() => setViewMode("calendar")}
+              >
+                Calendario
+              </button>
             </div>
           </div>
         </header>
@@ -395,6 +406,8 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
             onPriorityChange={handlePriorityChange}
             onOpenTask={openEditModal}
           />
+        ) : viewMode === "calendar" ? (
+          <TaskCalendarComponent tasks={currentProject.tasks} onOpenTask={openEditModal} />
         ) : (
           <div className={styles.taskTableCard}>
             <table className={styles.taskTable}>
@@ -554,9 +567,12 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
           // per precompilare correttamente i campi in edit.
           key={taskModalKey}
           isOpen={taskModal !== null}
+          projectId={progettoId}
+          taskId={editingTask?.id}
           mode={taskModal?.mode ?? "create"}
           initialTitle={editingTask?.title}
           initialDescription={editingTask?.description}
+          initialDueDate={editingTask?.dueDate}
           onClose={closeTaskModal}
           onSubmit={handleTaskFormSubmit}
           submitError={taskModalError}

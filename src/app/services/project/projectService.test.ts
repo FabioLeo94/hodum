@@ -40,7 +40,7 @@ describe("projectService", () => {
           id: "1",
           name: "Progetto Demo",
           tasks: [
-            { id: "t1", title: "Task 1", description: "", status: "progress" },
+            { id: "t1", title: "Task 1", description: "", status: "progress", dueDate: null },
           ],
         },
       ]);

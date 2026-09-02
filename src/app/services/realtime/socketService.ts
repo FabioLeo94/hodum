@@ -1,5 +1,5 @@
 import { io, type Socket } from "socket.io-client";
-import type { Task, TaskStatus } from "../../../shared/types/project";
+import type { Task, TaskComment, TaskStatus } from "../../../shared/types/project";
 import { API_BASE_URL } from "../httpClient";
 import { getToken, getUser, updateStoredUser, type User } from "../auth/authService";
 
@@ -10,6 +10,7 @@ interface TaskEventDto {
   description: string | null;
   status: TaskStatus;
   priority: number;
+  dueDate: string | null;
 }
 
 interface ProjectEventDto {
@@ -18,10 +19,24 @@ interface ProjectEventDto {
   isActive: boolean;
 }
 
+interface TaskCommentEventDto {
+  id: string;
+  taskId: string;
+  projectId: string;
+  authorId: string;
+  authorUsername: string;
+  body: string;
+  createdAt: string;
+  edited: boolean;
+}
+
 interface ServerToClientEvents {
   "task:created": (task: TaskEventDto) => void;
   "task:updated": (task: TaskEventDto) => void;
   "task:deleted": (payload: { projectId: string; taskId: string }) => void;
+  "task:comment:created": (comment: TaskCommentEventDto) => void;
+  "task:comment:updated": (comment: TaskCommentEventDto) => void;
+  "task:comment:deleted": (payload: { projectId: string; taskId: string; commentId: string }) => void;
   "project:created": (project: ProjectEventDto) => void;
   "project:updated": (project: ProjectEventDto) => void;
   "project:deleted": (payload: { projectId: string }) => void;
@@ -58,6 +73,7 @@ function toTask(dto: TaskEventDto): Task {
     description: dto.description ?? "",
     status: dto.status,
     priority: dto.priority,
+    dueDate: dto.dueDate ?? null,
   };
 }
 
@@ -111,6 +127,55 @@ export function subscribeToProjectTasks(projectId: string, handlers: TaskEventHa
     client.off("task:deleted", handleDeleted);
     client.off("connect", handleConnect);
     client.emit("project:leave", projectId);
+  };
+}
+
+function toTaskComment(dto: TaskCommentEventDto): TaskComment {
+  return {
+    id: dto.id,
+    taskId: dto.taskId,
+    authorId: dto.authorId,
+    authorUsername: dto.authorUsername,
+    body: dto.body,
+    createdAt: dto.createdAt,
+    edited: dto.edited,
+  };
+}
+
+export interface TaskCommentEventHandlers {
+  onCreated: (comment: TaskComment) => void;
+  onUpdated: (comment: TaskComment) => void;
+  onDeleted: (commentId: string) => void;
+}
+
+// Nessun project:join/leave qui: la room del progetto è già joinata da
+// subscribeToProjectTasks, montato dalla pagina che ospita la modale finché
+// questo pannello commenti è visibile. Filtra per taskId (non solo
+// projectId) perché la room recapita i commenti di TUTTI i task del progetto.
+export function subscribeToTaskComments(
+  taskId: string,
+  handlers: TaskCommentEventHandlers,
+): () => void {
+  const client = getSocket();
+
+  const handleCreated = (dto: TaskCommentEventDto) => {
+    if (dto.taskId === taskId) handlers.onCreated(toTaskComment(dto));
+  };
+  const handleUpdated = (dto: TaskCommentEventDto) => {
+    if (dto.taskId === taskId) handlers.onUpdated(toTaskComment(dto));
+  };
+  const handleDeleted = (payload: { projectId: string; taskId: string; commentId: string }) => {
+    if (payload.taskId === taskId) handlers.onDeleted(payload.commentId);
+  };
+
+  client.on("task:comment:created", handleCreated);
+  client.on("task:comment:updated", handleUpdated);
+  client.on("task:comment:deleted", handleDeleted);
+
+  return () => {
+    client.off("task:comment:created", handleCreated);
+    client.off("task:comment:updated", handleUpdated);
+    client.off("task:comment:deleted", handleDeleted);
   };
 }
 
