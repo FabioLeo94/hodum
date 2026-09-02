@@ -8,6 +8,7 @@ import type { EditEmployeeFormValues } from "../../components/editEmployeeModal/
 import AssignProjectsModalComponent from "../../components/assignProjectsModal/assignProjectsModalComponent";
 import DeleteEmployeeModalComponent from "../../components/deleteEmployeeModal/deleteEmployeeModalComponent";
 import type { AssistantLayoutContext } from "../../components/protectedLayout/protectedLayoutComponent";
+import AvatarComponent from "../../components/avatar/avatarComponent";
 import {
   listUsers,
   updateEmployee,
@@ -254,6 +255,7 @@ function Employees() {
           <ul className={styles.employeesList}>
             {employees.map((employee) => (
               <li key={employee.id} className={styles.employeeCard}>
+                <AvatarComponent username={employee.username} size="lg" />
                 <div className={styles.employeeInfo}>
                   <span className={styles.employeeUsername}>
                     {employee.username}

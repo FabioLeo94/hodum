@@ -316,6 +316,30 @@
   animation: menuPopIn 140ms ease both;
 }
 
+/* Intestazione del menu account: nome utente sopra, email sotto (stesso
+   ordine di lettura di AvatarComponent affianco). Non e' un .menuItem: testo
+   puramente informativo, nessuno stato hover/focus. */
+.menuUserInfo {
+  padding: var(--p-xs) var(--p-md) var(--p-sm);
+}
+
+.menuUserName {
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menuUserEmail {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .menuItem {
   padding: var(--p-sm) var(--p-md);
   border-radius: var(--radious-sm);

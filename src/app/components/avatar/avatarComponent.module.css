@@ -1,0 +1,38 @@
+.avatar {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background-color: var(--bg-primary);
+  color: var(--text-on-primary);
+  font-weight: 700;
+  line-height: 1;
+  /* Anello scuro fisso (non un bordo chiaro): nelle bolle "proprie" del
+     pannello commenti lo sfondo è anch'esso --bg-primary, identico a quello
+     dell'avatar, quindi un bordo chiaro/traslucido vi si perderebbe quasi
+     del tutto. --bg-main (il fondo più scuro della palette) resta invece
+     leggibile per contrasto sia lì sia sugli sfondi --bg-surface/--bg-field
+     usati altrove, senza bisogno di una variante di colore per contesto. */
+  box-shadow: 0 0 0 2px var(--bg-main);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.avatar[data-size="sm"] {
+  width: 24px;
+  height: 24px;
+  font-size: 0.7rem;
+}
+
+.avatar[data-size="md"] {
+  width: 32px;
+  height: 32px;
+  font-size: 0.85rem;
+}
+
+.avatar[data-size="lg"] {
+  width: 40px;
+  height: 40px;
+  font-size: 1.1rem;
+}

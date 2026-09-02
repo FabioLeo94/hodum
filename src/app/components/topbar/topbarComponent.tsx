@@ -6,6 +6,7 @@ import { getCompanyName } from "../../services/company/companyService";
 import { getProjectName, listProjectsSummary } from "../../services/project/projectService";
 import type { ProjectSummary } from "../../services/project/projectService";
 import { updateEmployee } from "../../services/user/userService";
+import AvatarComponent from "../avatar/avatarComponent";
 import EditAccountModalComponent from "../editAccountModal/editAccountModalComponent";
 import type { EditAccountFormValues } from "../editAccountModal/editAccountModalComponent";
 import { formatDateTime } from "../../../shared/utils/formatDate";
@@ -414,25 +415,23 @@ function TopbarComponent({ onLogout }: Prop) {
             aria-controls={menuId}
             onClick={() => setIsMenuOpen((current) => !current)}
           >
-            <svg
-              className={styles.accountIcon}
-              viewBox="0 0 24 24"
-              width="22"
-              height="22"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <circle cx="12" cy="8" r="3.5" />
-              <path d="M4.5 20c0-4.14 3.36-6.5 7.5-6.5s7.5 2.36 7.5 6.5" />
-            </svg>
+            <AvatarComponent username={authUser?.username ?? ""} size="md" />
           </button>
 
           {isMenuOpen && (
             <div id={menuId} role="menu" className={styles.menu}>
+              {/* Intestazione informativa (non un menuitem: niente ruolo/focus,
+                  stesso trattamento di .menuLastLogin sotto) cosi chi apre il
+                  menu conferma subito "chi" e' loggato prima di agire. */}
+              {authUser && (
+                <>
+                  <div className={styles.menuUserInfo}>
+                    <p className={styles.menuUserName}>{authUser.username}</p>
+                    <p className={styles.menuUserEmail}>{authUser.email}</p>
+                  </div>
+                  <div className={styles.menuSeparator} role="separator" />
+                </>
+              )}
               <button
                 ref={editAccountItemRef}
                 type="button"
