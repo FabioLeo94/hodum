@@ -20,6 +20,9 @@ async function mountDocs(app: Express): Promise<void> {
 
 export async function createApp(): Promise<Express> {
   const app = express();
+  // Senza, ogni risposta espone "X-Powered-By: Express": informazione gratuita
+  // per chi fa ricognizione sul framework in uso.
+  app.disable('x-powered-by');
 
   // Limite esplicito: senza, un body enorme è un DoS a costo zero per il client.
   app.use(express.json({ limit: '1mb' }));

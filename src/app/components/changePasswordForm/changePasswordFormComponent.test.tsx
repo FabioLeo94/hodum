@@ -23,6 +23,8 @@ const sampleUser: User = {
   companyId: "10",
   role: "employee",
   mustChangePassword: true,
+  createdAt: "2024-01-01T00:00:00.000Z",
+  lastLoginAt: null,
 };
 
 function seedSession(): void {
