@@ -13,4 +13,8 @@ export interface Task {
   description: string | null;
   status: TaskStatus;
   priority: number;
+  // Sempre una stringa YYYY-MM-DD a questo livello, anche se in DB la
+  // colonna è `date` (tasks.due_date): la conversione da/verso il tipo Date
+  // che il driver pg restituisce a runtime avviene in taskService.ts.
+  dueDate: string | null;
 }

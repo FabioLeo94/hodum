@@ -25,6 +25,11 @@ interface TaskRow {
   description: string | null;
   status_name: string;
   priority: number;
+  // Il driver pg converte sempre le colonne `date` (OID 1082) in un oggetto
+  // Date a runtime, indipendentemente dal tipo dichiarato qui (nessun
+  // setTypeParser custom in src/db): tipizzato Date per rispecchiare il
+  // valore reale, non la colonna SQL.
+  due_date: Date | null;
 }
 
 // task_status.name (seed in migrations/0004_task_status_smallint_identity_e_seed_stati_assegnabili.sql)
@@ -50,7 +55,7 @@ const SLUG_TO_STATUS_NAME: Record<TaskStatus, string> = {
 
 // Select condivisa da getTaskById e listTasksByProject: stessa forma di riga
 // (TaskRow) per entrambe, cambia solo il filtro WHERE.
-const TASK_SELECT = `SELECT t.id, t.project_id, t.title, t.description, t.priority, ts.name AS status_name
+const TASK_SELECT = `SELECT t.id, t.project_id, t.title, t.description, t.priority, t.due_date, ts.name AS status_name
      FROM tasks t
      JOIN task_status ts ON ts.id = t.status`;
 
@@ -70,6 +75,41 @@ export function isValidTaskStatus(value: unknown): value is TaskStatus {
   return typeof value === 'string' && value in SLUG_TO_STATUS_NAME;
 }
 
+// Usata solo quando il valore è presente e non-null (stesso schema di
+// isValidPriority): "è null o assente" resta responsabilità del chiamante
+// (controller), qui si valida solo il formato di una stringa candidata.
+const DUE_DATE_FORMAT = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+export function isValidDueDate(value: string): boolean {
+  const match = DUE_DATE_FORMAT.exec(value);
+  if (!match) return false;
+  const [, yearStr, monthStr, dayStr] = match;
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  const day = Number(dayStr);
+  // Un round-trip attraverso Date.UTC rifiuta le date calendaricamente
+  // inesistenti (es. 30 febbraio, che Date.UTC accetterebbe silenziosamente
+  // "scivolando" a marzo): se anno/mese/giorno non tornano invariati dopo la
+  // costruzione, il valore in ingresso non era una data reale.
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
+}
+
+// Mai toISOString() (converte a UTC, può far slittare il giorno secondo il
+// fuso orario del server) né toLocaleDateString() (locale-dipendente): solo
+// getter locali, simmetrico al parsing lato frontend (src/shared/utils/
+// taskDueDate.ts).
+function formatDateOnly(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 function toTask(row: TaskRow): Task {
   const status = STATUS_NAME_TO_SLUG[row.status_name];
   if (!status) {
@@ -82,6 +122,7 @@ function toTask(row: TaskRow): Task {
     description: row.description,
     status,
     priority: row.priority,
+    dueDate: row.due_date ? formatDateOnly(row.due_date) : null,
   };
 }
 
@@ -116,6 +157,7 @@ export interface CreateTaskInput {
   description?: string;
   status?: TaskStatus;
   priority?: number;
+  dueDate?: string | null;
 }
 
 export async function createTask(projectId: string, input: CreateTaskInput, companyId?: string | null): Promise<Task> {
@@ -133,16 +175,24 @@ export async function createTask(projectId: string, input: CreateTaskInput, comp
   // matcha mai righe, quindi la subquery esterna del COALESCE cade sul
   // fallback "in progress".
   const result = await pool.query<{ id: string }>(
-    `INSERT INTO tasks (project_id, title, description, status, priority)
+    `INSERT INTO tasks (project_id, title, description, status, priority, due_date)
      VALUES (
        $1,
        $2,
        $3,
        COALESCE((SELECT id FROM task_status WHERE name = $4), (SELECT id FROM task_status WHERE name = 'in progress')),
-       COALESCE($5, 5)
+       COALESCE($5, 5),
+       $6
      )
      RETURNING id`,
-    [projectId, input.title, input.description ?? null, input.status ? SLUG_TO_STATUS_NAME[input.status] : null, input.priority ?? null],
+    [
+      projectId,
+      input.title,
+      input.description ?? null,
+      input.status ? SLUG_TO_STATUS_NAME[input.status] : null,
+      input.priority ?? null,
+      input.dueDate ?? null,
+    ],
   );
   const task = await getTaskById(result.rows[0].id);
   emitTaskCreated(task);
@@ -152,6 +202,11 @@ export async function createTask(projectId: string, input: CreateTaskInput, comp
 export interface UpdateTaskInput {
   title?: string;
   description?: string;
+  // A differenza di title/description, dueDate ha bisogno di una semantica
+  // a tre stati: assente (non toccare), null (rimuovi la scadenza), stringa
+  // (impostala) — vedi il costruttore di SET clause in updateTask, che per
+  // questo campo non può usare il pattern COALESCE degli altri due.
+  dueDate?: string | null;
 }
 
 export async function updateTask(
@@ -175,17 +230,32 @@ export async function updateTask(
     throw new TaskNotFoundError(taskId);
   }
 
-  // Stesso pattern COALESCE di updateProject in projectService.ts: applica
-  // solo i campi effettivamente forniti (undefined -> null -> valore colonna
-  // invariato) senza concatenare a mano la SET clause in base ai campi
-  // presenti. `?? null` scatta solo su undefined (campo non fornito), non su
-  // stringa vuota: title/description forniti come '' restano '' e sovrascrivono
-  // il valore esistente, stesso trattamento già applicato in createTask.
+  // Stesso pattern COALESCE di updateProject in projectService.ts per
+  // title/description: applica solo i campi effettivamente forniti
+  // (undefined -> null -> valore colonna invariato) senza concatenare a
+  // mano la SET clause in base ai campi presenti. `?? null` scatta solo su
+  // undefined (campo non fornito), non su stringa vuota: title/description
+  // forniti come '' restano '' e sovrascrivono il valore esistente, stesso
+  // trattamento già applicato in createTask.
+  //
+  // dueDate NON può seguire lo stesso pattern: COALESCE non distingue "non
+  // fornito" da "fornito esplicitamente come null" (entrambi arriverebbero
+  // come parametro SQL NULL), ma qui serve poter davvero azzerare la
+  // scadenza. Il frammento SET va quindi aggiunto solo se il chiamante ha
+  // toccato il campo (dueDate !== undefined), scrivendo il valore così com'è
+  // (stringa o null) invece di passare per COALESCE.
+  const setClauses = ['title = COALESCE($3, title)', 'description = COALESCE($4, description)'];
+  const values: unknown[] = [taskId, projectId, input.title ?? null, input.description ?? null];
+  if (input.dueDate !== undefined) {
+    values.push(input.dueDate);
+    setClauses.push(`due_date = $${values.length}`);
+  }
+
   const result = await pool.query(
     `UPDATE tasks
-     SET title = COALESCE($3, title), description = COALESCE($4, description)
+     SET ${setClauses.join(', ')}
      WHERE id = $1 AND project_id = $2`,
-    [taskId, projectId, input.title ?? null, input.description ?? null],
+    values,
   );
   if (result.rowCount === 0) {
     throw new TaskNotFoundError(taskId);

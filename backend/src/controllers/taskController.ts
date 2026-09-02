@@ -5,6 +5,7 @@ import type { Task, TaskStatus } from '../models/task';
 import {
   createTask,
   deleteTask,
+  isValidDueDate,
   isValidPriority,
   isValidTaskStatus,
   listTasksByProject,
@@ -28,6 +29,7 @@ export interface CreateTaskRequest {
   description?: string;
   status?: TaskStatus;
   priority?: number;
+  dueDate?: string | null;
 }
 
 export interface UpdateTaskStatusRequest {
@@ -41,6 +43,7 @@ export interface UpdateTaskPriorityRequest {
 export interface UpdateTaskRequest {
   title?: string;
   description?: string;
+  dueDate?: string | null;
 }
 
 // Stesso prefisso 'projects' di ProjectController: la risorsa task è
@@ -72,7 +75,7 @@ export class TaskController extends Controller {
   @Security('jwt')
   @SuccessResponse(201, 'Task creato')
   @Response<TaskErrorResponse>(404, 'Project non trovato')
-  @Response<TaskErrorResponse>(422, 'title vuoto, priority o status non validi')
+  @Response<TaskErrorResponse>(422, 'title vuoto, priority, status o dueDate non validi')
   public async createTask(
     @Path() projectId: string,
     @Body() body: CreateTaskRequest,
@@ -95,13 +98,23 @@ export class TaskController extends Controller {
       this.setStatus(422);
       return { message: 'status non valido' };
     }
+    if (body.dueDate !== undefined && body.dueDate !== null && !isValidDueDate(body.dueDate)) {
+      this.setStatus(422);
+      return { message: 'dueDate deve essere una data valida in formato YYYY-MM-DD, oppure null' };
+    }
 
     const user = getAuthenticatedUser(request);
     try {
       await assertProjectAccessible(projectId, user);
       const task = await createTask(
         projectId,
-        { title: body.title, description: body.description, status: body.status, priority: body.priority },
+        {
+          title: body.title,
+          description: body.description,
+          status: body.status,
+          priority: body.priority,
+          dueDate: body.dueDate,
+        },
         user.companyId,
       );
       this.setStatus(201);
@@ -118,7 +131,7 @@ export class TaskController extends Controller {
   @Put('{projectId}/tasks/{taskId}')
   @Security('jwt')
   @Response<TaskErrorResponse>(404, 'Project o task non trovato')
-  @Response<TaskErrorResponse>(422, 'title presente ma vuoto')
+  @Response<TaskErrorResponse>(422, 'title presente ma vuoto, o dueDate non valida')
   public async updateTask(
     @Path() projectId: string,
     @Path() taskId: string,
@@ -128,6 +141,10 @@ export class TaskController extends Controller {
     if (body.title !== undefined && body.title.trim().length === 0) {
       this.setStatus(422);
       return { message: 'title non può essere vuoto' };
+    }
+    if (body.dueDate !== undefined && body.dueDate !== null && !isValidDueDate(body.dueDate)) {
+      this.setStatus(422);
+      return { message: 'dueDate deve essere una data valida in formato YYYY-MM-DD, oppure null' };
     }
 
     const user = getAuthenticatedUser(request);
