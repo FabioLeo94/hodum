@@ -7,6 +7,7 @@ import type { Server as HttpServer } from 'node:http';
 import { DefaultEventsMap, Server, type Socket } from 'socket.io';
 import type { Project } from '../models/project';
 import type { Task } from '../models/task';
+import type { TaskComment } from '../models/taskComment';
 import type { User } from '../models/user';
 import { getProjectById, ProjectNotFoundError } from '../services/projectService';
 import { getUserById, UserNotFoundError } from '../services/userService';
@@ -16,6 +17,12 @@ interface ServerToClientEvents {
   'task:created': (task: Task) => void;
   'task:updated': (task: Task) => void;
   'task:deleted': (payload: { projectId: string; taskId: string }) => void;
+  'task:comment:created': (comment: TaskComment) => void;
+  'task:comment:updated': (comment: TaskComment) => void;
+  // Nessun projectId/taskId ridondanti oltre a quelli necessari a instradare
+  // il client verso la riga giusta della cronologia: a differenza di
+  // task:deleted non serve altro, il commento non ha figli da invalidare.
+  'task:comment:deleted': (payload: { projectId: string; taskId: string; commentId: string }) => void;
   'project:created': (project: Project) => void;
   'project:updated': (project: Project) => void;
   'project:deleted': (payload: { projectId: string }) => void;
@@ -198,6 +205,22 @@ export function emitTaskUpdated(task: Task): void {
 
 export function emitTaskDeleted(projectId: string, taskId: string): void {
   getIo()?.to(projectRoom(projectId)).emit('task:deleted', { projectId, taskId });
+}
+
+// Stesso stile di emitTaskCreated: la project room è già scoped per company
+// (joinProjectRoom verifica l'appartenenza prima di farci entrare un socket),
+// quindi basta instradare per projectId senza ripetere qui un controllo su
+// companyId.
+export function emitTaskCommentCreated(comment: TaskComment): void {
+  getIo()?.to(projectRoom(comment.projectId)).emit('task:comment:created', comment);
+}
+
+export function emitTaskCommentUpdated(comment: TaskComment): void {
+  getIo()?.to(projectRoom(comment.projectId)).emit('task:comment:updated', comment);
+}
+
+export function emitTaskCommentDeleted(projectId: string, taskId: string, commentId: string): void {
+  getIo()?.to(projectRoom(projectId)).emit('task:comment:deleted', { projectId, taskId, commentId });
 }
 
 // companyId obbligatorio (a differenza della versione precedente, che faceva
