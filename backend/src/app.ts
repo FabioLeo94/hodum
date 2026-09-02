@@ -27,7 +27,15 @@ export async function createApp(): Promise<Express> {
   // Origine esplicita (mai '*' con credenziali) letta da env con lo stesso
   // pattern di PORT in server.ts: fallback alla porta di default di Vite per
   // non richiedere configurazione in sviluppo locale.
-  app.use(cors({ origin: process.env.FRONTEND_ORIGIN ?? 'http://localhost:5173' }));
+  // exposedHeaders: senza, il browser scarta RateLimit-Reset dalla response
+  // cross-origin del rate limiter sotto (non è nella lista CORS-safelisted di
+  // default) e il frontend non saprebbe tra quanti secondi si può riprovare.
+  app.use(
+    cors({
+      origin: process.env.FRONTEND_ORIGIN ?? 'http://localhost:5173',
+      exposedHeaders: ['RateLimit-Reset'],
+    }),
+  );
 
   // Limite per IP sul login: senza, niente si oppone a un brute-force sulle
   // credenziali (aggravato dal fatto che GET /users, se mai raggiunto senza

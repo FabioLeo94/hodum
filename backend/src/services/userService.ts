@@ -59,6 +59,8 @@ export interface UserRow {
   company_id: string | null;
   role: UserRole | null;
   must_change_password: boolean;
+  created_at: Date;
+  last_login_at: Date | null;
 }
 
 export function toUser(row: UserRow): User {
@@ -69,10 +71,16 @@ export function toUser(row: UserRow): User {
     companyId: row.company_id,
     role: row.role,
     mustChangePassword: row.must_change_password,
+    createdAt: row.created_at.toISOString(),
+    lastLoginAt: row.last_login_at ? row.last_login_at.toISOString() : null,
   };
 }
 
-const USER_COLUMNS = 'id, username, email, password, company_id, role, must_change_password';
+// Esportata per companyService.ts e authService.ts, che leggono/scrivono la
+// stessa tabella users e devono restituire un UserRow completo (via toUser)
+// senza duplicare qui l'elenco colonne a rischio di disallineamento.
+export const USER_COLUMNS =
+  'id, username, email, password, company_id, role, must_change_password, created_at, last_login_at';
 
 // companyId omesso (undefined) per usi interni che devono vedere tutti gli
 // utenti; il controller lo valorizza sempre con l'azienda del richiedente

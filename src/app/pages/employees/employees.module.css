@@ -133,6 +133,11 @@
   transform: scale(0.94);
 }
 
+.iconButtonDanger:hover {
+  background-color: var(--color-danger);
+  color: var(--text-on-primary);
+}
+
 .emptyState {
   composes: messageCard from "../../../shared/styles/messageCard.module.css";
 }

@@ -2,6 +2,14 @@
   composes: description from "../../../shared/styles/employeeForm.module.css";
 }
 
+.fields {
+  composes: fields from "../../../shared/styles/employeeForm.module.css";
+}
+
+.passwordGroup {
+  composes: passwordGroup from "../../../shared/styles/employeeForm.module.css";
+}
+
 .metaInfo {
   composes: metaInfo from "../../../shared/styles/modalForm.module.css";
 }
@@ -16,26 +24,6 @@
 
 .metaValue {
   composes: metaValue from "../../../shared/styles/modalForm.module.css";
-}
-
-.fields {
-  composes: fields from "../../../shared/styles/employeeForm.module.css";
-}
-
-.roleField {
-  composes: roleField from "../../../shared/styles/employeeForm.module.css";
-}
-
-.roleLabel {
-  composes: roleLabel from "../../../shared/styles/employeeForm.module.css";
-}
-
-.roleSelect {
-  composes: roleSelect from "../../../shared/styles/employeeForm.module.css";
-}
-
-.passwordGroup {
-  composes: passwordGroup from "../../../shared/styles/employeeForm.module.css";
 }
 
 .submitError {

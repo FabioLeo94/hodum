@@ -23,7 +23,10 @@ function jsonResponse(status: number, body: unknown): Response {
   } as Response;
 }
 
-function storeUser(role: "owner" | "manager" | "employee") {
+function storeUser(
+  role: "owner" | "manager" | "employee",
+  lastLoginAt: string | null = null,
+) {
   sessionStorage.setItem(AUTH_TOKEN_KEY, "signed-jwt-token");
   sessionStorage.setItem(
     AUTH_USER_KEY,
@@ -34,6 +37,8 @@ function storeUser(role: "owner" | "manager" | "employee") {
       companyId: "10",
       role,
       mustChangePassword: false,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      lastLoginAt,
     }),
   );
 }
@@ -107,6 +112,28 @@ describe("TopbarComponent", () => {
     expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument();
   });
 
+  it("shows the last login in place of Dipendenti for an employee", () => {
+    storeUser("employee", "2026-02-15T09:30:00.000Z");
+    renderTopbar();
+
+    expect(screen.queryByText("Dipendenti")).not.toBeInTheDocument();
+    expect(screen.getByText(/Ultimo accesso:/)).toBeInTheDocument();
+  });
+
+  it("shows nothing in that slot for an employee who never logged in", () => {
+    storeUser("employee", null);
+    renderTopbar();
+
+    expect(screen.queryByText(/Ultimo accesso:/)).not.toBeInTheDocument();
+  });
+
+  it("does not show the last login for an owner (Dipendenti takes that slot)", () => {
+    storeUser("owner", "2026-02-15T09:30:00.000Z");
+    renderTopbar();
+
+    expect(screen.queryByText(/Ultimo accesso:/)).not.toBeInTheDocument();
+  });
+
   it("renders the logo and the account button, with the menu closed", () => {
     renderTopbar();
 
@@ -123,15 +150,31 @@ describe("TopbarComponent", () => {
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
 
-  it("opens the menu with the Disconnetti option when the account button is clicked", () => {
+  it("opens the menu with the Modifica account and Disconnetti options when the account button is clicked", () => {
     renderTopbar();
 
     fireEvent.click(screen.getByRole("button", { name: "Menu account" }));
 
     expect(screen.getByRole("menu")).toBeInTheDocument();
     expect(
+      screen.getByRole("menuitem", { name: "Modifica account" }),
+    ).toBeInTheDocument();
+    expect(
       screen.getByRole("menuitem", { name: "Disconnetti" }),
     ).toBeInTheDocument();
+  });
+
+  it("opens the edit account modal prefilled with the current user and closes the account menu", () => {
+    storeUser("owner");
+    renderTopbar();
+
+    fireEvent.click(screen.getByRole("button", { name: "Menu account" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Modifica account" }));
+
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Modifica account" })).toBeInTheDocument();
+    expect(screen.getByDisplayValue("mario")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("mario@example.com")).toBeInTheDocument();
   });
 
   it("toggles the menu closed when the account button is clicked again", () => {

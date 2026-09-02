@@ -6,11 +6,13 @@ import type { CreateEmployeeFormValues } from "../../components/createEmployeeMo
 import EditEmployeeModalComponent from "../../components/editEmployeeModal/editEmployeeModalComponent";
 import type { EditEmployeeFormValues } from "../../components/editEmployeeModal/editEmployeeModalComponent";
 import AssignProjectsModalComponent from "../../components/assignProjectsModal/assignProjectsModalComponent";
+import DeleteEmployeeModalComponent from "../../components/deleteEmployeeModal/deleteEmployeeModalComponent";
 import type { AssistantLayoutContext } from "../../components/protectedLayout/protectedLayoutComponent";
 import {
   listUsers,
   updateEmployee,
   setAssignedProjects,
+  deleteEmployee,
 } from "../../services/user/userService";
 import { createEmployee } from "../../services/company/companyService";
 import { getUser, isAuthenticated, logout, useAuthUser } from "../../services/auth/authService";
@@ -35,6 +37,8 @@ function Employees() {
   const [editError, setEditError] = useState("");
   const [assigningEmployee, setAssigningEmployee] = useState<User | null>(null);
   const [assignError, setAssignError] = useState("");
+  const [deletingEmployee, setDeletingEmployee] = useState<User | null>(null);
+  const [deleteError, setDeleteError] = useState("");
 
   // Pannello riservato a owner e project manager: nessuna rotta protetta
   // filtra già per ruolo (ProtectedRouteComponent controlla solo
@@ -167,6 +171,33 @@ function Employees() {
     }
   }
 
+  function openDeleteModal(employee: User) {
+    setDeleteError("");
+    setDeletingEmployee(employee);
+  }
+
+  function closeDeleteModal() {
+    setDeleteError("");
+    setDeletingEmployee(null);
+  }
+
+  async function handleDeleteEmployee() {
+    if (!deletingEmployee) return;
+    try {
+      await deleteEmployee(deletingEmployee.id);
+      setEmployees((current) =>
+        current.filter((employee) => employee.id !== deletingEmployee.id),
+      );
+      closeDeleteModal();
+    } catch (error) {
+      setDeleteError(
+        error instanceof Error
+          ? error.message
+          : "Impossibile eliminare il dipendente.",
+      );
+    }
+  }
+
   function openAssignModal(employee: User) {
     setAssignError("");
     setAssigningEmployee(employee);
@@ -294,6 +325,32 @@ function Employees() {
                       </svg>
                     </button>
                   )}
+                  {canManageEmployees && (
+                    <button
+                      type="button"
+                      className={`${styles.iconButton} ${styles.iconButtonDanger}`}
+                      aria-label={`Elimina dipendente ${employee.username}`}
+                      onClick={() => openDeleteModal(employee)}
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        width="16"
+                        height="16"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M3 6h18" />
+                        <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                        <path d="M10 11v6" />
+                        <path d="M14 11v6" />
+                      </svg>
+                    </button>
+                  )}
                 </div>
               </li>
             ))}
@@ -338,8 +395,21 @@ function Employees() {
                 onClose={closeEditModal}
                 currentUsername={editingEmployee.username}
                 currentRole={editingEmployee.role === "manager" ? "manager" : "employee"}
+                currentCreatedAt={editingEmployee.createdAt}
+                currentLastLoginAt={editingEmployee.lastLoginAt}
                 onSave={handleEditEmployee}
                 submitError={editError}
+              />
+            )}
+
+            {deletingEmployee && (
+              <DeleteEmployeeModalComponent
+                key={deletingEmployee.id}
+                isOpen={deletingEmployee !== null}
+                onClose={closeDeleteModal}
+                employeeUsername={deletingEmployee.username}
+                onConfirm={handleDeleteEmployee}
+                submitError={deleteError}
               />
             )}
           </Fragment>

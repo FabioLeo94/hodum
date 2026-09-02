@@ -45,10 +45,10 @@ describe("userService", () => {
 
   it("listUsers lancia un errore con il messaggio del backend su status non ok", async () => {
     vi.mocked(fetch).mockResolvedValue(
-      jsonResponse(401, { message: "Token di sessione mancante" }),
+      jsonResponse(500, { message: "Errore interno del server" }),
     );
 
-    await expect(listUsers()).rejects.toThrow("Token di sessione mancante");
+    await expect(listUsers()).rejects.toThrow("Errore interno del server");
   });
 
   it("invia una PUT JSON con il token di sessione e risolve lo user aggiornato", async () => {

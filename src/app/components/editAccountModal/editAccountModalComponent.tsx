@@ -1,65 +1,61 @@
-import { useId, useState } from "react";
+import { useState } from "react";
 import ModalBaseComponent from "../modalBase/modalBaseComponent";
 import InputComponent from "../input/inputComponent";
 import ButtonComponent from "../button/buttonComponent";
-import type { EmployeeRole } from "../../services/auth/authService";
-import { validatePassword } from "../../services/validation/validationService";
+import { validateEmail, validatePassword } from "../../services/validation/validationService";
 import { useAsyncSubmit } from "../../../shared/hooks/useAsyncSubmit";
-import { formatDate, formatDateTime } from "../../../shared/utils/formatDate";
-import styles from "./editEmployeeModalComponent.module.css";
+import { formatDate } from "../../../shared/utils/formatDate";
+import styles from "./editAccountModalComponent.module.css";
 
-export interface EditEmployeeFormValues {
+export interface EditAccountFormValues {
   username: string;
-  // Omesso quando l'owner non vuole cambiare la password: distinto da una
-  // stringa vuota, che invece verrebbe rifiutata dalla validazione.
+  email: string;
+  // Omesso quando l'utente non vuole cambiare la password: a differenza di
+  // EditEmployeeModalComponent, qui è l'utente stesso a impostarla, quindi
+  // must_change_password non va mai forzato di nuovo (vedi updateUser lato
+  // backend, che lo forza solo quando isOwnerEditingEmployee).
   password?: string;
-  // Promozione/retrocessione project manager <-> dipendente (task "Ruolo
-  // project manager"): sempre presente, a differenza di password, perché il
-  // select ha sempre un valore selezionato.
-  role: EmployeeRole;
 }
 
 interface Prop {
   isOpen: boolean;
   onClose: () => void;
   currentUsername: string;
-  currentRole: EmployeeRole;
-  // Sola lettura (task "Modifica account"): l'owner le vede ma non può
-  // cambiarle, da qui fuori dallo state del form sotto.
+  currentEmail: string;
   currentCreatedAt: string;
-  currentLastLoginAt: string | null;
-  onSave: (values: EditEmployeeFormValues) => void | Promise<void>;
+  onSave: (values: EditAccountFormValues) => void | Promise<void>;
   submitError?: string;
 }
 
-function EditEmployeeModalComponent({
+function EditAccountModalComponent({
   isOpen,
   onClose,
   currentUsername,
-  currentRole,
+  currentEmail,
   currentCreatedAt,
-  currentLastLoginAt,
   onSave,
   submitError,
 }: Prop) {
   // Precompilato solo al mount: il chiamante rimonta il componente (via
   // `key`) ogni volta che la modale si riapre, stesso pattern di
-  // RenameProjectModalComponent.
+  // EditEmployeeModalComponent.
   const [username, setUsername] = useState(currentUsername);
+  const [email, setEmail] = useState(currentEmail);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [role, setRole] = useState<EmployeeRole>(currentRole);
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const { isSubmitting, submit } = useAsyncSubmit();
-  const roleFieldId = useId();
 
   const usernameError =
     submitAttempted && username.trim() === "" ? "Inserire uno username." : "";
 
-  // La password è opzionale: la validazione scatta solo se l'owner ha
-  // iniziato a scriverne una, stesso principio già usato in
-  // CreateEmployeeModalComponent per email/password (validazione "a partire
-  // dal primo carattere", non solo al submit).
+  const emailError =
+    (submitAttempted || email !== "") && !validateEmail(email)
+      ? "Inserire una email valida."
+      : "";
+
+  // La password è opzionale: la validazione scatta solo se si è iniziato a
+  // scriverne una nuova, stesso principio di EditEmployeeModalComponent.
   const passwordError =
     password !== "" && !validatePassword(password)
       ? "La password deve contenere almeno 8 caratteri, una minuscola, una maiuscola e un numero."
@@ -74,9 +70,9 @@ function EditEmployeeModalComponent({
 
   function resetForm() {
     setUsername(currentUsername);
+    setEmail(currentEmail);
     setPassword("");
     setConfirmPassword("");
-    setRole(currentRole);
     setSubmitAttempted(false);
   }
 
@@ -91,6 +87,7 @@ function EditEmployeeModalComponent({
     const trimmedUsername = username.trim();
     const isValid =
       trimmedUsername !== "" &&
+      validateEmail(email) &&
       (password === "" || (validatePassword(password) && password === confirmPassword));
 
     if (!isValid) return;
@@ -98,8 +95,8 @@ function EditEmployeeModalComponent({
     await submit(async () => {
       await onSave({
         username: trimmedUsername,
+        email,
         password: password === "" ? undefined : password,
-        role,
       });
       resetForm();
     });
@@ -109,7 +106,7 @@ function EditEmployeeModalComponent({
     <ModalBaseComponent
       isOpen={isOpen}
       onClose={handleClose}
-      title={currentRole === "manager" ? "Modifica project manager" : "Modifica dipendente"}
+      title="Modifica account"
       onSubmit={handleSave}
       primaryAction={
         <ButtonComponent onClick={() => {}} disabled={isSubmitting}>
@@ -117,30 +114,18 @@ function EditEmployeeModalComponent({
         </ButtonComponent>
       }
       secondaryActions={
-        <button
-          type="button"
-          className={styles.cancelButton}
-          onClick={handleClose}
-        >
+        <button type="button" className={styles.cancelButton} onClick={handleClose}>
           Annulla
         </button>
       }
     >
       <p className={styles.description}>
-        Lascia vuoti i campi password per non cambiarla. Una nuova password
-        andrà comunicata al dipendente: al prossimo accesso gli verrà chiesto
-        di sostituirla con una scelta da lui.
+        Lascia vuoti i campi password per non cambiarla.
       </p>
       <div className={styles.metaInfo}>
         <p className={styles.metaRow}>
           <span className={styles.metaLabel}>Creato il</span>
           <span className={styles.metaValue}>{formatDate(currentCreatedAt)}</span>
-        </p>
-        <p className={styles.metaRow}>
-          <span className={styles.metaLabel}>Ultimo accesso</span>
-          <span className={styles.metaValue}>
-            {currentLastLoginAt ? formatDateTime(currentLastLoginAt) : "Mai"}
-          </span>
         </p>
       </div>
       <div className={styles.fields}>
@@ -156,20 +141,17 @@ function EditEmployeeModalComponent({
           required
           error={usernameError}
         />
-        <div className={styles.roleField}>
-          <label className={styles.roleLabel} htmlFor={roleFieldId}>
-            Ruolo
-          </label>
-          <select
-            id={roleFieldId}
-            className={styles.roleSelect}
-            value={role}
-            onChange={(event) => setRole(event.target.value as EmployeeRole)}
-          >
-            <option value="employee">Dipendente</option>
-            <option value="manager">Project Manager</option>
-          </select>
-        </div>
+        <InputComponent
+          type="email"
+          name="email"
+          label="Email"
+          placeholder="Email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          autoComplete="off"
+          required
+          error={emailError}
+        />
         <div className={styles.passwordGroup}>
           <InputComponent
             type="password"
@@ -202,4 +184,4 @@ function EditEmployeeModalComponent({
   );
 }
 
-export default EditEmployeeModalComponent;
+export default EditAccountModalComponent;

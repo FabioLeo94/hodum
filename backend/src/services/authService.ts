@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { pool } from '../db/pool';
 import type { User } from '../models/user';
+import { toUser, USER_COLUMNS, type UserRow } from './userService';
 
 // Stesso pattern di UserNotFoundError: il service non conosce HTTP, il
 // controller intercetta e decide lo status (401). Messaggio generico di
@@ -12,21 +13,8 @@ export class InvalidCredentialsError extends Error {
   }
 }
 
-interface UserRow {
-  id: string;
-  username: string;
-  email: string;
-  password: string;
-  company_id: string | null;
-  role: User['role'];
-  must_change_password: boolean;
-}
-
 export async function login(email: string, password: string): Promise<User> {
-  const result = await pool.query<UserRow>(
-    'SELECT id, username, email, password, company_id, role, must_change_password FROM users WHERE email = $1',
-    [email],
-  );
+  const result = await pool.query<UserRow>(`SELECT ${USER_COLUMNS} FROM users WHERE email = $1`, [email]);
   const row = result.rows[0];
   if (!row) {
     // Stesso errore generico di "password sbagliata": una email inesistente
@@ -39,12 +27,14 @@ export async function login(email: string, password: string): Promise<User> {
     throw new InvalidCredentialsError();
   }
 
-  return {
-    id: row.id,
-    username: row.username,
-    email: row.email,
-    companyId: row.company_id,
-    role: row.role,
-    mustChangePassword: row.must_change_password,
-  };
+  // "Ping" di ultimo accesso (task "Modifica account"): un solo UPDATE per
+  // primary key, nella stessa chiamata di login invece di un endpoint
+  // dedicato — il modo più leggero di tenere last_login_at aggiornato senza
+  // una richiesta HTTP in più dal client. RETURNING invece di un secondo
+  // SELECT: evita una terza query per ottenere il valore appena scritto.
+  const updated = await pool.query<UserRow>(
+    `UPDATE users SET last_login_at = now() WHERE id = $1 RETURNING ${USER_COLUMNS}`,
+    [row.id],
+  );
+  return toUser(updated.rows[0]);
 }

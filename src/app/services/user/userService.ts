@@ -1,5 +1,5 @@
 import { API_BASE_URL, readErrorMessage } from "../httpClient";
-import { authHeader, type EmployeeRole, type User } from "../auth/authService";
+import { authFetch, authHeader, type EmployeeRole, type User } from "../auth/authService";
 
 interface ProjectDto {
   id: string;
@@ -11,7 +11,7 @@ interface ProjectDto {
 // (userController.ts -> listUsers(requester.companyId)): qui non serve
 // passare alcun id, la scoping avviene tramite il token nell'header.
 export async function listUsers(): Promise<User[]> {
-  const response = await fetch(`${API_BASE_URL}/users`, {
+  const response = await authFetch(`${API_BASE_URL}/users`, {
     headers: authHeader(),
   });
 
@@ -27,7 +27,7 @@ export async function listUsers(): Promise<User[]> {
 // (vedi backend/src/middleware/authentication.ts): tutte le altre rotte
 // protette rispondono 428 in quello stato.
 export async function changePassword(userId: string, password: string): Promise<User> {
-  const response = await fetch(`${API_BASE_URL}/users/${userId}/password`, {
+  const response = await authFetch(`${API_BASE_URL}/users/${userId}/password`, {
     method: "PUT",
     headers: { "Content-Type": "application/json", ...authHeader() },
     body: JSON.stringify({ password }),
@@ -44,15 +44,17 @@ export async function changePassword(userId: string, password: string): Promise<
   return (await response.json()) as User;
 }
 
-// Task "Gestione del dipendente": PUT /users/{id} instrada già lato backend
-// sia il self-service sia l'owner-su-un-proprio-dipendente (stesso endpoint di
-// updateUser, vedi userController.ts), quindi qui basta chiamarlo con i campi
-// che l'owner può cambiare — password vuota/omessa lascia quella esistente.
+// Task "Gestione del dipendente"/"Modifica account": PUT /users/{id} instrada
+// già lato backend sia il self-service (topbarComponent, editAccountModal)
+// sia l'owner-su-un-proprio-dipendente (stesso endpoint di updateUser, vedi
+// userController.ts), quindi qui basta chiamarlo con i campi che il
+// chiamante può cambiare — password vuota/omessa lascia quella esistente,
+// email presente solo nel self-service (l'owner non la cambia da qui).
 export async function updateEmployee(
   id: string,
-  values: { username?: string; password?: string; role?: EmployeeRole },
+  values: { username?: string; email?: string; password?: string; role?: EmployeeRole },
 ): Promise<User> {
-  const response = await fetch(`${API_BASE_URL}/users/${id}`, {
+  const response = await authFetch(`${API_BASE_URL}/users/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json", ...authHeader() },
     body: JSON.stringify(values),
@@ -72,8 +74,26 @@ export async function updateEmployee(
   return (await response.json()) as User;
 }
 
+// DELETE /users/{id} instrada già lato backend sia il self-service sia
+// l'owner-su-un-proprio-dipendente (stesso endpoint di deleteUser, vedi
+// userController.ts): qui basta chiamarlo con l'id del dipendente.
+// project_assignments_users_fk in ON DELETE CASCADE ripulisce da sé le
+// assegnazioni progetto del dipendente eliminato, nessuna chiamata in più
+// necessaria da qui.
+export async function deleteEmployee(id: string): Promise<void> {
+  const response = await authFetch(`${API_BASE_URL}/users/${id}`, {
+    method: "DELETE",
+    headers: authHeader(),
+  });
+
+  if (!response.ok) {
+    const message = await readErrorMessage(response);
+    throw new Error(message ?? "Impossibile eliminare il dipendente. Riprova più tardi.");
+  }
+}
+
 export async function getAssignedProjectIds(employeeId: string): Promise<string[]> {
-  const response = await fetch(`${API_BASE_URL}/users/${employeeId}/projects`, {
+  const response = await authFetch(`${API_BASE_URL}/users/${employeeId}/projects`, {
     headers: authHeader(),
   });
 
@@ -90,7 +110,7 @@ export async function getAssignedProjectIds(employeeId: string): Promise<string[
 // projectIds (stesso pattern lato backend, vedi setProjectAssignments in
 // projectAssignmentService.ts).
 export async function setAssignedProjects(employeeId: string, projectIds: string[]): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/users/${employeeId}/projects`, {
+  const response = await authFetch(`${API_BASE_URL}/users/${employeeId}/projects`, {
     method: "PUT",
     headers: { "Content-Type": "application/json", ...authHeader() },
     body: JSON.stringify({ projectIds }),

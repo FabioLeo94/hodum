@@ -18,4 +18,11 @@ export interface User {
   // false (migrations/0016_add_must_change_password_a_users.sql) — ogni riga
   // ne ha sempre un valore booleano.
   mustChangePassword: boolean;
+  // ISO 8601. NOT NULL DEFAULT now() (migrations/0019), sola lettura lato
+  // frontend: mai valorizzato da un body di richiesta, solo dal DB.
+  createdAt: string;
+  // ISO 8601 o null se l'account non ha ancora effettuato un accesso
+  // (migrations/0019). Valorizzato da authService.login lato backend, mai da
+  // un body di richiesta: sola lettura lato frontend, come createdAt.
+  lastLoginAt: string | null;
 }

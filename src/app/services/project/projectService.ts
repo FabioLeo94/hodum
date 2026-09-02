@@ -1,5 +1,5 @@
 import type { Project, Task, TaskStatus } from "../../../shared/types/project";
-import { authHeader } from "../auth/authService";
+import { authFetch, authHeader } from "../auth/authService";
 import { API_BASE_URL, readErrorMessage } from "../httpClient";
 
 interface ProjectDto {
@@ -28,7 +28,7 @@ function toTask(dto: TaskDto): Task {
 }
 
 async function fetchProjectTasks(projectId: string): Promise<Task[]> {
-  const response = await fetch(`${API_BASE_URL}/projects/${projectId}/tasks`, { headers: authHeader() });
+  const response = await authFetch(`${API_BASE_URL}/projects/${projectId}/tasks`, { headers: authHeader() });
   if (!response.ok) {
     const message = await readErrorMessage(response);
     throw new Error(message ?? "Impossibile caricare i task del progetto.");
@@ -38,7 +38,7 @@ async function fetchProjectTasks(projectId: string): Promise<Task[]> {
 }
 
 export async function getAllProjects(): Promise<Project[]> {
-  const response = await fetch(`${API_BASE_URL}/projects`, { headers: authHeader() });
+  const response = await authFetch(`${API_BASE_URL}/projects`, { headers: authHeader() });
   if (!response.ok) {
     const message = await readErrorMessage(response);
     throw new Error(message ?? "Impossibile caricare i progetti.");
@@ -64,7 +64,7 @@ export interface ProjectSummary {
 }
 
 export async function listProjectsSummary(): Promise<ProjectSummary[]> {
-  const response = await fetch(`${API_BASE_URL}/projects`, { headers: authHeader() });
+  const response = await authFetch(`${API_BASE_URL}/projects`, { headers: authHeader() });
   if (!response.ok) {
     const message = await readErrorMessage(response);
     throw new Error(message ?? "Impossibile caricare i progetti.");
@@ -77,7 +77,7 @@ export async function listProjectsSummary(): Promise<ProjectSummary[]> {
 // toggle "contesto" dell'assistente) senza pagare la fetchProjectTasks di
 // getProjectById.
 export async function getProjectName(id: string): Promise<string | undefined> {
-  const response = await fetch(`${API_BASE_URL}/projects/${id}`, { headers: authHeader() });
+  const response = await authFetch(`${API_BASE_URL}/projects/${id}`, { headers: authHeader() });
   if (response.status === 404) {
     return undefined;
   }
@@ -90,7 +90,7 @@ export async function getProjectName(id: string): Promise<string | undefined> {
 }
 
 export async function getProjectById(id: string): Promise<Project | undefined> {
-  const response = await fetch(`${API_BASE_URL}/projects/${id}`, { headers: authHeader() });
+  const response = await authFetch(`${API_BASE_URL}/projects/${id}`, { headers: authHeader() });
   if (response.status === 404) {
     return undefined;
   }
@@ -104,7 +104,7 @@ export async function getProjectById(id: string): Promise<Project | undefined> {
 }
 
 export async function createProject(name: string): Promise<Project> {
-  const response = await fetch(`${API_BASE_URL}/projects`, {
+  const response = await authFetch(`${API_BASE_URL}/projects`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeader() },
     body: JSON.stringify({ name }),
@@ -121,7 +121,7 @@ export async function updateProject(
   id: string,
   name: string,
 ): Promise<Pick<Project, "id" | "name">> {
-  const response = await fetch(`${API_BASE_URL}/projects/${id}`, {
+  const response = await authFetch(`${API_BASE_URL}/projects/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json", ...authHeader() },
     body: JSON.stringify({ name }),
@@ -135,7 +135,7 @@ export async function updateProject(
 }
 
 export async function deleteProject(id: string): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/projects/${id}`, {
+  const response = await authFetch(`${API_BASE_URL}/projects/${id}`, {
     method: "DELETE",
     headers: authHeader(),
   });
@@ -152,7 +152,7 @@ export async function createTask(
   status?: TaskStatus,
   priority?: number,
 ): Promise<Task> {
-  const response = await fetch(`${API_BASE_URL}/projects/${projectId}/tasks`, {
+  const response = await authFetch(`${API_BASE_URL}/projects/${projectId}/tasks`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeader() },
     body: JSON.stringify({ title, description, status, priority }),
@@ -171,7 +171,7 @@ export async function updateTask(
   title: string,
   description: string,
 ): Promise<Task> {
-  const response = await fetch(
+  const response = await authFetch(
     `${API_BASE_URL}/projects/${projectId}/tasks/${taskId}`,
     {
       method: "PUT",
@@ -192,7 +192,7 @@ export async function updateTaskStatus(
   taskId: string,
   status: TaskStatus,
 ): Promise<Task> {
-  const response = await fetch(
+  const response = await authFetch(
     `${API_BASE_URL}/projects/${projectId}/tasks/${taskId}/status`,
     {
       method: "PATCH",
@@ -213,7 +213,7 @@ export async function updateTaskPriority(
   taskId: string,
   priority: number,
 ): Promise<Task> {
-  const response = await fetch(
+  const response = await authFetch(
     `${API_BASE_URL}/projects/${projectId}/tasks/${taskId}/priority`,
     {
       method: "PATCH",

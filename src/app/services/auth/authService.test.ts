@@ -7,16 +7,23 @@ import {
   getUser,
   updateStoredUser,
   logout,
+  authFetch,
+  RateLimitError,
   AUTH_TOKEN_KEY,
   AUTH_USER_KEY,
   type User,
 } from "./authService";
 
-function jsonResponse(status: number, body: unknown = {}): Response {
+function jsonResponse(
+  status: number,
+  body: unknown = {},
+  headers: Record<string, string> = {},
+): Response {
   return {
     ok: status >= 200 && status < 300,
     status,
     json: () => Promise.resolve(body),
+    headers: new Headers(headers),
   } as Response;
 }
 
@@ -68,6 +75,28 @@ describe("authService", () => {
       );
 
       await expect(login("demo@taskmanager.dev", "wrong")).resolves.toBeNull();
+    });
+
+    it("lancia RateLimitError con i secondi da RateLimit-Reset su 429", async () => {
+      vi.mocked(fetch).mockResolvedValue(
+        jsonResponse(
+          429,
+          { message: "Troppi tentativi di accesso, riprova più tardi" },
+          { "RateLimit-Reset": "42" },
+        ),
+      );
+
+      const error = await login("demo@taskmanager.dev", "demo1234").catch((err) => err);
+      expect(error).toBeInstanceOf(RateLimitError);
+      expect((error as RateLimitError).retryAfterSeconds).toBe(42);
+    });
+
+    it("usa 60 secondi di fallback se RateLimit-Reset manca su 429", async () => {
+      vi.mocked(fetch).mockResolvedValue(jsonResponse(429, {}));
+
+      const error = await login("demo@taskmanager.dev", "demo1234").catch((err) => err);
+      expect(error).toBeInstanceOf(RateLimitError);
+      expect((error as RateLimitError).retryAfterSeconds).toBe(60);
     });
   });
 
@@ -165,6 +194,39 @@ describe("authService", () => {
       expect(localStorage.getItem(AUTH_TOKEN_KEY)).toBeNull();
       expect(sessionStorage.getItem(AUTH_USER_KEY)).toBeNull();
       expect(localStorage.getItem(AUTH_USER_KEY)).toBeNull();
+    });
+  });
+
+  describe("authFetch", () => {
+    it("lascia passare la response inalterata quando non è un 401", async () => {
+      const response = jsonResponse(200, { ok: true });
+      vi.mocked(fetch).mockResolvedValue(response);
+
+      await expect(authFetch("http://localhost:3000/projects")).resolves.toBe(response);
+    });
+
+    it("su un 401 fa logout e rimanda a /auth (token scaduto o non valido)", async () => {
+      sessionStorage.setItem(AUTH_TOKEN_KEY, "expired-token");
+      sessionStorage.setItem(AUTH_USER_KEY, JSON.stringify(sampleUser));
+      vi.mocked(fetch).mockResolvedValue(jsonResponse(401, { message: "Token scaduto" }));
+      const assign = vi.fn();
+      vi.stubGlobal("location", { ...window.location, pathname: "/dashboard", assign });
+
+      await authFetch("http://localhost:3000/projects");
+
+      expect(sessionStorage.getItem(AUTH_TOKEN_KEY)).toBeNull();
+      expect(sessionStorage.getItem(AUTH_USER_KEY)).toBeNull();
+      expect(assign).toHaveBeenCalledWith("/auth");
+    });
+
+    it("non ridirige di nuovo se si è già sulla pagina di login", async () => {
+      vi.mocked(fetch).mockResolvedValue(jsonResponse(401, {}));
+      const assign = vi.fn();
+      vi.stubGlobal("location", { ...window.location, pathname: "/auth", assign });
+
+      await authFetch("http://localhost:3000/projects");
+
+      expect(assign).not.toHaveBeenCalled();
     });
   });
 });

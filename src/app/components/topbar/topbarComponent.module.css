@@ -33,6 +33,44 @@
   flex-shrink: 0;
 }
 
+/* Centrata via position: absolute (non una terza colonna flex/grid): a
+   fianco di leftGroup, notoriamente più pesante di rightGroup (nav + menu
+   progetti contro la sola icona account), una colonna centrale avrebbe
+   comunque richiesto larghezze fisse per restare simmetrica. pointer-events
+   none perché è testo puramente identificativo, non deve intercettare click
+   destinati agli elementi sottostanti quando il testo tronca a max-width. */
+.companyName {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  overflow: hidden;
+  max-width: min(40vw, 320px);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+@media (max-width: 700px) {
+  .companyName {
+    display: none;
+  }
+
+  /* Stesso motivo di .companyName: a questa larghezza rightGroup ha già
+     poco spazio per nav/account, un testo di questa lunghezza andrebbe in
+     conflitto con loro prima che con .separator (che si nasconde solo sotto
+     400px). Il selettore adiacente nasconde anche il separatore che lo segue
+     nel markup, altrimenti resterebbe un confine visivo orfano. */
+  .lastLogin,
+  .lastLogin + .separator {
+    display: none;
+  }
+}
+
 .nav {
   display: flex;
   align-items: center;
@@ -186,6 +224,20 @@
 
 .projectsMenuStatus[role="alert"] {
   color: var(--color-danger);
+}
+
+/* Stesso slot di .navItem "Dipendenti" ma non interattivo (un dipendente non
+   può cliccarci sopra per fare nulla): stesse dimensioni/peso testuale per
+   restare allineato col resto della rightGroup senza saltare a un padding
+   diverso. */
+.lastLogin {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  padding: var(--p-sm) var(--p-md);
 }
 
 /* Separatore verticale sottile tra "Dipendenti" e l'account: segnala che è

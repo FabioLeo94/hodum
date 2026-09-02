@@ -278,9 +278,12 @@ export class UserController extends Controller {
     }
   }
 
-  // Stessa restrizione self-service di updateUser: nessuna funzione "owner
-  // elimina un dipendente" esiste ancora, quindi solo l'eliminazione del
-  // proprio account è legittima oggi.
+  // Self-service (id === requester.id) oppure owner che elimina un proprio
+  // dipendente (task "Gestione del dipendente"), stessa restrizione di
+  // updateUser sopra: un id fuori da questi due casi risponde 404, mai 403,
+  // per non confermare l'esistenza di un utente fuori dal proprio ambito.
+  // project_assignments_users_fk (ON DELETE CASCADE, migrations/0010) ripulisce
+  // da sé le assegnazioni progetto del dipendente eliminato.
   @Delete('{id}')
   @Security('jwt')
   @SuccessResponse(204, 'User eliminato')
@@ -288,8 +291,27 @@ export class UserController extends Controller {
   public async deleteUser(@Path() id: string, @Request() request: ExRequest): Promise<void> {
     const requester = getAuthenticatedUser(request);
     if (id !== requester.id) {
-      this.setStatus(404);
-      return;
+      if (requester.role !== 'owner') {
+        this.setStatus(404);
+        return;
+      }
+      let target: User;
+      try {
+        target = await getUserById(id);
+      } catch (err) {
+        if (err instanceof UserNotFoundError) {
+          this.setStatus(404);
+          return;
+        }
+        throw err;
+      }
+      if (
+        (target.role !== 'employee' && target.role !== 'manager') ||
+        target.companyId !== requester.companyId
+      ) {
+        this.setStatus(404);
+        return;
+      }
     }
 
     try {

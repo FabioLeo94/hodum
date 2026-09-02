@@ -1,5 +1,5 @@
 import { API_BASE_URL, readErrorMessage } from "../httpClient";
-import { authHeader } from "../auth/authService";
+import { authFetch, authHeader } from "../auth/authService";
 import type { EmployeeRole, User } from "../auth/authService";
 
 export interface RegisterCompanyInput {
@@ -48,6 +48,22 @@ export async function registerCompany(
   return (await response.json()) as RegisterCompanyResult;
 }
 
+// Stessa forma di getProjectName in projectService.ts: undefined su 404 (id
+// fuori dalla propria company) invece di lanciare, così il chiamante può
+// scegliere di non mostrare nulla senza dover distinguere un errore vero.
+export async function getCompanyName(id: string): Promise<string | undefined> {
+  const response = await authFetch(`${API_BASE_URL}/companies/${id}`, { headers: authHeader() });
+  if (response.status === 404) {
+    return undefined;
+  }
+  if (!response.ok) {
+    const message = await readErrorMessage(response);
+    throw new Error(message ?? "Impossibile caricare l'azienda.");
+  }
+  const company = (await response.json()) as RegisteredCompany;
+  return company.name;
+}
+
 export interface CreateEmployeeInput {
   username: string;
   email: string;
@@ -63,7 +79,7 @@ export async function createEmployee(
   companyId: string,
   input: CreateEmployeeInput,
 ): Promise<User> {
-  const response = await fetch(`${API_BASE_URL}/companies/${companyId}/employees`, {
+  const response = await authFetch(`${API_BASE_URL}/companies/${companyId}/employees`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeader() },
     body: JSON.stringify(input),

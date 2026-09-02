@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import AuthFormComponent from "./authFormComponent";
 import { AUTH_TOKEN_KEY } from "../../services/auth/authService";
@@ -12,11 +12,16 @@ function renderAuthForm() {
   );
 }
 
-function jsonResponse(status: number, body: unknown = {}): Response {
+function jsonResponse(
+  status: number,
+  body: unknown = {},
+  headers: Record<string, string> = {},
+): Response {
   return {
     ok: status >= 200 && status < 300,
     status,
     json: () => Promise.resolve(body),
+    headers: new Headers(headers),
   } as Response;
 }
 
@@ -123,6 +128,37 @@ describe("AuthFormComponent", () => {
 
     await screen.findByText("Email o password non corretti.");
     expect(screen.getByRole("button", { name: "Accedi" })).not.toBeDisabled();
+  });
+
+  it("shows a countdown and disables the submit button on a 429 (rate limit)", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.mocked(fetch).mockResolvedValue(jsonResponse(429, {}, { "RateLimit-Reset": "2" }));
+    renderAuthForm();
+    fireEvent.change(screen.getByPlaceholderText("Email"), {
+      target: { value: "demo@taskmanager.dev" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Password"), {
+      target: { value: "demo1234" },
+    });
+    fireEvent.click(screen.getByText("Accedi"));
+
+    expect(
+      await screen.findByText("Troppi tentativi di accesso. Riprova tra 0:02."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Accedi" })).toBeDisabled();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+
+    expect(
+      screen.queryByText(/Troppi tentativi di accesso/),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Accedi" })).not.toBeDisabled();
+    vi.useRealTimers();
   });
 
   it("persists the session on successful login when remember-me is checked", async () => {

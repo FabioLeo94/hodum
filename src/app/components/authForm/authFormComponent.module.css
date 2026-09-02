@@ -18,3 +18,7 @@
 .authCheckbox {
   composes: checkboxBase from "../../../shared/styles/checkboxBase.module.css";
 }
+
+.authFormError {
+  composes: formError from "../../../shared/styles/formCard.module.css";
+}

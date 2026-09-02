@@ -1,9 +1,9 @@
 import type { Request as ExRequest } from 'express';
-import { Body, Controller, Path, Post, Request, Response, Route, Security, SuccessResponse } from 'tsoa';
+import { Body, Controller, Get, Path, Post, Request, Response, Route, Security, SuccessResponse } from 'tsoa';
 import { getAuthenticatedUser } from '../middleware/authentication';
 import type { Company } from '../models/company';
 import type { User } from '../models/user';
-import { createEmployee, registerCompany } from '../services/companyService';
+import { createEmployee, getCompanyById, registerCompany } from '../services/companyService';
 import { signSessionToken } from '../services/tokenService';
 import { UserConflictError } from '../services/userService';
 import { isValidEmail, isValidPassword, PASSWORD_POLICY_MESSAGE } from '../utils/validation';
@@ -99,6 +99,32 @@ export class CompanyController extends Controller {
       }
       throw err;
     }
+  }
+
+  // Visibile a chiunque sia autenticato nella company (non solo owner): il
+  // nome compare in topbar per ogni ruolo, a differenza di createEmployee
+  // sotto che resta un'azione riservata all'owner. Stesso principio 404 di
+  // companyNotFoundResponse sopra: un id fuori dalla propria company non va
+  // confermato con un 403.
+  @Get('{id}')
+  @Security('jwt')
+  @Response<CompanyErrorResponse>(404, 'Company non trovata')
+  public async getCompany(
+    @Path() id: string,
+    @Request() request: ExRequest,
+  ): Promise<Company | CompanyErrorResponse> {
+    const requester = getAuthenticatedUser(request);
+    if (requester.companyId === null || id !== requester.companyId) {
+      this.setStatus(404);
+      return companyNotFoundResponse(id);
+    }
+
+    const company = await getCompanyById(id);
+    if (!company) {
+      this.setStatus(404);
+      return companyNotFoundResponse(id);
+    }
+    return company;
   }
 
   // Nessun self-signup per dipendenti: solo l'owner autenticato della

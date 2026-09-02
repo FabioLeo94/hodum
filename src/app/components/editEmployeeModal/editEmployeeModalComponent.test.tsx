@@ -10,6 +10,8 @@ describe("EditEmployeeModalComponent", () => {
         onClose={() => {}}
         currentUsername="dipendente1"
         currentRole="employee"
+        currentCreatedAt="2026-01-01T00:00:00.000Z"
+        currentLastLoginAt={null}
         onSave={() => {}}
       />,
     );
@@ -25,6 +27,8 @@ describe("EditEmployeeModalComponent", () => {
         onClose={() => {}}
         currentUsername="dipendente1"
         currentRole="employee"
+        currentCreatedAt="2026-01-01T00:00:00.000Z"
+        currentLastLoginAt={null}
         onSave={onSave}
       />,
     );
@@ -46,6 +50,8 @@ describe("EditEmployeeModalComponent", () => {
         onClose={() => {}}
         currentUsername="dipendente1"
         currentRole="employee"
+        currentCreatedAt="2026-01-01T00:00:00.000Z"
+        currentLastLoginAt={null}
         onSave={onSave}
       />,
     );
@@ -70,6 +76,8 @@ describe("EditEmployeeModalComponent", () => {
         onClose={() => {}}
         currentUsername="dipendente1"
         currentRole="employee"
+        currentCreatedAt="2026-01-01T00:00:00.000Z"
+        currentLastLoginAt={null}
         onSave={() => {}}
       />,
     );
@@ -93,6 +101,8 @@ describe("EditEmployeeModalComponent", () => {
         onClose={() => {}}
         currentUsername="dipendente1"
         currentRole="employee"
+        currentCreatedAt="2026-01-01T00:00:00.000Z"
+        currentLastLoginAt={null}
         onSave={onSave}
       />,
     );
@@ -119,6 +129,8 @@ describe("EditEmployeeModalComponent", () => {
         onClose={() => {}}
         currentUsername="dipendente1"
         currentRole="employee"
+        currentCreatedAt="2026-01-01T00:00:00.000Z"
+        currentLastLoginAt={null}
         onSave={onSave}
       />,
     );
@@ -147,6 +159,8 @@ describe("EditEmployeeModalComponent", () => {
         onClose={() => {}}
         currentUsername="dipendente1"
         currentRole="manager"
+        currentCreatedAt="2026-01-01T00:00:00.000Z"
+        currentLastLoginAt={null}
         onSave={onSave}
       />,
     );
@@ -172,6 +186,8 @@ describe("EditEmployeeModalComponent", () => {
         onClose={onClose}
         currentUsername="dipendente1"
         currentRole="employee"
+        currentCreatedAt="2026-01-01T00:00:00.000Z"
+        currentLastLoginAt={null}
         onSave={() => {}}
       />,
     );
@@ -187,11 +203,47 @@ describe("EditEmployeeModalComponent", () => {
         onClose={() => {}}
         currentUsername="dipendente1"
         currentRole="employee"
+        currentCreatedAt="2026-01-01T00:00:00.000Z"
+        currentLastLoginAt={null}
         onSave={() => {}}
         submitError="Username già in uso."
       />,
     );
 
     expect(screen.getByText("Username già in uso.")).toBeInTheDocument();
+  });
+
+  it("shows the formatted creation date and last login when present", () => {
+    render(
+      <EditEmployeeModalComponent
+        isOpen
+        onClose={() => {}}
+        currentUsername="dipendente1"
+        currentRole="employee"
+        currentCreatedAt="2026-01-01T00:00:00.000Z"
+        currentLastLoginAt="2026-02-15T09:30:00.000Z"
+        onSave={() => {}}
+      />,
+    );
+
+    expect(screen.getByText("Creato il")).toBeInTheDocument();
+    expect(screen.getByText("Ultimo accesso")).toBeInTheDocument();
+    expect(screen.queryByText("Mai")).not.toBeInTheDocument();
+  });
+
+  it("shows 'Mai' when the employee never logged in", () => {
+    render(
+      <EditEmployeeModalComponent
+        isOpen
+        onClose={() => {}}
+        currentUsername="dipendente1"
+        currentRole="employee"
+        currentCreatedAt="2026-01-01T00:00:00.000Z"
+        currentLastLoginAt={null}
+        onSave={() => {}}
+      />,
+    );
+
+    expect(screen.getByText("Mai")).toBeInTheDocument();
   });
 });

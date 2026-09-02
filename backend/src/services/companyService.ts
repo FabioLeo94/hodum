@@ -3,7 +3,7 @@ import { DatabaseError } from 'pg';
 import { pool } from '../db/pool';
 import type { Company } from '../models/company';
 import type { User } from '../models/user';
-import { hashPassword, mapUserUniqueViolation, toUser, type UserRow } from './userService';
+import { hashPassword, mapUserUniqueViolation, toUser, USER_COLUMNS, type UserRow } from './userService';
 
 // Riga così come esce da pg per l'INSERT su companies: snake_case, coerente
 // con migrations/0013_create_companies_table.sql.
@@ -74,7 +74,7 @@ export async function registerCompany(input: RegisterCompanyInput): Promise<Regi
     const userResult = await client.query<UserRow>(
       `UPDATE users SET company_id = $2, role = 'owner'
        WHERE id = $1
-       RETURNING id, username, email, password, company_id, role, must_change_password`,
+       RETURNING ${USER_COLUMNS}`,
       [userId, company.id],
     );
 
@@ -91,6 +91,11 @@ export async function registerCompany(input: RegisterCompanyInput): Promise<Regi
   } finally {
     client.release();
   }
+}
+
+export async function getCompanyById(id: string): Promise<Company | null> {
+  const result = await pool.query<CompanyRow>('SELECT id, name, owner_id FROM companies WHERE id = $1', [id]);
+  return result.rows[0] ? toCompany(result.rows[0]) : null;
 }
 
 // Punto 3 di .tasks/TASK.md: crea un dipendente già agganciato alla company
@@ -111,7 +116,7 @@ export async function createEmployee(companyId: string, input: CreateEmployeeInp
     const result = await pool.query<UserRow>(
       `INSERT INTO users (id, username, email, password, company_id, role, must_change_password)
        VALUES ($1, $2, $3, $4, $5, $6, true)
-       RETURNING id, username, email, password, company_id, role, must_change_password`,
+       RETURNING ${USER_COLUMNS}`,
       [userId, input.username, input.email, passwordHash, companyId, input.role ?? 'employee'],
     );
     return toUser(result.rows[0]);

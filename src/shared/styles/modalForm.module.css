@@ -1,6 +1,38 @@
 /* Stile condiviso dalle modali di form (creazione/rinomina/eliminazione
    progetto, creazione task) tramite `composes` (stesso pattern di
    shared/styles/fieldBase.module.css e fabButton.module.css). */
+
+/* Coppie data creazione/ultimo accesso in editEmployeeModal ed
+   editAccountModal: sola lettura, quindi testo semplice invece dei campi
+   InputComponent usati per i valori modificabili nello stesso form — non
+   deve suggerire che siano digitabili. */
+.metaInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-xs);
+  margin-bottom: var(--m-lg);
+  padding: var(--p-md);
+  border-radius: var(--radious-sm);
+  background-color: var(--bg-field);
+}
+
+.metaRow {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--m-md);
+  font-size: 0.85rem;
+}
+
+.metaLabel {
+  color: var(--text-muted);
+}
+
+.metaValue {
+  color: var(--text-primary);
+  font-weight: 600;
+  text-align: right;
+}
+
 .submitError {
   margin-top: var(--m-md);
   color: var(--color-danger);

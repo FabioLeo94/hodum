@@ -39,6 +39,20 @@ function sortTasksByPriority(tasks: Task[], order: PrioritySortOrder): Task[] {
 
 type ViewMode = "list" | "kanban";
 
+const VIEW_MODE_KEY = "taskList.viewMode";
+
+// localStorage può non essere disponibile (privacy mode, contesti di test):
+// un default sensato (lista) evita che l'assenza del valore salvato rompa
+// il rendering.
+function readViewModePreference(): ViewMode {
+  try {
+    const stored = localStorage.getItem(VIEW_MODE_KEY);
+    return stored === "kanban" ? "kanban" : "list";
+  } catch {
+    return "list";
+  }
+}
+
 const STATUS_STYLES: Record<TaskStatus, string> = {
   progress: styles.groupHeaderProgress,
   review: styles.groupHeaderReview,
@@ -92,12 +106,21 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
   const [inlineUpdateError, setInlineUpdateError] = useState("");
   const [dragOverStatus, setDragOverStatus] = useState<TaskStatus | null>(null);
   const [prioritySort, setPrioritySort] = useState<PrioritySortOrder>("none");
-  const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [viewMode, setViewMode] = useState<ViewMode>(readViewModePreference);
 
   usePageMeta({
     title: project ? project.name : "Progetto",
     robots: "noindex, nofollow",
   });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(VIEW_MODE_KEY, viewMode);
+    } catch {
+      // Preferenza non persistita (localStorage non disponibile): resta
+      // comunque valida per la sessione corrente in memoria.
+    }
+  }, [viewMode]);
 
   useEffect(() => {
     let cancelled = false;

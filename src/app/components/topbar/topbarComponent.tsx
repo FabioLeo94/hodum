@@ -1,9 +1,14 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router";
-import { useAuthUser } from "../../services/auth/authService";
+import { updateStoredUser, useAuthUser } from "../../services/auth/authService";
+import { getCompanyName } from "../../services/company/companyService";
 import { getProjectName, listProjectsSummary } from "../../services/project/projectService";
 import type { ProjectSummary } from "../../services/project/projectService";
+import { updateEmployee } from "../../services/user/userService";
+import EditAccountModalComponent from "../editAccountModal/editAccountModalComponent";
+import type { EditAccountFormValues } from "../editAccountModal/editAccountModalComponent";
+import { formatDateTime } from "../../../shared/utils/formatDate";
 import styles from "./topbarComponent.module.css";
 
 interface Prop {
@@ -32,14 +37,41 @@ function TopbarComponent({ onLogout }: Prop) {
   // (invece di getUser diretto) fa ri-renderizzare questo componente quando
   // arriva 'user:updated' (es. l'owner promuove questo utente a manager
   // mentre è già sulla pagina), senza dover disconnettere e riconnettere.
-  const role = useAuthUser()?.role;
+  const authUser = useAuthUser();
+  const role = authUser?.role;
+  const companyId = authUser?.companyId ?? undefined;
   const canSeeEmployees = role === "owner" || role === "manager";
   const { pathname } = useLocation();
+
+  // Nessun placeholder mentre carica (a differenza di activeProjectLabel):
+  // il nome azienda non cambia mai durante la sessione, quindi un vuoto
+  // momentaneo alla prima renderizzazione è meno invasivo di un testo
+  // segnaposto che lampeggia ad ogni mount della topbar.
+  const [companyName, setCompanyName] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (!companyId) return;
+    let cancelled = false;
+    getCompanyName(companyId)
+      .then((name) => {
+        if (!cancelled) setCompanyName(name);
+      })
+      .catch(() => {
+        if (!cancelled) setCompanyName(undefined);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [companyId]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
   const accountButtonRef = useRef<HTMLButtonElement>(null);
+  const editAccountItemRef = useRef<HTMLButtonElement>(null);
   const logoutItemRef = useRef<HTMLButtonElement>(null);
+
+  const [isEditAccountModalOpen, setIsEditAccountModalOpen] = useState(false);
+  const [editAccountError, setEditAccountError] = useState("");
 
   const [isProjectsMenuOpen, setIsProjectsMenuOpen] = useState(false);
   // undefined = non ancora caricato: la fetch parte solo alla prima apertura
@@ -107,7 +139,7 @@ function TopbarComponent({ onLogout }: Prop) {
   useEffect(() => {
     if (!isMenuOpen) return;
 
-    logoutItemRef.current?.focus();
+    editAccountItemRef.current?.focus();
 
     function handlePointerDown(event: PointerEvent) {
       if (
@@ -122,19 +154,33 @@ function TopbarComponent({ onLogout }: Prop) {
       if (event.key === "Escape") {
         setIsMenuOpen(false);
         accountButtonRef.current?.focus();
-      } else if (event.key === "Tab") {
-        // Con un solo item il focus è già sull'unica voce: se l'utente esce
-        // con Tab il menu deve chiudersi, altrimenti resta aperto e "orfano"
-        // mentre il focus prosegue altrove nella pagina.
+      }
+    }
+
+    // "Modifica account" + "Disconnetti" ora sono due voci (prima solo
+    // Disconnetti, dove Tab chiudeva sempre il menu): un Tab in avanti
+    // dall'ultima voce o indietro dalla prima deve ancora chiudere il menu,
+    // ma un Tab tra le due voci deve muovere il focus normalmente.
+    // focusout (bubbling, a differenza di blur) sul container intercetta
+    // entrambi i casi confrontando dove il focus è appena arrivato.
+    function handleFocusOut(event: FocusEvent) {
+      const nextFocused = event.relatedTarget as Node | null;
+      if (!containerRef.current?.contains(nextFocused)) {
         setIsMenuOpen(false);
       }
     }
 
+    // Copiato in una variabile locale (non riletto in cleanup): al momento
+    // dello smontaggio containerRef.current potrebbe già essere null, e
+    // l'evento va rimosso dallo stesso nodo a cui è stato aggiunto.
+    const container = containerRef.current;
     document.addEventListener("pointerdown", handlePointerDown);
     document.addEventListener("keydown", handleKeyDown);
+    container?.addEventListener("focusout", handleFocusOut);
     return () => {
       document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
+      container?.removeEventListener("focusout", handleFocusOut);
     };
   }, [isMenuOpen]);
 
@@ -201,6 +247,35 @@ function TopbarComponent({ onLogout }: Prop) {
   function handleLogoutClick() {
     setIsMenuOpen(false);
     onLogout();
+  }
+
+  function handleEditAccountClick() {
+    setIsMenuOpen(false);
+    setEditAccountError("");
+    setIsEditAccountModalOpen(true);
+  }
+
+  function closeEditAccountModal() {
+    setEditAccountError("");
+    setIsEditAccountModalOpen(false);
+  }
+
+  // PUT /users/{id} instrada già il self-service quando id === requester.id
+  // (vedi updateUser lato backend): stessa updateEmployee usata dall'owner su
+  // un dipendente, qui chiamata sul proprio id. updateStoredUser propaga
+  // subito username/email aggiornati al resto dell'app (es. questa stessa
+  // topbar), stesso pattern di changePasswordFormComponent.
+  async function handleSaveAccount(values: EditAccountFormValues) {
+    if (!authUser) return;
+    try {
+      const updated = await updateEmployee(authUser.id, values);
+      updateStoredUser(updated);
+      closeEditAccountModal();
+    } catch (error) {
+      setEditAccountError(
+        error instanceof Error ? error.message : "Impossibile aggiornare l'account.",
+      );
+    }
   }
 
   function handleProjectLinkClick() {
@@ -311,14 +386,35 @@ function TopbarComponent({ onLogout }: Prop) {
         </nav>
       </div>
 
+      {/* Assoluto rispetto a .topbar (sticky = positioned) invece che una
+          terza colonna in un layout a grid: leftGroup e rightGroup restano
+          due blocchi di larghezza diversa (nav pesante vs. sola icona
+          account), un centro "vero" indipendente da quell'asimmetria si
+          ottiene solo sganciandolo dal flusso. */}
+      {companyName && <span className={styles.companyName}>{companyName}</span>}
+
       <div className={styles.rightGroup}>
-        {canSeeEmployees && (
+        {canSeeEmployees ? (
           <>
             {renderNavItem({ to: "/employees", label: "Dipendenti" })}
             {/* Separatore puramente visivo: segnala che "Dipendenti" è
                 amministrativo, non parte della nav primaria a sinistra. */}
             <span className={styles.separator} aria-hidden="true" />
           </>
+        ) : (
+          // Un dipendente non vede "Dipendenti" (non gestisce colleghi): lo
+          // stesso spazio mostra invece il proprio ultimo accesso, l'unico
+          // punto dell'app in cui questo dato compare per lui (l'owner lo
+          // vede invece nella modale di modifica del dipendente).
+          role === "employee" &&
+          authUser?.lastLoginAt && (
+            <>
+              <span className={styles.lastLogin}>
+                Ultimo accesso: {formatDateTime(authUser.lastLoginAt)}
+              </span>
+              <span className={styles.separator} aria-hidden="true" />
+            </>
+          )
         )}
 
         <div className={styles.accountArea} ref={containerRef}>
@@ -352,6 +448,15 @@ function TopbarComponent({ onLogout }: Prop) {
           {isMenuOpen && (
             <div id={menuId} role="menu" className={styles.menu}>
               <button
+                ref={editAccountItemRef}
+                type="button"
+                role="menuitem"
+                className={styles.menuItem}
+                onClick={handleEditAccountClick}
+              >
+                Modifica account
+              </button>
+              <button
                 ref={logoutItemRef}
                 type="button"
                 role="menuitem"
@@ -364,6 +469,25 @@ function TopbarComponent({ onLogout }: Prop) {
           )}
         </div>
       </div>
+
+      {/* Smontata (non solo isOpen=false) quando si chiude, stesso pattern di
+          editingEmployee in employees.tsx: senza il remount via `key` la
+          prossima apertura ripartirebbe dallo state interno resettato sui
+          valori pre-salvataggio (le closure di resetForm catturano le props
+          del render in cui la modale è stata aperta), non da quelli appena
+          salvati con updateStoredUser. */}
+      {isEditAccountModalOpen && authUser && (
+        <EditAccountModalComponent
+          key={authUser.id}
+          isOpen={isEditAccountModalOpen}
+          onClose={closeEditAccountModal}
+          currentUsername={authUser.username}
+          currentEmail={authUser.email}
+          currentCreatedAt={authUser.createdAt}
+          onSave={handleSaveAccount}
+          submitError={editAccountError}
+        />
+      )}
     </header>
   );
 }

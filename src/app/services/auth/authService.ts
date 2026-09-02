@@ -20,6 +20,12 @@ export interface User {
   companyId: string | null;
   role: UserRole | null;
   mustChangePassword: boolean;
+  // ISO 8601, sola lettura: mai inviato in un body di richiesta, solo
+  // ricevuto (vedi models/user.ts lato backend).
+  createdAt: string;
+  // ISO 8601 o null se l'account non ha ancora effettuato un accesso.
+  // Aggiornato dal backend a ogni login riuscito, sola lettura come createdAt.
+  lastLoginAt: string | null;
 }
 
 interface LoginResponseBody {
@@ -27,8 +33,23 @@ interface LoginResponseBody {
   token: string;
 }
 
-// Ritorna { user, token } su credenziali valide, null altrimenti: chi
-// chiama decide se e dove persisterli (vedi persistSession).
+// Lanciato da login() quando /auth/login risponde 429 (rate limit per IP,
+// vedi backend/src/app.ts): distinto da "credenziali sbagliate" (quello resta
+// null) perché qui il form deve mostrare un conto alla rovescia, non un
+// errore di validazione.
+export class RateLimitError extends Error {
+  readonly retryAfterSeconds: number;
+
+  constructor(retryAfterSeconds: number) {
+    super("Troppi tentativi di accesso, riprova più tardi");
+    this.name = "RateLimitError";
+    this.retryAfterSeconds = retryAfterSeconds;
+  }
+}
+
+// Ritorna { user, token } su credenziali valide, null se sono sbagliate;
+// lancia RateLimitError se il rate limit è scattato. Chi chiama decide se e
+// dove persistere la sessione (vedi persistSession).
 export async function login(
   email: string,
   password: string,
@@ -38,6 +59,14 @@ export async function login(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
+  if (response.status === 429) {
+    // RateLimit-Reset (standardHeaders draft-6) è già espresso in secondi
+    // residui, non in un timestamp: nessuna conversione di fuso/orologio da
+    // fare qui. 60s di fallback se l'header manca (proxy che lo filtra).
+    const resetHeader = response.headers.get("RateLimit-Reset");
+    const parsed = resetHeader !== null ? Number(resetHeader) : NaN;
+    throw new RateLimitError(Number.isFinite(parsed) && parsed > 0 ? parsed : 60);
+  }
   if (!response.ok) {
     return null;
   }
@@ -152,4 +181,23 @@ export function logout(): void {
   sessionStorage.removeItem(AUTH_USER_KEY);
   localStorage.removeItem(AUTH_USER_KEY);
   notifyUserChange();
+}
+
+// Da usare al posto di fetch per ogni chiamata verso una rotta protetta (con
+// authHeader() nell'header). In una pagina protetta un 401 significa quasi
+// sempre "token scaduto o non più valido" (il token manca solo se lo storage
+// è stato svuotato a mano), non un errore applicativo qualunque: senza questa
+// intercettazione il chiamante lo trattava come un Error generico e lo
+// mostrava inline, lasciando l'utente sulla pagina invece di rimandarlo al
+// login. Redirect con window.location perché queste funzioni vivono fuori
+// dall'albero React (nessun useNavigate disponibile in un service).
+export async function authFetch(input: string, init?: RequestInit): Promise<Response> {
+  const response = await fetch(input, init);
+  if (response.status === 401) {
+    logout();
+    if (window.location.pathname !== "/auth") {
+      window.location.assign("/auth");
+    }
+  }
+  return response;
 }
