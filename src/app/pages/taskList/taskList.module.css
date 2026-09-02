@@ -172,19 +172,23 @@
    troncata riga per riga (vedi .descriptionCell) invece di dettare l'altezza
    riga. */
 .colTitle {
-  width: 28%;
+  width: 24%;
 }
 
 .colDescription {
-  width: 38%;
+  width: 32%;
 }
 
 .colStatus {
-  width: 17%;
+  width: 15%;
 }
 
 .colPriority {
-  width: 17%;
+  width: 15%;
+}
+
+.colAssignees {
+  width: 14%;
 }
 
 .groupHeaderCell {

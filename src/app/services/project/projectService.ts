@@ -1,4 +1,4 @@
-import type { Project, Task, TaskComment, TaskStatus } from "../../../shared/types/project";
+import type { Project, Task, TaskAssignee, TaskComment, TaskStatus } from "../../../shared/types/project";
 import { authFetch, authHeader } from "../auth/authService";
 import { API_BASE_URL, readErrorMessage } from "../httpClient";
 
@@ -16,6 +16,7 @@ interface TaskDto {
   status: TaskStatus;
   priority: number;
   dueDate: string | null;
+  assignees: TaskAssignee[];
 }
 
 function toTask(dto: TaskDto): Task {
@@ -26,6 +27,7 @@ function toTask(dto: TaskDto): Task {
     status: dto.status,
     priority: dto.priority,
     dueDate: dto.dueDate ?? null,
+    assignees: dto.assignees,
   };
 }
 
@@ -154,11 +156,12 @@ export async function createTask(
   status?: TaskStatus,
   priority?: number,
   dueDate?: string | null,
+  assigneeIds?: string[],
 ): Promise<Task> {
   const response = await authFetch(`${API_BASE_URL}/projects/${projectId}/tasks`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeader() },
-    body: JSON.stringify({ title, description, status, priority, dueDate }),
+    body: JSON.stringify({ title, description, status, priority, dueDate, assigneeIds }),
   });
   if (!response.ok) {
     const message = await readErrorMessage(response);
@@ -328,6 +331,29 @@ export async function updateTaskPriority(
   if (!response.ok) {
     const message = await readErrorMessage(response);
     throw new Error(message ?? "Impossibile aggiornare la priorità del task.");
+  }
+  const task = (await response.json()) as TaskDto;
+  return toTask(task);
+}
+
+// Replace-all: sostituisce l'intero set di assegnatari del task con userIds
+// (stesso pattern lato backend di setAssignedProjects/setProjectAssignments).
+export async function updateTaskAssignees(
+  projectId: string,
+  taskId: string,
+  userIds: string[],
+): Promise<Task> {
+  const response = await authFetch(
+    `${API_BASE_URL}/projects/${projectId}/tasks/${taskId}/assignees`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...authHeader() },
+      body: JSON.stringify({ userIds }),
+    },
+  );
+  if (!response.ok) {
+    const message = await readErrorMessage(response);
+    throw new Error(message ?? "Impossibile aggiornare gli assegnatari del task.");
   }
   const task = (await response.json()) as TaskDto;
   return toTask(task);

@@ -91,6 +91,17 @@
   white-space: nowrap;
 }
 
+/* A differenza di .selectField (label ed elemento affiancati sulla stessa
+   riga, adatto a uno <select> di larghezza fissa), qui l'elemento sotto la
+   label è una riga di avatar + trigger "+" che cresce in larghezza: impilarli
+   evita che la label finisca incollata al trigger. */
+.assigneesField {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--m-sm);
+}
+
 .submitError {
   composes: submitError from "../../../shared/styles/modalForm.module.css";
 }

@@ -1,20 +1,23 @@
 import { Fragment, useEffect, useState } from "react";
 import type { DragEvent } from "react";
-import { useNavigate, useOutletContext, useParams } from "react-router";
+import { useNavigate, useOutletContext, useParams, useSearchParams } from "react-router";
 import type { Project, Task, TaskStatus } from "../../../shared/types/project";
 import {
   createTask,
   getProjectById,
   updateTask,
+  updateTaskAssignees,
   updateTaskPriority,
   updateTaskStatus,
 } from "../../services/project/projectService";
 import { subscribeToProjectTasks } from "../../services/realtime/socketService";
-import { logout } from "../../services/auth/authService";
+import { logout, type User } from "../../services/auth/authService";
+import { listUsers } from "../../services/user/userService";
 import TopbarComponent from "../../components/topbar/topbarComponent";
 import TaskFormModalComponent from "../../components/taskFormModal/taskFormModalComponent";
 import TaskStatusSelectComponent from "../../components/taskStatusSelect/taskStatusSelectComponent";
 import PrioritySelectComponent from "../../components/prioritySelect/prioritySelectComponent";
+import TaskAssigneesComponent from "../../components/taskAssignees/taskAssigneesComponent";
 import TaskKanbanBoardComponent from "../../components/taskKanbanBoard/taskKanbanBoardComponent";
 import TaskCalendarComponent from "../../components/taskCalendar/taskCalendarComponent";
 import type { AssistantLayoutContext } from "../../components/protectedLayout/protectedLayoutComponent";
@@ -73,6 +76,14 @@ function replaceTaskInProject(project: Project, updatedTask: Task): Project {
   };
 }
 
+// Evita una PUT .../assignees superflua quando il set scelto nella modale
+// coincide con quello già salvato (ordine non rilevante, sono id univoci).
+function sameAssigneeIds(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  const setA = new Set(a);
+  return b.every((id) => setA.has(id));
+}
+
 function useLogoutHandler() {
   const navigate = useNavigate();
   return function handleLogout() {
@@ -109,6 +120,14 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
   const [dragOverStatus, setDragOverStatus] = useState<TaskStatus | null>(null);
   const [prioritySort, setPrioritySort] = useState<PrioritySortOrder>("none");
   const [viewMode, setViewMode] = useState<ViewMode>(readViewModePreference);
+  // Elenco dei dipendenti della company, per il picker degli assegnatari
+  // (card lista/kanban + modale di creazione). Un fallimento qui non deve
+  // impedire di vedere i task: resta semplicemente [], il picker degraderà
+  // mostrando 0 dipendenti selezionabili.
+  const [employees, setEmployees] = useState<User[]>([]);
+  // Deep link da una notifica di assegnazione (vedi notificationBellComponent):
+  // ?openTask=<id> apre la modale di modifica una volta caricato il progetto.
+  const [searchParams, setSearchParams] = useSearchParams();
 
   usePageMeta({
     title: project ? project.name : "Progetto",
@@ -123,6 +142,22 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
       // comunque valida per la sessione corrente in memoria.
     }
   }, [viewMode]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    listUsers()
+      .then((data) => {
+        if (!cancelled) setEmployees(data);
+      })
+      .catch((error: unknown) => {
+        console.error("Impossibile caricare i dipendenti della company.", error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -186,6 +221,26 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
     return unsubscribe;
   }, [progettoId]);
 
+  // Il task potrebbe essere stato eliminato tra l'invio della notifica e il
+  // click: in quel caso semplicemente non compare tra i tasks del progetto e
+  // la modale non si apre, invece di puntare a un link rotto.
+  useEffect(() => {
+    const openTaskId = searchParams.get("openTask");
+    if (!openTaskId || !project) return;
+    const task = project.tasks.find((candidate) => candidate.id === openTaskId);
+    if (task) {
+      openEditModal(task);
+    }
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("openTask");
+        return next;
+      },
+      { replace: true },
+    );
+  }, [project, searchParams, setSearchParams]);
+
   function openCreateModal() {
     setTaskModalError("");
     setTaskModal({ mode: "create" });
@@ -207,12 +262,25 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
     status: TaskStatus,
     priority: number,
     dueDate: string | null,
+    assigneeIds?: string[],
   ) {
     try {
       const editingTask = taskModal?.mode === "edit" ? taskModal.task : null;
-      const savedTask = editingTask
+      let savedTask = editingTask
         ? await updateTask(progettoId, editingTask.id, title, description, dueDate)
-        : await createTask(progettoId, title, description, status, priority, dueDate);
+        : await createTask(progettoId, title, description, status, priority, dueDate, assigneeIds);
+
+      // In edit mode gli assegnatari passano da un endpoint separato (stesso
+      // motivo di handleAssigneesChange sotto): updateTask non li accetta,
+      // quindi qui va replicato l'aggiornamento, ma solo se la modale li ha
+      // davvero modificati rispetto a quelli già salvati.
+      if (
+        editingTask &&
+        assigneeIds &&
+        !sameAssigneeIds(assigneeIds, editingTask.assignees.map((assignee) => assignee.id))
+      ) {
+        savedTask = await updateTaskAssignees(progettoId, editingTask.id, assigneeIds);
+      }
 
       setProject((current) => {
         if (!current) return current;
@@ -262,6 +330,22 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
         error instanceof Error
           ? error.message
           : "Impossibile aggiornare la priorità del task.",
+      );
+    }
+  }
+
+  async function handleAssigneesChange(taskId: string, userIds: string[]) {
+    try {
+      const updatedTask = await updateTaskAssignees(progettoId, taskId, userIds);
+      setProject((current) =>
+        current ? replaceTaskInProject(current, updatedTask) : current,
+      );
+      setInlineUpdateError("");
+    } catch (error) {
+      setInlineUpdateError(
+        error instanceof Error
+          ? error.message
+          : "Impossibile aggiornare gli assegnatari del task.",
       );
     }
   }
@@ -405,6 +489,8 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
             onStatusChange={handleStatusChange}
             onPriorityChange={handlePriorityChange}
             onOpenTask={openEditModal}
+            employees={employees}
+            onAssigneesChange={handleAssigneesChange}
           />
         ) : viewMode === "calendar" ? (
           <TaskCalendarComponent tasks={currentProject.tasks} onOpenTask={openEditModal} />
@@ -428,6 +514,9 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
                   <th className={styles.colPriority} scope="col">
                     Priorità
                   </th>
+                  <th className={styles.colAssignees} scope="col">
+                    Assegnatari
+                  </th>
                 </tr>
               </thead>
               {STATUS_ORDER.map((status) => {
@@ -445,7 +534,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
                     <tr>
                       <th
                         className={`${styles.groupHeaderCell} ${STATUS_STYLES[status]}`}
-                        colSpan={4}
+                        colSpan={5}
                         scope="colgroup"
                       >
                         {STATUS_GROUP_LABELS[status]} ({tasks.length})
@@ -456,7 +545,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
                         <td
                           className={styles.emptyRow}
                           data-drop-target={dragOverStatus === status}
-                          colSpan={4}
+                          colSpan={5}
                         >
                           {dragOverStatus === status
                             ? "Rilascia qui per spostare il task"
@@ -523,6 +612,14 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
                               }
                             />
                           </td>
+                          <td>
+                            <TaskAssigneesComponent
+                              employees={employees}
+                              selectedIds={task.assignees.map((assignee) => assignee.id)}
+                              taskTitle={task.title}
+                              onChange={(userIds) => handleAssigneesChange(task.id, userIds)}
+                            />
+                          </td>
                         </tr>
                       ))
                     )}
@@ -573,9 +670,11 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
           initialTitle={editingTask?.title}
           initialDescription={editingTask?.description}
           initialDueDate={editingTask?.dueDate}
+          initialAssigneeIds={editingTask?.assignees.map((assignee) => assignee.id)}
           onClose={closeTaskModal}
           onSubmit={handleTaskFormSubmit}
           submitError={taskModalError}
+          employees={employees}
         />
       </div>
     </Fragment>

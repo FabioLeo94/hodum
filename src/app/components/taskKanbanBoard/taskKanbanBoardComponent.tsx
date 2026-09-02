@@ -2,8 +2,10 @@ import { useState } from "react";
 import type { DragEvent } from "react";
 import type { Task, TaskStatus } from "../../../shared/types/project";
 import { STATUS_ORDER, STATUS_GROUP_LABELS } from "../../../shared/constants/taskStatus";
+import type { User } from "../../services/auth/authService";
 import TaskStatusSelectComponent from "../taskStatusSelect/taskStatusSelectComponent";
 import PrioritySelectComponent from "../prioritySelect/prioritySelectComponent";
+import TaskAssigneesComponent from "../taskAssignees/taskAssigneesComponent";
 import styles from "./taskKanbanBoardComponent.module.css";
 
 const COLUMN_STYLES: Record<TaskStatus, string> = {
@@ -38,6 +40,8 @@ interface TaskKanbanBoardComponentProps {
   onStatusChange: (taskId: string, status: TaskStatus) => void;
   onPriorityChange: (taskId: string, priority: number) => void;
   onOpenTask: (task: Task) => void;
+  employees: User[];
+  onAssigneesChange: (taskId: string, userIds: string[]) => void;
 }
 
 // Il drag & drop tra colonne è incapsulato qui (stato dragOverStatus locale):
@@ -49,6 +53,8 @@ function TaskKanbanBoardComponent({
   onStatusChange,
   onPriorityChange,
   onOpenTask,
+  employees,
+  onAssigneesChange,
 }: TaskKanbanBoardComponentProps) {
   const [dragOverStatus, setDragOverStatus] = useState<TaskStatus | null>(null);
 
@@ -130,6 +136,12 @@ function TaskKanbanBoardComponent({
                         priority={task.priority}
                         taskTitle={task.title}
                         onChange={(newPriority) => onPriorityChange(task.id, newPriority)}
+                      />
+                      <TaskAssigneesComponent
+                        employees={employees}
+                        selectedIds={task.assignees.map((assignee) => assignee.id)}
+                        taskTitle={task.title}
+                        onChange={(userIds) => onAssigneesChange(task.id, userIds)}
                       />
                     </div>
                   </div>

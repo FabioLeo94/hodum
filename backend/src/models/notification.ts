@@ -4,7 +4,7 @@
 // actorUsername), MAI un testo già composto ("Mario ha commentato il task
 // X"): il frontend costruisce il messaggio da questi campi, così una
 // traduzione o un cambio di formato non richiede una migration.
-export type NotificationType = 'task_comment' | 'task_created' | 'task_due' | 'project_assigned';
+export type NotificationType = 'task_comment' | 'task_created' | 'task_due' | 'project_assigned' | 'task_assigned';
 
 export interface Notification {
   id: string;

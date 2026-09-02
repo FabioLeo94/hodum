@@ -1,10 +1,11 @@
 import { pool } from '../db/pool';
-import type { Task, TaskStatus } from '../models/task';
+import type { Task, TaskAssignee, TaskStatus } from '../models/task';
 import { getProjectById } from './projectService';
 import { isValidUuid } from '../utils/uuid';
 import { formatDateOnly } from '../utils/dateOnly';
 import { emitTaskCreated, emitTaskDeleted, emitTaskUpdated } from '../realtime/io';
-import { notifyProjectTeam } from './notificationService';
+import { notifyProjectTeam, notifyUsers } from './notificationService';
+import { UserNotFoundError } from './userService';
 
 export { ProjectNotFoundError } from './projectService';
 
@@ -101,7 +102,7 @@ export function isValidDueDate(value: string): boolean {
   );
 }
 
-function toTask(row: TaskRow): Task {
+function toTask(row: TaskRow, assignees: TaskAssignee[]): Task {
   const status = STATUS_NAME_TO_SLUG[row.status_name];
   if (!status) {
     throw new Error(`Stato task sconosciuto: ${row.status_name}`);
@@ -114,7 +115,37 @@ function toTask(row: TaskRow): Task {
     status,
     priority: row.priority,
     dueDate: row.due_date ? formatDateOnly(row.due_date) : null,
+    assignees,
   };
+}
+
+// Bulk, non N+1: una sola query per l'intero elenco di task_id invece di una
+// per task (stesso principio del bulk insert via unnest in
+// projectAssignmentService.ts). ANY($1) su un array vuoto è comunque valido
+// in Postgres (0 righe), ma evitiamo il round-trip a vuoto quando il
+// chiamante non ha nemmeno un task da risolvere.
+async function loadAssigneesByTaskIds(taskIds: string[]): Promise<Map<string, TaskAssignee[]>> {
+  const result = new Map<string, TaskAssignee[]>();
+  if (taskIds.length === 0) {
+    return result;
+  }
+  const rows = await pool.query<{ task_id: string; id: string; username: string }>(
+    `SELECT ta.task_id, u.id, u.username
+     FROM task_assignments ta JOIN users u ON u.id = ta.user_id
+     WHERE ta.task_id = ANY($1::uuid[])
+     ORDER BY u.username`,
+    [taskIds],
+  );
+  for (const row of rows.rows) {
+    const assignee: TaskAssignee = { id: row.id, username: row.username };
+    const existing = result.get(row.task_id);
+    if (existing) {
+      existing.push(assignee);
+    } else {
+      result.set(row.task_id, [assignee]);
+    }
+  }
+  return result;
 }
 
 async function getTaskById(id: string): Promise<Task> {
@@ -123,7 +154,8 @@ async function getTaskById(id: string): Promise<Task> {
   if (!row) {
     throw new TaskNotFoundError(id);
   }
-  return toTask(row);
+  const assigneesByTaskId = await loadAssigneesByTaskIds([id]);
+  return toTask(row, assigneesByTaskId.get(id) ?? []);
 }
 
 export async function listTasksByProject(projectId: string, companyId?: string | null): Promise<Task[]> {
@@ -140,7 +172,10 @@ export async function listTasksByProject(projectId: string, companyId?: string |
     `${TASK_SELECT} WHERE t.project_id = $1 ORDER BY t.creation_date NULLS LAST, t.title`,
     [projectId],
   );
-  return result.rows.map(toTask);
+  // Un'unica query bulk per l'intera lista invece di una per riga (N+1): vedi
+  // loadAssigneesByTaskIds.
+  const assigneesByTaskId = await loadAssigneesByTaskIds(result.rows.map((row) => row.id));
+  return result.rows.map((row) => toTask(row, assigneesByTaskId.get(row.id) ?? []));
 }
 
 export interface CreateTaskInput {
@@ -149,6 +184,10 @@ export interface CreateTaskInput {
   status?: TaskStatus;
   priority?: number;
   dueDate?: string | null;
+  // Assegnatari iniziali, opzionali: se presente e non vuoto, createTask
+  // richiama setTaskAssignees dopo l'insert (vedi sotto), che si occupa anche
+  // della notifica 'task_assigned'.
+  assigneeIds?: string[];
 }
 
 export async function createTask(
@@ -190,7 +229,7 @@ export async function createTask(
       input.dueDate ?? null,
     ],
   );
-  const task = await getTaskById(result.rows[0].id);
+  let task = await getTaskById(result.rows[0].id);
   emitTaskCreated(task);
   // Un bug nelle notifiche non deve mai far fallire la creazione del task
   // (stesso principio già applicato a joinProjectRoom in realtime/io.ts):
@@ -200,6 +239,12 @@ export async function createTask(
     await notifyProjectTeam(projectId, { type: 'task_created', actorId, taskId: task.id });
   } catch (err) {
     console.error('Notifica task_created fallita', err);
+  }
+  if (input.assigneeIds && input.assigneeIds.length > 0) {
+    // Il set "precedente" letto dentro setTaskAssignees sarà vuoto (task
+    // appena creato): ogni id passato risulta quindi "nuovo assegnato" e
+    // riceve la notifica task_assigned, senza duplicare qui quella logica.
+    task = await setTaskAssignees(projectId, task.id, input.assigneeIds, companyId, actorId);
   }
   return task;
 }
@@ -325,6 +370,116 @@ export async function updateTaskPriority(
   }
   const task = await getTaskById(taskId);
   emitTaskUpdated(task);
+  return task;
+}
+
+// Replace-all, stesso pattern di setProjectAssignments in
+// projectAssignmentService.ts: il chiamante invia l'intero set di
+// assegnatari che il task deve avere, non un delta.
+export async function setTaskAssignees(
+  projectId: string,
+  taskId: string,
+  userIds: string[],
+  companyId: string | null | undefined,
+  actorId: string,
+): Promise<Task> {
+  // Verifica che il progetto esista e appartenga alla company del
+  // richiedente, stesso controllo di updateTask/updateTaskStatus.
+  await getProjectById(projectId, companyId);
+  if (!isValidUuid(taskId)) {
+    throw new TaskNotFoundError(taskId);
+  }
+
+  const uniqueIds = [...new Set(userIds)];
+  const invalidId = uniqueIds.find((id) => !isValidUuid(id));
+  if (invalidId) {
+    throw new UserNotFoundError(invalidId);
+  }
+
+  const client = await pool.connect();
+  // Letto PRIMA della DELETE sotto, stesso motivo di previousProjectIds in
+  // setProjectAssignments: serve a distinguere dopo il COMMIT gli
+  // assegnatari davvero nuovi da un resend della stessa checklist, solo i
+  // primi devono generare una notifica 'task_assigned'.
+  let previousIds: Set<string>;
+  try {
+    await client.query('BEGIN');
+
+    // Verifica che il task esista e appartenga al progetto: dentro la
+    // transazione, così un id inesistente fa fallire (e fare ROLLBACK) tutto
+    // il resto invece di lasciare una DELETE/INSERT orfana.
+    const taskResult = await client.query('SELECT 1 FROM tasks WHERE id = $1 AND project_id = $2', [
+      taskId,
+      projectId,
+    ]);
+    if (taskResult.rowCount === 0) {
+      throw new TaskNotFoundError(taskId);
+    }
+
+    const previousResult = await client.query<{ user_id: string }>(
+      'SELECT user_id FROM task_assignments WHERE task_id = $1',
+      [taskId],
+    );
+    previousIds = new Set(previousResult.rows.map((row) => row.user_id));
+
+    if (uniqueIds.length > 0) {
+      // Verifica che ogni id fornito sia un dipendente della company del
+      // richiedente: senza, si potrebbe assegnare un task a uno user di
+      // un'altra azienda conoscendone solo l'id (stesso controllo di
+      // setProjectAssignments, ma sugli user invece che sui progetti).
+      const ownedResult = await client.query<{ id: string }>(
+        'SELECT id FROM users WHERE id = ANY($1::uuid[]) AND company_id = $2',
+        [uniqueIds, companyId],
+      );
+      const ownedIds = new Set(ownedResult.rows.map((row) => row.id));
+      const missingId = uniqueIds.find((id) => !ownedIds.has(id));
+      if (missingId) {
+        throw new UserNotFoundError(missingId);
+      }
+    }
+
+    await client.query('DELETE FROM task_assignments WHERE task_id = $1 AND NOT (user_id = ANY($2::uuid[]))', [
+      taskId,
+      uniqueIds,
+    ]);
+    if (uniqueIds.length > 0) {
+      // Un solo round-trip invece di uno per assegnatario, stesso principio
+      // dell'INSERT via unnest in setProjectAssignments.
+      await client.query(
+        `INSERT INTO task_assignments (task_id, user_id)
+         SELECT $1, uid FROM unnest($2::uuid[]) AS uid
+         ON CONFLICT DO NOTHING`,
+        [taskId, uniqueIds],
+      );
+    }
+
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+
+  const task = await getTaskById(taskId);
+  emitTaskUpdated(task);
+
+  // Solo gli id assenti nel set letto prima della DELETE (una checklist
+  // risalvata invariata non deve rispedire la notifica) e mai l'autore
+  // dell'operazione (non ha senso notificare sé stessi di un'assegnazione
+  // fatta da sé stessi).
+  const newlyAssignedIds = uniqueIds.filter((id) => !previousIds.has(id) && id !== actorId);
+  if (newlyAssignedIds.length > 0 && companyId) {
+    // Un bug nelle notifiche non deve mai far fallire l'assegnazione, già
+    // committata sopra: stesso try/catch con solo console.error di
+    // setProjectAssignments.
+    try {
+      await notifyUsers(newlyAssignedIds, { companyId, type: 'task_assigned', taskId, actorId });
+    } catch (err) {
+      console.error('Notifica task_assigned fallita', err);
+    }
+  }
+
   return task;
 }
 

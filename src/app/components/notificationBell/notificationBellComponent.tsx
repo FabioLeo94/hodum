@@ -31,6 +31,8 @@ function describeNotification(notification: Notification): string {
     }
     case "project_assigned":
       return `Sei stato assegnato al progetto «${notification.projectName ?? "un progetto"}»`;
+    case "task_assigned":
+      return `${notification.actorUsername ?? "Qualcuno"} ti ha assegnato «${notification.taskTitle ?? "un task"}»`;
   }
 }
 
@@ -158,7 +160,13 @@ function NotificationBellComponent() {
       });
     }
     setIsOpen(false);
-    if (notification.projectId) {
+    // Solo le notifiche di assegnazione portano a un link garantito valido:
+    // task/progetto assegnati esistono ancora al momento della notifica. Gli
+    // altri tipi (commento, creazione, scadenza) non navigano: potrebbero
+    // riferirsi a un task nel frattempo eliminato, portando a un link rotto.
+    if (notification.type === "task_assigned" && notification.projectId && notification.taskId) {
+      navigate(`/dashboard/${notification.projectId}/task-list?openTask=${notification.taskId}`);
+    } else if (notification.type === "project_assigned" && notification.projectId) {
       navigate(`/dashboard/${notification.projectId}/task-list`);
     }
   }

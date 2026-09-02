@@ -1,0 +1,159 @@
+.taskAssignees {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--m-xs);
+  /* Il toggle in shift-click (vedi handleOptionClick nel componente) invita a
+     un drag rapido fra le opzioni: senza questo, il browser interpreta il
+     drag come selezione di testo nativa invece che come toggle multiplo. */
+  user-select: none;
+}
+
+.overflowBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: var(--bg-field);
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Cerchio tratteggiato con "+": stesso diametro degli avatar size="sm"
+   affiancati, così il trigger si allinea alla fila di avatar senza saltare
+   riga. */
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border: 1px dashed var(--text-muted);
+  border-radius: 50%;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    color 150ms ease,
+    background-color 150ms ease;
+}
+
+.trigger:hover:not(:disabled) {
+  border-color: var(--bg-primary);
+  color: var(--bg-primary);
+}
+
+.trigger:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+.trigger[aria-expanded="true"] {
+  border-style: solid;
+  border-color: var(--bg-primary);
+  background-color: var(--bg-primary);
+  color: var(--text-on-primary);
+}
+
+.trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* position: fixed con top/left impostati via JS (vedi
+   taskAssigneesComponent.tsx): stesso motivo di .panel in
+   notificationBellComponent.module.css, il pannello è in portal su
+   document.body. */
+.panel {
+  position: fixed;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-xs);
+  width: max-content;
+  min-width: 200px;
+  max-width: 280px;
+  max-height: 320px;
+  padding: var(--p-sm);
+  overflow-y: auto;
+  border-radius: var(--radious-md);
+  background-color: var(--bg-surface);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  animation: panelPopIn 140ms ease both;
+  scrollbar-width: thin;
+  /* .panel vive in un portal (document.body o il <dialog> aperto), quindi
+     non è un discendente DOM di .taskAssignees: user-select va ripetuto qui,
+     altrimenti il drag fra opzioni per selezionarne più d'una in sequenza
+     seleziona il testo delle label invece di fare toggle. */
+  user-select: none;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: var(--m-sm);
+  padding: var(--p-sm) var(--p-md);
+  border-radius: var(--radious-sm);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.option:hover {
+  background-color: var(--bg-field);
+}
+
+.option:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: -2px;
+}
+
+.option[data-selected="true"] {
+  color: var(--text-primary);
+  font-weight: 600;
+  background-color: var(--bg-field);
+}
+
+.optionLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status {
+  padding: var(--p-md);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+@keyframes panelPopIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trigger {
+    transition: none;
+  }
+
+  .panel {
+    animation: none;
+  }
+}

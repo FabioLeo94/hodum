@@ -6,7 +6,9 @@ import ButtonComponent from "../button/buttonComponent";
 import TaskStatusSelectComponent from "../taskStatusSelect/taskStatusSelectComponent";
 import PrioritySelectComponent from "../prioritySelect/prioritySelectComponent";
 import TaskCommentsPanelComponent from "../taskCommentsPanel/taskCommentsPanelComponent";
+import TaskAssigneesComponent from "../taskAssignees/taskAssigneesComponent";
 import type { TaskStatus } from "../../../shared/types/project";
+import type { User } from "../../services/auth/authService";
 import { useAsyncSubmit } from "../../../shared/hooks/useAsyncSubmit";
 import styles from "./taskFormModalComponent.module.css";
 
@@ -26,12 +28,15 @@ interface Prop {
     status: TaskStatus,
     priority: number,
     dueDate: string | null,
+    assigneeIds?: string[],
   ) => void | Promise<void>;
   submitError?: string;
   mode?: "create" | "edit";
   initialTitle?: string;
   initialDescription?: string;
   initialDueDate?: string | null;
+  initialAssigneeIds?: string[];
+  employees: User[];
 }
 
 const MODE_COPY = {
@@ -44,7 +49,7 @@ const MODE_COPY = {
   },
   edit: {
     title: "Modifica task",
-    description: "Aggiorna titolo e descrizione del task.",
+    description: "Aggiorna titolo, descrizione e assegnatari del task.",
     confirmLabel: "Salva modifiche",
     confirmPendingLabel: "Salvataggio in corso...",
   },
@@ -61,6 +66,8 @@ function TaskFormModalComponent({
   initialTitle,
   initialDescription,
   initialDueDate,
+  initialAssigneeIds,
+  employees,
 }: Prop) {
   // Inizializzati solo al mount di questa istanza: il chiamante è responsabile
   // di rimontare il componente (via `key`) ogni volta che la modale si riapre,
@@ -74,6 +81,7 @@ function TaskFormModalComponent({
   // Stringa vuota rappresenta "nessuna scadenza" nell'input HTML nativo
   // type="date": normalizzata a null solo al submit (vedi handleSubmit).
   const [dueDate, setDueDate] = useState(initialDueDate ?? "");
+  const [assigneeIds, setAssigneeIds] = useState<string[]>(initialAssigneeIds ?? []);
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const { isSubmitting, submit } = useAsyncSubmit();
 
@@ -90,6 +98,7 @@ function TaskFormModalComponent({
     setStatus(DEFAULT_STATUS);
     setPriority(DEFAULT_PRIORITY);
     setDueDate("");
+    setAssigneeIds([]);
     setSubmitAttempted(false);
     onClose();
   }
@@ -100,12 +109,20 @@ function TaskFormModalComponent({
     if (trimmedTitle === "") return;
 
     await submit(async () => {
-      await onSubmit(trimmedTitle, description.trim(), status, priority, dueDate === "" ? null : dueDate);
+      await onSubmit(
+        trimmedTitle,
+        description.trim(),
+        status,
+        priority,
+        dueDate === "" ? null : dueDate,
+        assigneeIds,
+      );
       setTitle("");
       setDescription("");
       setStatus(DEFAULT_STATUS);
       setPriority(DEFAULT_PRIORITY);
       setDueDate("");
+      setAssigneeIds([]);
       setSubmitAttempted(false);
     });
   }
@@ -151,6 +168,15 @@ function TaskFormModalComponent({
           value={dueDate}
           onChange={(event) => setDueDate(event.target.value)}
           showLabel
+        />
+      </div>
+      <div className={`${styles.fieldSpacing} ${styles.assigneesField}`}>
+        <span className={styles.selectLabel}>Assegnatari</span>
+        <TaskAssigneesComponent
+          employees={employees}
+          selectedIds={assigneeIds}
+          taskTitle={title.trim() || "nuovo task"}
+          onChange={setAssigneeIds}
         />
       </div>
       {mode === "create" && (

@@ -11,6 +11,7 @@ function buildTask(overrides: Partial<Task>): Task {
     status: "progress",
     priority: 5,
     dueDate: null,
+    assignees: [],
     ...overrides,
   };
 }

@@ -8,6 +8,7 @@ describe("TaskFormModalComponent", () => {
       <TaskFormModalComponent
         isOpen={false}
         projectId="project-1"
+        employees={[]}
         onClose={() => {}}
         onSubmit={() => {}}
       />,
@@ -23,6 +24,7 @@ describe("TaskFormModalComponent", () => {
       <TaskFormModalComponent
         isOpen
         projectId="project-1"
+        employees={[]}
         onClose={() => {}}
         onSubmit={() => {}}
       />,
@@ -43,6 +45,7 @@ describe("TaskFormModalComponent", () => {
       <TaskFormModalComponent
         isOpen
         projectId="project-1"
+        employees={[]}
         onClose={() => {}}
         onSubmit={onSubmit}
       />,
@@ -62,6 +65,7 @@ describe("TaskFormModalComponent", () => {
       <TaskFormModalComponent
         isOpen
         projectId="project-1"
+        employees={[]}
         onClose={() => {}}
         onSubmit={onSubmit}
       />,
@@ -84,6 +88,7 @@ describe("TaskFormModalComponent", () => {
       "progress",
       5,
       null,
+      [],
     );
   });
 
@@ -93,6 +98,7 @@ describe("TaskFormModalComponent", () => {
       <TaskFormModalComponent
         isOpen
         projectId="project-1"
+        employees={[]}
         onClose={() => {}}
         onSubmit={onSubmit}
       />,
@@ -111,6 +117,7 @@ describe("TaskFormModalComponent", () => {
       "progress",
       5,
       null,
+      [],
     );
   });
 
@@ -120,6 +127,7 @@ describe("TaskFormModalComponent", () => {
       <TaskFormModalComponent
         isOpen
         projectId="project-1"
+        employees={[]}
         onClose={() => {}}
         onSubmit={onSubmit}
       />,
@@ -136,6 +144,7 @@ describe("TaskFormModalComponent", () => {
       "progress",
       5,
       null,
+      [],
     );
   });
 
@@ -144,6 +153,7 @@ describe("TaskFormModalComponent", () => {
       <TaskFormModalComponent
         isOpen
         projectId="project-1"
+        employees={[]}
         onClose={() => {}}
         onSubmit={() => {}}
       />,
@@ -163,6 +173,7 @@ describe("TaskFormModalComponent", () => {
       <TaskFormModalComponent
         isOpen
         projectId="project-1"
+        employees={[]}
         onClose={() => {}}
         onSubmit={onSubmit}
       />,
@@ -183,7 +194,7 @@ describe("TaskFormModalComponent", () => {
     fireEvent.click(screen.getByText("Crea task"));
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
-    expect(onSubmit).toHaveBeenCalledWith("Task Nuovo", "", "review", 1, null);
+    expect(onSubmit).toHaveBeenCalledWith("Task Nuovo", "", "review", 1, null, []);
   });
 
   it("calls onSubmit with the due date chosen in the date field", async () => {
@@ -192,6 +203,7 @@ describe("TaskFormModalComponent", () => {
       <TaskFormModalComponent
         isOpen
         projectId="project-1"
+        employees={[]}
         onClose={() => {}}
         onSubmit={onSubmit}
       />,
@@ -213,6 +225,7 @@ describe("TaskFormModalComponent", () => {
       "progress",
       5,
       "2026-09-10",
+      [],
     );
   });
 
@@ -222,6 +235,7 @@ describe("TaskFormModalComponent", () => {
       <TaskFormModalComponent
         isOpen
         projectId="project-1"
+        employees={[]}
         onClose={onClose}
         onSubmit={() => {}}
       />,
@@ -243,6 +257,7 @@ describe("TaskFormModalComponent", () => {
       <TaskFormModalComponent
         isOpen
         projectId="project-1"
+        employees={[]}
         onClose={() => {}}
         onSubmit={onSubmit}
       />,
@@ -274,6 +289,7 @@ describe("TaskFormModalComponent", () => {
       <TaskFormModalComponent
         isOpen
         projectId="project-1"
+        employees={[]}
         onClose={() => {}}
         onSubmit={onSubmit}
       />,
@@ -301,6 +317,7 @@ describe("TaskFormModalComponent", () => {
           initialTitle="Task esistente"
           initialDescription="Descrizione esistente"
           projectId="project-1"
+          employees={[]}
         onClose={() => {}}
           onSubmit={() => {}}
         />,
@@ -308,7 +325,7 @@ describe("TaskFormModalComponent", () => {
 
       expect(screen.getByText("Modifica task")).toBeInTheDocument();
       expect(
-        screen.getByText("Aggiorna titolo e descrizione del task."),
+        screen.getByText("Aggiorna titolo, descrizione e assegnatari del task."),
       ).toBeInTheDocument();
       expect(
         screen.getByPlaceholderText("Es. Sistemare il bug di login"),
@@ -335,6 +352,7 @@ describe("TaskFormModalComponent", () => {
           initialTitle="Task esistente"
           initialDueDate="2026-09-10"
           projectId="project-1"
+          employees={[]}
           onClose={() => {}}
           onSubmit={() => {}}
         />,
@@ -354,6 +372,7 @@ describe("TaskFormModalComponent", () => {
           initialTitle="Task esistente"
           initialDueDate="2026-09-10"
           projectId="project-1"
+          employees={[]}
           onClose={() => {}}
           onSubmit={onSubmit}
         />,
@@ -371,6 +390,7 @@ describe("TaskFormModalComponent", () => {
         "progress",
         5,
         null,
+        [],
       );
     });
 
@@ -383,6 +403,7 @@ describe("TaskFormModalComponent", () => {
           initialTitle="Task esistente"
           initialDescription="Descrizione esistente"
           projectId="project-1"
+          employees={[]}
         onClose={() => {}}
           onSubmit={onSubmit}
         />,
@@ -407,6 +428,7 @@ describe("TaskFormModalComponent", () => {
         "progress",
         5,
         null,
+        [],
       );
     });
 
@@ -424,6 +446,7 @@ describe("TaskFormModalComponent", () => {
           mode="edit"
           initialTitle="Task esistente"
           projectId="project-1"
+          employees={[]}
         onClose={() => {}}
           onSubmit={onSubmit}
         />,

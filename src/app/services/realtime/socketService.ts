@@ -1,5 +1,5 @@
 import { io, type Socket } from "socket.io-client";
-import type { Task, TaskComment, TaskStatus } from "../../../shared/types/project";
+import type { Task, TaskAssignee, TaskComment, TaskStatus } from "../../../shared/types/project";
 import { API_BASE_URL } from "../httpClient";
 import { getToken, getUser, updateStoredUser, type User } from "../auth/authService";
 
@@ -11,6 +11,7 @@ interface TaskEventDto {
   status: TaskStatus;
   priority: number;
   dueDate: string | null;
+  assignees: TaskAssignee[];
 }
 
 interface ProjectEventDto {
@@ -19,7 +20,12 @@ interface ProjectEventDto {
   isActive: boolean;
 }
 
-export type NotificationType = "task_comment" | "task_created" | "task_due" | "project_assigned";
+export type NotificationType =
+  | "task_comment"
+  | "task_created"
+  | "task_due"
+  | "project_assigned"
+  | "task_assigned";
 
 export interface NotificationEventDto {
   id: string;
@@ -94,6 +100,7 @@ function toTask(dto: TaskEventDto): Task {
     status: dto.status,
     priority: dto.priority,
     dueDate: dto.dueDate ?? null,
+    assignees: dto.assignees,
   };
 }
 

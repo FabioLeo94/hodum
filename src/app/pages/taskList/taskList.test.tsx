@@ -45,6 +45,7 @@ describe("TaskList", () => {
             description: "Il form non renderizza correttamente",
             status: "progress",
             priority: 3,
+            assignees: [],
           },
           {
             id: "t2",
@@ -53,6 +54,7 @@ describe("TaskList", () => {
             description: "Inserire un form per la registrazione dei clienti",
             status: "progress",
             priority: 7,
+            assignees: [],
           },
           {
             id: "t3",
@@ -61,6 +63,7 @@ describe("TaskList", () => {
             description: "Il bottone della login non ha il primary come sfondo",
             status: "review",
             priority: 9,
+            assignees: [],
           },
         ]);
       }
@@ -107,6 +110,7 @@ describe("TaskList", () => {
             description: "Il form non renderizza correttamente",
             status: "progress",
             priority: 3,
+            assignees: [],
           },
         ]);
       }
@@ -139,6 +143,7 @@ describe("TaskList", () => {
             description: "Il form non renderizza correttamente",
             status: "progress",
             priority: 2,
+            assignees: [],
           },
         ]);
       }
@@ -173,6 +178,7 @@ describe("TaskList", () => {
           description: "Descrizione del nuovo task",
           status: "progress",
           priority: 5,
+          assignees: [],
         });
       }
       throw new Error(`URL non atteso: ${url}`);
@@ -212,6 +218,7 @@ describe("TaskList", () => {
             description: "Il form non renderizza correttamente",
             status: "progress",
             priority: 3,
+            assignees: [],
           },
         ]);
       }
@@ -226,6 +233,7 @@ describe("TaskList", () => {
           description: "Descrizione aggiornata",
           status: "progress",
           priority: 3,
+          assignees: [],
         });
       }
       throw new Error(`URL non atteso: ${url}`);
@@ -281,6 +289,7 @@ describe("TaskList", () => {
             description: "Il form non renderizza correttamente",
             status: "progress",
             priority: 3,
+            assignees: [],
           },
         ]);
       }
@@ -295,6 +304,7 @@ describe("TaskList", () => {
           description: "Il form non renderizza correttamente",
           status: "completed",
           priority: 3,
+          assignees: [],
         });
       }
       throw new Error(`URL non atteso: ${url}`);
@@ -331,6 +341,7 @@ describe("TaskList", () => {
             description: "Il form non renderizza correttamente",
             status: "progress",
             priority: 5,
+            assignees: [],
           },
         ]);
       }
@@ -345,6 +356,7 @@ describe("TaskList", () => {
           description: "Il form non renderizza correttamente",
           status: "progress",
           priority: 1,
+          assignees: [],
         });
       }
       throw new Error(`URL non atteso: ${url}`);
@@ -378,6 +390,7 @@ describe("TaskList", () => {
             description: "d",
             status: "progress",
             priority: 5,
+            assignees: [],
           },
           {
             id: "t2",
@@ -386,6 +399,7 @@ describe("TaskList", () => {
             description: "d",
             status: "progress",
             priority: 1,
+            assignees: [],
           },
           {
             id: "t3",
@@ -394,6 +408,7 @@ describe("TaskList", () => {
             description: "d",
             status: "progress",
             priority: 9,
+            assignees: [],
           },
         ]);
       }

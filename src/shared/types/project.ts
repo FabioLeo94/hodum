@@ -5,6 +5,11 @@ export interface Project {
   tasks: Task[];
 }
 
+export interface TaskAssignee {
+  id: string;
+  username: string;
+}
+
 // 1 = priorità più alta, 10 = più bassa: coerente con il campo omonimo nel
 // modello backend (backend/src/models/task.ts).
 export interface Task {
@@ -15,6 +20,7 @@ export interface Task {
   priority: number;
   // Stringa YYYY-MM-DD, o null se il task non ha una scadenza impostata.
   dueDate: string | null;
+  assignees: TaskAssignee[];
 }
 
 export interface TaskComment {

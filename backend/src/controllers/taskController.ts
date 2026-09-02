@@ -10,12 +10,14 @@ import {
   isValidTaskStatus,
   listTasksByProject,
   ProjectNotFoundError,
+  setTaskAssignees,
   TaskNotFoundError,
   updateTask,
   updateTaskPriority,
   updateTaskStatus,
 } from '../services/taskService';
 import { assertProjectAccessible } from '../services/projectAssignmentService';
+import { UserNotFoundError } from '../services/userService';
 
 // Nome distinto da "ErrorResponse" di projectController.ts: tsoa risolve i
 // modelli per nome dell'interfaccia a livello globale (non per file), quindi
@@ -30,6 +32,7 @@ export interface CreateTaskRequest {
   status?: TaskStatus;
   priority?: number;
   dueDate?: string | null;
+  assigneeIds?: string[];
 }
 
 export interface UpdateTaskStatusRequest {
@@ -44,6 +47,10 @@ export interface UpdateTaskRequest {
   title?: string;
   description?: string;
   dueDate?: string | null;
+}
+
+export interface UpdateTaskAssigneesRequest {
+  userIds: string[];
 }
 
 // Stesso prefisso 'projects' di ProjectController: la risorsa task è
@@ -114,6 +121,7 @@ export class TaskController extends Controller {
           status: body.status,
           priority: body.priority,
           dueDate: body.dueDate,
+          assigneeIds: body.assigneeIds,
         },
         user.id,
         user.companyId,
@@ -121,7 +129,7 @@ export class TaskController extends Controller {
       this.setStatus(201);
       return task;
     } catch (err) {
-      if (err instanceof ProjectNotFoundError) {
+      if (err instanceof ProjectNotFoundError || err instanceof UserNotFoundError) {
         this.setStatus(404);
         return { message: err.message };
       }
@@ -229,6 +237,28 @@ export class TaskController extends Controller {
       if (err instanceof TaskNotFoundError || err instanceof ProjectNotFoundError) {
         this.setStatus(404);
         return;
+      }
+      throw err;
+    }
+  }
+
+  @Put('{projectId}/tasks/{taskId}/assignees')
+  @Security('jwt')
+  @Response<TaskErrorResponse>(404, 'Project, task o utente non trovato')
+  public async updateTaskAssignees(
+    @Path() projectId: string,
+    @Path() taskId: string,
+    @Body() body: UpdateTaskAssigneesRequest,
+    @Request() request: ExRequest,
+  ): Promise<Task | TaskErrorResponse> {
+    const user = getAuthenticatedUser(request);
+    try {
+      await assertProjectAccessible(projectId, user);
+      return await setTaskAssignees(projectId, taskId, body.userIds, user.companyId, user.id);
+    } catch (err) {
+      if (err instanceof TaskNotFoundError || err instanceof ProjectNotFoundError || err instanceof UserNotFoundError) {
+        this.setStatus(404);
+        return { message: err.message };
       }
       throw err;
     }
