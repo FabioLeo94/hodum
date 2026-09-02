@@ -8,6 +8,7 @@ import type { ProjectSummary } from "../../services/project/projectService";
 import { updateEmployee } from "../../services/user/userService";
 import AvatarComponent from "../avatar/avatarComponent";
 import EditAccountModalComponent from "../editAccountModal/editAccountModalComponent";
+import NotificationBellComponent from "../notificationBell/notificationBellComponent";
 import type { EditAccountFormValues } from "../editAccountModal/editAccountModalComponent";
 import { formatDateTime } from "../../../shared/utils/formatDate";
 import styles from "./topbarComponent.module.css";
@@ -403,6 +404,10 @@ function TopbarComponent({ onLogout }: Prop) {
             <span className={styles.separator} aria-hidden="true" />
           </>
         )}
+
+        {/* Visibile a tutti i ruoli (a differenza di "Dipendenti" sopra),
+            quindi fuori dal blocco canSeeEmployees. */}
+        <NotificationBellComponent />
 
         <div className={styles.accountArea} ref={containerRef}>
           <button

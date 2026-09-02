@@ -2,7 +2,9 @@ import { pool } from '../db/pool';
 import type { Task, TaskStatus } from '../models/task';
 import { getProjectById } from './projectService';
 import { isValidUuid } from '../utils/uuid';
+import { formatDateOnly } from '../utils/dateOnly';
 import { emitTaskCreated, emitTaskDeleted, emitTaskUpdated } from '../realtime/io';
+import { notifyProjectTeam } from './notificationService';
 
 export { ProjectNotFoundError } from './projectService';
 
@@ -99,17 +101,6 @@ export function isValidDueDate(value: string): boolean {
   );
 }
 
-// Mai toISOString() (converte a UTC, può far slittare il giorno secondo il
-// fuso orario del server) né toLocaleDateString() (locale-dipendente): solo
-// getter locali, simmetrico al parsing lato frontend (src/shared/utils/
-// taskDueDate.ts).
-function formatDateOnly(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
 function toTask(row: TaskRow): Task {
   const status = STATUS_NAME_TO_SLUG[row.status_name];
   if (!status) {
@@ -160,7 +151,12 @@ export interface CreateTaskInput {
   dueDate?: string | null;
 }
 
-export async function createTask(projectId: string, input: CreateTaskInput, companyId?: string | null): Promise<Task> {
+export async function createTask(
+  projectId: string,
+  input: CreateTaskInput,
+  actorId: string,
+  companyId?: string | null,
+): Promise<Task> {
   // Stesso controllo di listTasksByProject: senza, un projectId inesistente
   // (o di un'altra azienda) inserirebbe comunque la riga (project_id è NOT
   // NULL ma non FK-validato qui) invece di rispondere 404.
@@ -196,6 +192,15 @@ export async function createTask(projectId: string, input: CreateTaskInput, comp
   );
   const task = await getTaskById(result.rows[0].id);
   emitTaskCreated(task);
+  // Un bug nelle notifiche non deve mai far fallire la creazione del task
+  // (stesso principio già applicato a joinProjectRoom in realtime/io.ts):
+  // try/catch con solo console.error, mai un throw che risalirebbe al
+  // controller come se il task non fosse stato creato.
+  try {
+    await notifyProjectTeam(projectId, { type: 'task_created', actorId, taskId: task.id });
+  } catch (err) {
+    console.error('Notifica task_created fallita', err);
+  }
   return task;
 }
 

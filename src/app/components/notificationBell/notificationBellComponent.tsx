@@ -1,0 +1,250 @@
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { useNavigate } from "react-router";
+import { formatDateTime } from "../../../shared/utils/formatDate";
+import { formatDateOnly } from "../../../shared/utils/taskDueDate";
+import {
+  listNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+} from "../../services/notification/notificationService";
+import type { Notification } from "../../services/notification/notificationService";
+import { subscribeToNotifications } from "../../services/realtime/socketService";
+import styles from "./notificationBellComponent.module.css";
+
+const MAX_BADGE_COUNT = 99;
+
+// dueDate è "YYYY-MM-DD" (mai un timestamp): il confronto lessicografico con
+// formatDateOnly(oggi) evita ogni problema di fuso orario, stesso principio
+// di parseDateOnly/isTaskOverdue in taskDueDate.ts, senza doverne dipendere
+// (quella funzione vuole un Task intero, qui basta la stringa).
+function describeNotification(notification: Notification): string {
+  switch (notification.type) {
+    case "task_comment":
+      return `${notification.actorUsername ?? "Qualcuno"} ha commentato «${notification.taskTitle ?? "un task"}»`;
+    case "task_created":
+      return `${notification.actorUsername ?? "Qualcuno"} ha creato «${notification.taskTitle ?? "un task"}»`;
+    case "task_due": {
+      const isOverdue =
+        notification.dueDate !== null && notification.dueDate < formatDateOnly(new Date());
+      return `«${notification.taskTitle ?? "Un task"}» è ${isOverdue ? "scaduto" : "in scadenza"}`;
+    }
+    case "project_assigned":
+      return `Sei stato assegnato al progetto «${notification.projectName ?? "un progetto"}»`;
+  }
+}
+
+// Campanella + dropdown nel topbar, montata su ogni pagina che include
+// TopbarComponent: nessuno stato sopravvive alla navigazione, il mount
+// successivo rifà la fetch (stesso patto già accettato per companyName/projects
+// nello stesso file).
+function NotificationBellComponent() {
+  const navigate = useNavigate();
+
+  // undefined = non ancora caricato: distingue "sto caricando" da "0
+  // notifiche", stesso motivo di `projects` in topbarComponent. A differenza
+  // del menu Progetti la fetch parte subito al mount (non alla prima
+  // apertura): il badge deve riflettere unreadCount anche a pannello chiuso.
+  const [items, setItems] = useState<Notification[] | undefined>(undefined);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [error, setError] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+
+  const menuId = useId();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const bellButtonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const firstFocusRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    listNotifications()
+      .then((data) => {
+        if (cancelled) return;
+        setItems(data.items);
+        setUnreadCount(data.unreadCount);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : "Impossibile caricare le notifiche.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Nessuna guardia "cancelled" qui: l'handler si limita ad aggiornare state
+  // locale (non un side effect esterno), e il cleanup rimuove il listener
+  // allo smontaggio prima che possa scattare ancora.
+  useEffect(() => {
+    return subscribeToNotifications({
+      onCreated: (notification) => {
+        setItems((prev) => [notification, ...(prev ?? [])]);
+        setUnreadCount((prev) => prev + 1);
+      },
+    });
+  }, []);
+
+  // Stesso pattern di dismiss del menu Progetti in topbarComponent: il
+  // pannello vive in un portal, quindi un click "dentro" va riconosciuto
+  // anche lì, non solo dentro containerRef.
+  useEffect(() => {
+    if (!isOpen) return;
+
+    firstFocusRef.current?.focus();
+
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target as Node;
+      if (containerRef.current?.contains(target) || panelRef.current?.contains(target)) {
+        return;
+      }
+      setIsOpen(false);
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+        bellButtonRef.current?.focus();
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
+
+  // Stesso motivo di projectsPanelRef in topbarComponent: portal su
+  // document.body per non farsi tagliare da un antenato con overflow non
+  // "visible", riposizionato via rect del bottone perché vive fuori dal
+  // flusso del suo trigger. Ancorato al bordo destro (non sinistro come il
+  // menu Progetti): la campanella sta vicino al bordo destro della finestra,
+  // un pannello ancorato a sinistra rischierebbe di uscire dal viewport.
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+
+    function reposition() {
+      const button = bellButtonRef.current;
+      const panel = panelRef.current;
+      if (!button || !panel) return;
+      const rect = button.getBoundingClientRect();
+      panel.style.top = `${rect.bottom + 8}px`;
+      panel.style.right = `${window.innerWidth - rect.right}px`;
+    }
+
+    reposition();
+    window.addEventListener("resize", reposition);
+    return () => window.removeEventListener("resize", reposition);
+  }, [isOpen]);
+
+  function handleMarkAllRead() {
+    setItems((prev) => prev?.map((notification) => ({ ...notification, read: true })));
+    setUnreadCount(0);
+    markAllNotificationsRead().catch((err: unknown) => {
+      console.error("Impossibile segnare tutte le notifiche come lette.", err);
+    });
+  }
+
+  function handleNotificationClick(notification: Notification) {
+    if (!notification.read) {
+      setItems((prev) =>
+        prev?.map((item) => (item.id === notification.id ? { ...item, read: true } : item)),
+      );
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+      markNotificationRead(notification.id).catch((err: unknown) => {
+        console.error("Impossibile segnare la notifica come letta.", err);
+      });
+    }
+    setIsOpen(false);
+    if (notification.projectId) {
+      navigate(`/dashboard/${notification.projectId}/task-list`);
+    }
+  }
+
+  const badgeLabel = unreadCount > MAX_BADGE_COUNT ? `${MAX_BADGE_COUNT}+` : String(unreadCount);
+  const showMarkAll = unreadCount > 0;
+
+  return (
+    <div className={styles.notificationArea} ref={containerRef}>
+      <button
+        ref={bellButtonRef}
+        type="button"
+        className={styles.bellButton}
+        aria-label={unreadCount > 0 ? `Notifiche, ${unreadCount} non lette` : "Notifiche"}
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        aria-controls={menuId}
+        onClick={() => setIsOpen((current) => !current)}
+      >
+        <svg
+          viewBox="0 0 24 24"
+          width="20"
+          height="20"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+        </svg>
+        {unreadCount > 0 && <span className={styles.badge}>{badgeLabel}</span>}
+      </button>
+
+      {isOpen &&
+        createPortal(
+          <div
+            ref={panelRef}
+            id={menuId}
+            role="menu"
+            aria-label="Notifiche"
+            className={styles.panel}
+          >
+            {showMarkAll && (
+              <button
+                ref={firstFocusRef}
+                type="button"
+                role="menuitem"
+                className={styles.markAllButton}
+                onClick={handleMarkAllRead}
+              >
+                Segna tutte come lette
+              </button>
+            )}
+
+            {error ? (
+              <p className={styles.status} role="alert">
+                {error}
+              </p>
+            ) : items === undefined ? (
+              <p className={styles.status}>Caricamento...</p>
+            ) : items.length === 0 ? (
+              <p className={styles.status}>Nessuna notifica</p>
+            ) : (
+              items.map((notification, index) => (
+                <button
+                  key={notification.id}
+                  ref={!showMarkAll && index === 0 ? firstFocusRef : undefined}
+                  type="button"
+                  role="menuitem"
+                  className={styles.item}
+                  data-unread={!notification.read}
+                  onClick={() => handleNotificationClick(notification)}
+                >
+                  <span className={styles.itemText}>{describeNotification(notification)}</span>
+                  <span className={styles.itemTime}>{formatDateTime(notification.createdAt)}</span>
+                </button>
+              ))
+            )}
+          </div>,
+          document.body,
+        )}
+    </div>
+  );
+}
+
+export default NotificationBellComponent;

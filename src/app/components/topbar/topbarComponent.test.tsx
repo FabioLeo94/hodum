@@ -4,6 +4,20 @@ import { MemoryRouter } from "react-router";
 import TopbarComponent from "./topbarComponent";
 import { AUTH_TOKEN_KEY, AUTH_USER_KEY } from "../../services/auth/authService";
 
+// NotificationBellComponent fa la sua fetch/subscribe a ogni mount di
+// TopbarComponent, indipendentemente da autenticazione o rotta: mockato qui
+// (non tramite lo stub di fetch usato sotto per Progetti/nome progetto)
+// perché quello stub conta le chiamate a fetch per verificare comportamenti
+// non correlati alle notifiche, e altrimenti ne risulterebbe inquinato.
+vi.mock("../../services/notification/notificationService", () => ({
+  listNotifications: vi.fn().mockResolvedValue({ items: [], unreadCount: 0 }),
+  markNotificationRead: vi.fn().mockResolvedValue(undefined),
+  markAllNotificationsRead: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock("../../services/realtime/socketService", () => ({
+  subscribeToNotifications: vi.fn().mockReturnValue(() => {}),
+}));
+
 function renderTopbar(
   onLogout: () => void = () => {},
   initialPath: string = "/",

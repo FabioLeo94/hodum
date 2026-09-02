@@ -115,6 +115,7 @@ export class TaskController extends Controller {
           priority: body.priority,
           dueDate: body.dueDate,
         },
+        user.id,
         user.companyId,
       );
       this.setStatus(201);

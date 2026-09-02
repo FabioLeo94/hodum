@@ -690,7 +690,12 @@ async function resolveTaskId(projectId: string, idOrTitle: string, companyId?: s
   };
 }
 
-async function callTool(name: string, args: Record<string, unknown>, companyId?: string | null): Promise<unknown> {
+async function callTool(
+  name: string,
+  args: Record<string, unknown>,
+  userId: string,
+  companyId?: string | null,
+): Promise<unknown> {
   switch (name) {
     case 'list_projects':
       return listProjects(companyId);
@@ -725,7 +730,11 @@ async function callTool(name: string, args: Record<string, unknown>, companyId?:
       const project = await resolveProjectId(projectIdArg, companyId);
       if (!project.ok) return { error: project.error };
       try {
-        return await createTask(project.id, { title, description }, companyId);
+        // userId: chi sta effettivamente compiendo l'azione (l'utente che
+        // chatta con l'assistente), usato dalle notifiche per escluderlo dai
+        // destinatari del proprio stesso task_created — stesso ruolo di
+        // user.id nel controller REST equivalente (taskController.ts).
+        return await createTask(project.id, { title, description }, userId, companyId);
       } catch (err) {
         if (err instanceof ProjectNotFoundError) {
           return { error: err.message };
@@ -895,6 +904,14 @@ async function buildPageContextMessage(
 
 export async function askAssistant(
   message: string,
+  // Non opzionale, quindi va prima dei parametri opzionali sotto (regola TS:
+  // "a required parameter cannot follow an optional parameter"): askAssistant
+  // è raggiungibile solo da una rotta autenticata (@Security('jwt') in
+  // assistantController.ts), un id utente c'è sempre. Serve a propagare "chi
+  // sta compiendo l'azione" fino a createTask (via callTool), che lo passa
+  // come actorId alle notifiche per escludere l'autore dai destinatari del
+  // proprio stesso task_created.
+  userId: string,
   history: AssistantMessage[] = [],
   pageContext?: PageContext,
   companyId?: string | null,
@@ -1035,7 +1052,7 @@ export async function askAssistant(
             'Per sicurezza, elimino al massimo un task alla volta in un singolo messaggio: chiedi conferma per gli altri singolarmente, uno per messaggio.',
         };
       } else {
-        result = await callTool(call.function.name, call.function.arguments ?? {}, companyId);
+        result = await callTool(call.function.name, call.function.arguments ?? {}, userId, companyId);
         if (call.function.name === 'delete_task' && !(result && typeof result === 'object' && 'error' in result)) {
           deleteCallsExecutedThisTurn++;
         }

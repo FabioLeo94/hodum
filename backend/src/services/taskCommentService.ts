@@ -5,6 +5,7 @@ import { TaskNotFoundError } from './taskService';
 import { isValidUuid } from '../utils/uuid';
 import { AuthorizationError } from '../middleware/authentication';
 import { emitTaskCommentCreated, emitTaskCommentDeleted, emitTaskCommentUpdated } from '../realtime/io';
+import { notifyProjectTeam } from './notificationService';
 
 export { ProjectNotFoundError } from './projectService';
 export { TaskNotFoundError } from './taskService';
@@ -117,6 +118,14 @@ export async function createComment(
   const result = await pool.query<TaskCommentRow>(`${TASK_COMMENT_SELECT} WHERE tc.id = $1`, [inserted.rows[0].id]);
   const comment = toTaskComment(result.rows[0]);
   emitTaskCommentCreated(comment);
+  // Un bug nelle notifiche non deve mai far fallire la creazione del
+  // commento (stesso principio già applicato a joinProjectRoom in
+  // realtime/io.ts): try/catch con solo console.error, mai un throw.
+  try {
+    await notifyProjectTeam(projectId, { type: 'task_comment', actorId: authorId, taskId, commentId: comment.id });
+  } catch (err) {
+    console.error('Notifica task_comment fallita', err);
+  }
   return comment;
 }
 

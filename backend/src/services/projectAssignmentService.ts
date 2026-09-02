@@ -4,6 +4,7 @@ import type { User } from '../models/user';
 import { isValidUuid } from '../utils/uuid';
 import { ProjectNotFoundError, toProject, type ProjectRow } from './projectService';
 import { UserNotFoundError, getUserById } from './userService';
+import { notifyUsers } from './notificationService';
 
 // Task "Gestione del dipendente": un dipendente non assegnato a un progetto
 // deve trovarlo indistinguibile da un progetto inesistente (stesso principio
@@ -73,6 +74,7 @@ export async function setProjectAssignments(
   employeeId: string,
   projectIds: string[],
   companyId: string,
+  actorId: string,
 ): Promise<void> {
   await assertOwnEmployee(employeeId, companyId);
 
@@ -82,8 +84,21 @@ export async function setProjectAssignments(
   }
 
   const client = await pool.connect();
+  // Letto PRIMA della DELETE sotto (fuori/dentro la stessa transazione non
+  // importa, è una sola SELECT su uno stato che questa stessa funzione sta per
+  // sovrascrivere): serve a distinguere dopo il COMMIT le assegnazioni
+  // davvero nuove da un resend dell'intera checklist con lo stesso set — solo
+  // le prime devono generare una notifica 'project_assigned', altrimenti ogni
+  // salvataggio della checklist (anche senza modifiche) ne spedirebbe una.
+  let previousProjectIds: Set<string>;
   try {
     await client.query('BEGIN');
+
+    const previousResult = await client.query<{ project_id: string }>(
+      'SELECT project_id FROM project_assignments WHERE user_id = $1',
+      [employeeId],
+    );
+    previousProjectIds = new Set(previousResult.rows.map((row) => row.project_id));
 
     if (uniqueIds.length > 0) {
       // Verifica che ogni id fornito appartenga davvero alla company del
@@ -123,5 +138,21 @@ export async function setProjectAssignments(
     throw err;
   } finally {
     client.release();
+  }
+
+  // Solo gli id assenti nel set letto prima della DELETE: un id già presente
+  // prima e ripresentato in questo salvataggio non è una nuova assegnazione,
+  // solo la checklist risalvata invariata (o quasi) dall'owner.
+  const newlyAssignedIds = uniqueIds.filter((id) => !previousProjectIds.has(id));
+  for (const projectId of newlyAssignedIds) {
+    // Un bug nelle notifiche non deve mai far fallire l'assegnazione, già
+    // committata sopra (stesso principio già applicato a joinProjectRoom in
+    // realtime/io.ts): try/catch con solo console.error, per progetto così un
+    // fallimento su uno non impedisce la notifica per gli altri.
+    try {
+      await notifyUsers([employeeId], { companyId, type: 'project_assigned', projectId, actorId });
+    } catch (err) {
+      console.error('Notifica project_assigned fallita', err);
+    }
   }
 }

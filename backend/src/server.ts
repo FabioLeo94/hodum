@@ -5,6 +5,7 @@ import 'dotenv/config';
 
 import { createApp } from './app';
 import { initRealtime } from './realtime/io';
+import { checkDueDateNotifications } from './services/notificationService';
 
 const port = Number(process.env.PORT) || 3000;
 
@@ -20,12 +21,27 @@ async function main(): Promise<void> {
   // nessuna configurazione aggiuntiva richiesta al client.
   initRealtime(server);
 
+  // Job periodico "promemoria scadenza": nessuna libreria di cron nel
+  // progetto (package.json non ne ha), setInterval basta per una cadenza
+  // oraria. checkDueDateNotifications gestisce già i propri errori per task
+  // (console.error, mai un throw), il .catch qui è solo una rete di
+  // sicurezza per un eventuale errore sfuggito a quel livello: senza,
+  // diventerebbe una promise rejection non gestita nel callback di
+  // setInterval e abbatterebbe il processo.
+  const dueDateCheckInterval = setInterval(() => {
+    checkDueDateNotifications().catch((err) => console.error('Controllo scadenze notifiche fallito', err));
+  }, 60 * 60 * 1000);
+  // Un giro subito all'avvio: senza, le scadenze già passate al momento del
+  // riavvio del server aspetterebbero fino a un'ora prima del primo avviso.
+  void checkDueDateNotifications().catch((err) => console.error('Controllo scadenze notifiche fallito', err));
+
   // Spegnimento ordinato: smettiamo di accettare nuove connessioni e usciamo
   // solo quando quelle in corso sono state chiuse. Se in futuro si aggiungono
   // risorse con connessioni aperte (pool DB, code, client esterni), vanno
   // chiuse qui, dopo server.close() e prima di process.exit().
   function shutdown(signal: NodeJS.Signals): void {
     console.log(`Ricevuto ${signal}, arresto in corso...`);
+    clearInterval(dueDateCheckInterval);
     server.close((err) => {
       if (err) {
         console.error('Errore durante la chiusura del server:', err);

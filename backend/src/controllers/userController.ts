@@ -263,7 +263,7 @@ export class UserController extends Controller {
       return notFoundResponse(id);
     }
     try {
-      await setProjectAssignments(id, body.projectIds, requester.companyId);
+      await setProjectAssignments(id, body.projectIds, requester.companyId, requester.id);
       return await listAssignedProjects(id, requester.companyId);
     } catch (err) {
       if (err instanceof EmployeeNotFoundError) {

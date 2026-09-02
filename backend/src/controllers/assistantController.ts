@@ -50,7 +50,7 @@ export class AssistantController extends Controller {
       // leggere/modificare progetti e task di qualunque azienda (vedi
       // assistantService.ts, dove viene propagato a listProjects/
       // getProjectById lungo tutta la catena di tool-calling).
-      return await askAssistant(body.message, body.history ?? [], body.pageContext, user.companyId);
+      return await askAssistant(body.message, user.id, body.history ?? [], body.pageContext, user.companyId);
     } catch (err) {
       if (err instanceof OllamaError) {
         // 502 (Bad Gateway): il problema è nel servizio a valle (Ollama non

@@ -1,0 +1,207 @@
+.notificationArea {
+  position: relative;
+}
+
+/* Stessa dimensione/forma di .accountButton in topbarComponent.module.css:
+   restano due icone circolari della stessa taglia affiancate in rightGroup. */
+.bellButton {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: var(--bg-field);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    transform 100ms ease;
+}
+
+.bellButton:hover {
+  background-color: color-mix(in srgb, var(--bg-field) 80%, white 20%);
+  color: var(--text-primary);
+}
+
+.bellButton:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+.bellButton:active {
+  transform: scale(0.95);
+}
+
+.bellButton[aria-expanded="true"] {
+  background-color: var(--bg-primary);
+  color: var(--text-on-primary);
+}
+
+/* Non solo colore: dimensione e posizione bastano da sole a segnalare "c'è
+   qualcosa" anche senza percepire la tinta d'allarme. */
+.badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radious-xl);
+  background-color: var(--color-danger);
+  color: var(--text-primary);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+  border: 2px solid var(--bg-surface);
+}
+
+/* position: fixed con top/right impostati via JS (vedi
+   notificationBellComponent.tsx): stesso motivo di .projectsMenu in
+   topbarComponent.module.css, il pannello è in portal su document.body. */
+.panel {
+  position: fixed;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-xs);
+  width: max-content;
+  min-width: 280px;
+  max-width: 360px;
+  max-height: 360px;
+  padding: var(--p-sm);
+  overflow-y: auto;
+  border-radius: var(--radious-md);
+  background-color: var(--bg-surface);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  animation: panelPopIn 140ms ease both;
+  scrollbar-width: thin;
+}
+
+.markAllButton {
+  padding: var(--p-sm) var(--p-md);
+  border-radius: var(--radious-sm);
+  color: var(--bg-primary);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.markAllButton:hover {
+  background-color: var(--bg-field);
+}
+
+.markAllButton:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: -2px;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-xs);
+  padding: var(--p-sm) var(--p-md);
+  border-radius: var(--radious-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.item:hover {
+  background-color: var(--bg-field);
+}
+
+.item:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: -2px;
+}
+
+.itemText {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.itemTime {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+/* Le non lette si distinguono per peso e colore del testo (non solo un
+   pallino): resta leggibile anche a chi non percepisce la differenza di tinta
+   sul pallino stesso, che qui è solo un rinforzo ulteriore. */
+.item[data-unread="true"] .itemText {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.item[data-unread="true"] .itemText::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: var(--m-sm);
+  border-radius: 50%;
+  background-color: var(--bg-primary);
+  vertical-align: middle;
+}
+
+.status {
+  padding: var(--p-md);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.status[role="alert"] {
+  color: var(--color-danger);
+}
+
+@keyframes panelPopIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bellButton {
+    transition: none;
+  }
+
+  .bellButton:active {
+    transform: none;
+  }
+
+  .markAllButton,
+  .item {
+    transition: none;
+  }
+
+  .panel {
+    animation: none;
+  }
+}
+
+@media (max-width: 400px) {
+  .panel {
+    min-width: 240px;
+    max-width: calc(100vw - 2 * var(--p-md) - 8px);
+  }
+}

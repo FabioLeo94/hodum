@@ -19,6 +19,23 @@ interface ProjectEventDto {
   isActive: boolean;
 }
 
+export type NotificationType = "task_comment" | "task_created" | "task_due" | "project_assigned";
+
+export interface NotificationEventDto {
+  id: string;
+  type: NotificationType;
+  read: boolean;
+  createdAt: string;
+  projectId: string | null;
+  projectName: string | null;
+  taskId: string | null;
+  taskTitle: string | null;
+  commentId: string | null;
+  actorId: string | null;
+  actorUsername: string | null;
+  dueDate: string | null;
+}
+
 interface TaskCommentEventDto {
   id: string;
   taskId: string;
@@ -43,6 +60,9 @@ interface ServerToClientEvents {
   // Recapitato solo alla room personale dell'utente modificato (vedi io.ts
   // lato backend): mai un dato di un altro utente della company.
   "user:updated": (user: User) => void;
+  // Stessa room personale di user:updated, non una room di progetto: una
+  // notifica riguarda sempre uno specifico destinatario, mai l'intera company.
+  "notification:created": (notification: NotificationEventDto) => void;
 }
 
 interface ClientToServerEvents {
@@ -228,5 +248,23 @@ export function subscribeToOwnUserUpdates(): () => void {
 
   return () => {
     client.off("user:updated", handleUpdated);
+  };
+}
+
+export interface NotificationEventHandlers {
+  onCreated: (notification: NotificationEventDto) => void;
+}
+
+// Nessun project:join/leave: stessa room personale di subscribeToOwnUserUpdates
+// sopra, il server recapita già solo le notifiche del destinatario.
+export function subscribeToNotifications(handlers: NotificationEventHandlers): () => void {
+  const client = getSocket();
+
+  const handleCreated = (notification: NotificationEventDto) => handlers.onCreated(notification);
+
+  client.on("notification:created", handleCreated);
+
+  return () => {
+    client.off("notification:created", handleCreated);
   };
 }

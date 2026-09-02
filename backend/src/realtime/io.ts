@@ -5,6 +5,7 @@
 // entrambi i chiamanti senza duplicare la notifica in ciascuno di essi.
 import type { Server as HttpServer } from 'node:http';
 import { DefaultEventsMap, Server, type Socket } from 'socket.io';
+import type { Notification } from '../models/notification';
 import type { Project } from '../models/project';
 import type { Task } from '../models/task';
 import type { TaskComment } from '../models/taskComment';
@@ -31,6 +32,10 @@ interface ServerToClientEvents {
   // non deve poter dedurre ruolo/mustChangePassword di un collega dal fatto
   // di essere connesso.
   'user:updated': (user: User) => void;
+  // Room personale, stesso destinatario unico di user:updated: una
+  // notifica riguarda per costruzione un solo user_id (vedi notifications.
+  // user_id in schema), mai un broadcast di company.
+  'notification:created': (notification: Notification) => void;
 }
 
 interface ClientToServerEvents {
@@ -245,4 +250,13 @@ export function emitProjectDeleted(projectId: string, companyId: string): void {
 // dipendente, vedi updateUser in userService.ts).
 export function emitUserUpdated(user: User): void {
   getIo()?.to(userRoom(user.id)).emit('user:updated', user);
+}
+
+// Room personale, stesso stile di emitUserUpdated: userId è passato
+// esplicitamente (a differenza di Notification, che non porta un campo
+// userId proprio — è per costruzione il destinatario, non un dato da
+// esporgli su di sé) dal chiamante (notificationService.notifyUsers), che lo
+// conosce dalla riga appena inserita.
+export function emitNotificationCreated(notification: Notification, userId: string): void {
+  getIo()?.to(userRoom(userId)).emit('notification:created', notification);
 }
