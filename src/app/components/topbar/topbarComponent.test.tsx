@@ -112,26 +112,32 @@ describe("TopbarComponent", () => {
     expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument();
   });
 
-  it("shows the last login in place of Dipendenti for an employee", () => {
+  it("shows the last login at the bottom of the account menu for an employee", () => {
     storeUser("employee", "2026-02-15T09:30:00.000Z");
     renderTopbar();
 
-    expect(screen.queryByText("Dipendenti")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Ultimo accesso:/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Menu account" }));
+
     expect(screen.getByText(/Ultimo accesso:/)).toBeInTheDocument();
   });
 
-  it("shows nothing in that slot for an employee who never logged in", () => {
+  it("shows nothing in the account menu for a user who never logged in", () => {
     storeUser("employee", null);
     renderTopbar();
+
+    fireEvent.click(screen.getByRole("button", { name: "Menu account" }));
 
     expect(screen.queryByText(/Ultimo accesso:/)).not.toBeInTheDocument();
   });
 
-  it("does not show the last login for an owner (Dipendenti takes that slot)", () => {
+  it("also shows the last login in the account menu for an owner", () => {
     storeUser("owner", "2026-02-15T09:30:00.000Z");
     renderTopbar();
 
-    expect(screen.queryByText(/Ultimo accesso:/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Menu account" }));
+
+    expect(screen.getByText(/Ultimo accesso:/)).toBeInTheDocument();
   });
 
   it("renders the logo and the account button, with the menu closed", () => {

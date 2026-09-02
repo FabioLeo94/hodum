@@ -59,16 +59,6 @@
   .companyName {
     display: none;
   }
-
-  /* Stesso motivo di .companyName: a questa larghezza rightGroup ha già
-     poco spazio per nav/account, un testo di questa lunghezza andrebbe in
-     conflitto con loro prima che con .separator (che si nasconde solo sotto
-     400px). Il selettore adiacente nasconde anche il separatore che lo segue
-     nel markup, altrimenti resterebbe un confine visivo orfano. */
-  .lastLogin,
-  .lastLogin + .separator {
-    display: none;
-  }
 }
 
 .nav {
@@ -226,20 +216,6 @@
   color: var(--color-danger);
 }
 
-/* Stesso slot di .navItem "Dipendenti" ma non interattivo (un dipendente non
-   può cliccarci sopra per fare nulla): stesse dimensioni/peso testuale per
-   restare allineato col resto della rightGroup senza saltare a un padding
-   diverso. */
-.lastLogin {
-  display: inline-flex;
-  align-items: center;
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  font-weight: 600;
-  white-space: nowrap;
-  padding: var(--p-sm) var(--p-md);
-}
-
 /* Separatore verticale sottile tra "Dipendenti" e l'account: segnala che è
    una voce amministrativa/di sistema, non parte della nav primaria a
    sinistra, senza il peso di un bordo o di uno sfondo diverso. */
@@ -357,6 +333,22 @@
 .menuItem:focus-visible {
   outline: 2px solid var(--bg-primary);
   outline-offset: -2px;
+}
+
+/* Linea leggera che stacca l'ultimo accesso (informativo, non cliccabile)
+   dalle voci d'azione sopra: un margine invece di un bordo su .menu stesso,
+   così la linea rispetta lo stesso padding orizzontale degli item. */
+.menuSeparator {
+  height: 1px;
+  margin: var(--p-xs) var(--p-sm);
+  background-color: var(--bg-field);
+}
+
+.menuLastLogin {
+  padding: var(--p-xs) var(--p-md) var(--p-sm);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  white-space: nowrap;
 }
 
 @keyframes menuPopIn {

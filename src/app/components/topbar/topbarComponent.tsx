@@ -394,27 +394,13 @@ function TopbarComponent({ onLogout }: Prop) {
       {companyName && <span className={styles.companyName}>{companyName}</span>}
 
       <div className={styles.rightGroup}>
-        {canSeeEmployees ? (
+        {canSeeEmployees && (
           <>
             {renderNavItem({ to: "/employees", label: "Dipendenti" })}
             {/* Separatore puramente visivo: segnala che "Dipendenti" è
                 amministrativo, non parte della nav primaria a sinistra. */}
             <span className={styles.separator} aria-hidden="true" />
           </>
-        ) : (
-          // Un dipendente non vede "Dipendenti" (non gestisce colleghi): lo
-          // stesso spazio mostra invece il proprio ultimo accesso, l'unico
-          // punto dell'app in cui questo dato compare per lui (l'owner lo
-          // vede invece nella modale di modifica del dipendente).
-          role === "employee" &&
-          authUser?.lastLoginAt && (
-            <>
-              <span className={styles.lastLogin}>
-                Ultimo accesso: {formatDateTime(authUser.lastLoginAt)}
-              </span>
-              <span className={styles.separator} aria-hidden="true" />
-            </>
-          )
         )}
 
         <div className={styles.accountArea} ref={containerRef}>
@@ -465,6 +451,20 @@ function TopbarComponent({ onLogout }: Prop) {
               >
                 Disconnetti
               </button>
+              {/* Non più legato al ruolo (a differenza della vecchia posizione
+                  nella topbar, riservata all'employee per mancanza di spazio
+                  accanto a "Dipendenti"): qui c'è spazio per chiunque abbia
+                  già effettuato un accesso precedente. role="separator" (non
+                  solo uno span decorativo) perché AT dentro un role="menu" si
+                  aspettano voci tipizzate, non testo libero non annunciato. */}
+              {authUser?.lastLoginAt && (
+                <>
+                  <div className={styles.menuSeparator} role="separator" />
+                  <p className={styles.menuLastLogin}>
+                    Ultimo accesso: {formatDateTime(authUser.lastLoginAt)}
+                  </p>
+                </>
+              )}
             </div>
           )}
         </div>
