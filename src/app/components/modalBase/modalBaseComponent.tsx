@@ -7,6 +7,9 @@ interface Prop {
   onClose: () => void;
   title: string;
   variant?: "generic" | "error" | "info" | "success";
+  // "wide" ospita layout a due colonne (es. modifica task + pannello
+  // commenti): la larghezza resta gestita nel CSS module, qui solo la scelta.
+  size?: "default" | "wide";
   showCloseButton?: boolean;
   primaryAction: ReactNode;
   secondaryActions?: ReactNode;
@@ -19,6 +22,7 @@ function ModalBaseComponent({
   onClose,
   title,
   variant = "generic",
+  size = "default",
   showCloseButton = true,
   primaryAction,
   secondaryActions,
@@ -54,6 +58,7 @@ function ModalBaseComponent({
       ref={dialogRef}
       aria-labelledby={titleId}
       className={styles.dialogBase}
+      data-size={size}
       onCancel={(event) => {
         event.preventDefault();
         onClose();

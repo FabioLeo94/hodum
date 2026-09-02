@@ -126,6 +126,7 @@ function CreateEmployeeModalComponent({
           autoFocus
           required
           error={usernameError}
+          showLabel
         />
         <InputComponent
           type="email"
@@ -137,6 +138,7 @@ function CreateEmployeeModalComponent({
           autoComplete="off"
           required
           error={emailError}
+          showLabel
         />
         <div className={styles.roleField}>
           <label className={styles.roleLabel} htmlFor={roleFieldId}>
@@ -167,6 +169,7 @@ function CreateEmployeeModalComponent({
             autoComplete="off"
             required
             error={passwordError}
+            showLabel
           />
           <InputComponent
             type="password"
@@ -178,6 +181,7 @@ function CreateEmployeeModalComponent({
             autoComplete="off"
             required
             error={confirmPasswordError}
+            showLabel
           />
         </div>
       </div>

@@ -57,6 +57,20 @@
   border: 0;
 }
 
+/* Label visibile, stesso trattamento tipografico di .selectLabel in
+   taskFormModalComponent (etichette di Stato/Priorità): riusata qui perché
+   InputComponent/TextareaComponent possono mostrare la label invece di
+   nasconderla solo per gli screen reader (prop showLabel), quando il solo
+   placeholder non basta a far capire cosa contiene il campo una volta
+   compilato (es. la data di scadenza task). */
+.fieldLabel {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .fieldBase {
     transition: none;

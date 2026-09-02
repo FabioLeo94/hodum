@@ -8,6 +8,10 @@
   composes: srOnly from "../../../shared/styles/fieldBase.module.css";
 }
 
+.label {
+  composes: fieldLabel from "../../../shared/styles/fieldBase.module.css";
+}
+
 .inputBase {
   composes: fieldBase from "../../../shared/styles/fieldBase.module.css";
 }

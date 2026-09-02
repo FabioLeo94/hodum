@@ -155,6 +155,7 @@ function EditEmployeeModalComponent({
           autoFocus
           required
           error={usernameError}
+          showLabel
         />
         <div className={styles.roleField}>
           <label className={styles.roleLabel} htmlFor={roleFieldId}>
@@ -180,6 +181,7 @@ function EditEmployeeModalComponent({
             onChange={(event) => setPassword(event.target.value)}
             autoComplete="off"
             error={passwordError}
+            showLabel
           />
           <InputComponent
             type="password"
@@ -190,6 +192,7 @@ function EditEmployeeModalComponent({
             onChange={(event) => setConfirmPassword(event.target.value)}
             autoComplete="off"
             error={confirmPasswordError}
+            showLabel
           />
         </div>
       </div>

@@ -24,9 +24,11 @@
 }
 
 .roleLabel {
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  font-weight: 600;
+  /* Stesso trattamento tipografico delle label ora visibili di
+     InputComponent/TextareaComponent (.fieldLabel in fieldBase.module.css):
+     "Ruolo" è un select nativo, non passa da quei componenti, ma vive negli
+     stessi form e deve restare coerente con le label accanto. */
+  composes: fieldLabel from "./fieldBase.module.css";
 }
 
 .roleSelect {

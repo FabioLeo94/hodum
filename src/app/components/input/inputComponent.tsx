@@ -13,6 +13,10 @@ interface Prop {
   autoComplete?: string;
   autoFocus?: boolean;
   error?: string;
+  /** Mostra la label sopra il campo invece di lasciarla solo per screen reader:
+   * serve dove il placeholder da solo non basta a capire cosa contiene il
+   * campo (es. un input date, che non mostra placeholder nativo). */
+  showLabel?: boolean;
 }
 function InputComponent({
   type,
@@ -25,13 +29,17 @@ function InputComponent({
   autoComplete,
   autoFocus,
   error,
+  showLabel = false,
 }: Prop) {
   const inputId = useId();
   const errorId = useId();
 
   return (
     <div className={styles.inputWrapper}>
-      <label className={styles.srOnly} htmlFor={inputId}>
+      <label
+        className={showLabel ? styles.label : styles.srOnly}
+        htmlFor={inputId}
+      >
         {label}
       </label>
       <input

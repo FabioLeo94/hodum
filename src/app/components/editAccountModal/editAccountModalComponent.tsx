@@ -140,6 +140,7 @@ function EditAccountModalComponent({
           autoFocus
           required
           error={usernameError}
+          showLabel
         />
         <InputComponent
           type="email"
@@ -151,6 +152,7 @@ function EditAccountModalComponent({
           autoComplete="off"
           required
           error={emailError}
+          showLabel
         />
         <div className={styles.passwordGroup}>
           <InputComponent
@@ -162,6 +164,7 @@ function EditAccountModalComponent({
             onChange={(event) => setPassword(event.target.value)}
             autoComplete="off"
             error={passwordError}
+            showLabel
           />
           <InputComponent
             type="password"
@@ -172,6 +175,7 @@ function EditAccountModalComponent({
             onChange={(event) => setConfirmPassword(event.target.value)}
             autoComplete="off"
             error={confirmPasswordError}
+            showLabel
           />
         </div>
       </div>

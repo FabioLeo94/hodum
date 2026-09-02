@@ -80,6 +80,7 @@ function CreateProjectModalComponent({
         autoComplete="off"
         autoFocus
         error={nameError}
+        showLabel
       />
       {submitError && (
         <p role="alert" className={styles.submitError}>

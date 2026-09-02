@@ -15,6 +15,10 @@
   display: flex;
 }
 
+.dialogBase[data-size="wide"] {
+  width: min(880px, 95vw);
+}
+
 .dialogBase::backdrop {
   background-color: color-mix(in srgb, var(--bg-main) 80%, transparent);
 }
