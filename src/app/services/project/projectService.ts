@@ -1,4 +1,4 @@
-import type { Project, Task, TaskAssignee, TaskComment, TaskStatus } from "../../../shared/types/project";
+import type { Project, Task, TaskAssignee, TaskComment, TaskStatus, TaskWithProject } from "../../../shared/types/project";
 import { authFetch, authHeader } from "../auth/authService";
 import { API_BASE_URL, readErrorMessage } from "../httpClient";
 
@@ -56,6 +56,32 @@ export async function getAllProjects(): Promise<Project[]> {
       tasks: await fetchProjectTasks(project.id),
     })),
   );
+}
+
+interface TaskWithProjectDto extends TaskDto {
+  projectName: string;
+}
+
+// A differenza di toTask, mantiene projectId/projectName invece di scartarli:
+// la vista calendario aggregata della dashboard mostra task di più progetti
+// insieme, quindi le servono per etichettare ogni task e per navigare al
+// progetto giusto (vedi TaskDetailModalComponent).
+function toTaskWithProject(dto: TaskWithProjectDto): TaskWithProject {
+  return { ...toTask(dto), projectId: dto.projectId, projectName: dto.projectName };
+}
+
+// Tutti i task di tutti i progetti della company (calendario aggregato della
+// dashboard): un dipendente riceve solo i task dei propri progetti assegnati,
+// owner/manager tutta la company (filtro applicato lato backend, vedi
+// companyTasksController.ts).
+export async function getAllCompanyTasks(): Promise<TaskWithProject[]> {
+  const response = await authFetch(`${API_BASE_URL}/tasks`, { headers: authHeader() });
+  if (!response.ok) {
+    const message = await readErrorMessage(response);
+    throw new Error(message ?? "Impossibile caricare i task dell'azienda.");
+  }
+  const tasks = (await response.json()) as TaskWithProjectDto[];
+  return tasks.map(toTaskWithProject);
 }
 
 // Solo id e nome di tutti i progetti della company, senza i task: usata dalla

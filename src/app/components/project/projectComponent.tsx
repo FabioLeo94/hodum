@@ -187,7 +187,6 @@ function ProjectComponent({
         <span className={styles.projectName} title={name}>
           {name}
         </span>
-        <span className={styles.taskTotal}>{totalTasks} task</span>
       </div>
       {/* Il donut sta sopra .cardLink (z-index) per ricevere l'hover sui
           singoli segmenti: l'onClick replica la navigazione del link

@@ -1,5 +1,5 @@
 import { pool } from '../db/pool';
-import type { Task, TaskAssignee, TaskStatus } from '../models/task';
+import type { Task, TaskAssignee, TaskStatus, TaskWithProject } from '../models/task';
 import { getProjectById } from './projectService';
 import { isValidUuid } from '../utils/uuid';
 import { formatDateOnly } from '../utils/dateOnly';
@@ -62,6 +62,15 @@ const TASK_SELECT = `SELECT t.id, t.project_id, t.title, t.description, t.priori
      FROM tasks t
      JOIN task_status ts ON ts.id = t.status`;
 
+// Stessa forma di TASK_SELECT più p.name: usata solo da listTasksByCompany,
+// che a differenza di TASK_SELECT deve comunque sapere a quale progetto
+// appartiene ogni riga (qui i task di più progetti convivono nello stesso
+// risultato).
+const TASK_WITH_PROJECT_SELECT = `SELECT t.id, t.project_id, t.title, t.description, t.priority, t.due_date, ts.name AS status_name, p.name AS project_name
+     FROM tasks t
+     JOIN task_status ts ON ts.id = t.status
+     JOIN projects p ON p.id = t.project_id`;
+
 // 1 = priorità più alta, 10 = più bassa (vedi models/task.ts): stesso vincolo
 // del CHECK a livello di DB (migration 0012), ripetuto qui perché un valore
 // fuori range deve essere rifiutato dal controller con un 422 prima di
@@ -117,6 +126,14 @@ function toTask(row: TaskRow, assignees: TaskAssignee[]): Task {
     dueDate: row.due_date ? formatDateOnly(row.due_date) : null,
     assignees,
   };
+}
+
+interface TaskWithProjectRow extends TaskRow {
+  project_name: string;
+}
+
+function toTaskWithProject(row: TaskWithProjectRow, assignees: TaskAssignee[]): TaskWithProject {
+  return { ...toTask(row, assignees), projectName: row.project_name };
 }
 
 // Bulk, non N+1: una sola query per l'intero elenco di task_id invece di una
@@ -176,6 +193,39 @@ export async function listTasksByProject(projectId: string, companyId?: string |
   // loadAssigneesByTaskIds.
   const assigneesByTaskId = await loadAssigneesByTaskIds(result.rows.map((row) => row.id));
   return result.rows.map((row) => toTask(row, assigneesByTaskId.get(row.id) ?? []));
+}
+
+// Usata solo da GET /tasks (companyTasksController.ts), la vista calendario
+// aggregata della dashboard: a differenza di listTasksByProject non riceve un
+// projectId da un client, quindi non serve un check di esistenza/ownership
+// separato (getProjectById/assertProjectAccessible) — lo scoping per company
+// è già garantito dal JOIN su projects filtrato per company_id, stesso
+// principio del ramo companyId di listProjects in projectService.ts.
+// assignedToUserId, se presente, applica lo stesso restringimento ai soli
+// progetti assegnati che listProjects usa per il dipendente (vedi
+// projectController.ts): un dipendente deve vedere nel calendario solo i
+// task dei progetti a cui è assegnato, non l'intera company.
+export async function listTasksByCompany(
+  companyId: string | null,
+  assignedToUserId?: string,
+): Promise<TaskWithProject[]> {
+  const result =
+    assignedToUserId !== undefined
+      ? await pool.query<TaskWithProjectRow>(
+          `${TASK_WITH_PROJECT_SELECT}
+           JOIN project_assignments pa ON pa.project_id = p.id AND pa.user_id = $2
+           WHERE p.company_id = $1
+           ORDER BY t.creation_date NULLS LAST, t.title`,
+          [companyId, assignedToUserId],
+        )
+      : await pool.query<TaskWithProjectRow>(
+          `${TASK_WITH_PROJECT_SELECT}
+           WHERE p.company_id = $1
+           ORDER BY t.creation_date NULLS LAST, t.title`,
+          [companyId],
+        );
+  const assigneesByTaskId = await loadAssigneesByTaskIds(result.rows.map((row) => row.id));
+  return result.rows.map((row) => toTaskWithProject(row, assigneesByTaskId.get(row.id) ?? []));
 }
 
 export interface CreateTaskInput {
@@ -474,7 +524,13 @@ export async function setTaskAssignees(
     // committata sopra: stesso try/catch con solo console.error di
     // setProjectAssignments.
     try {
-      await notifyUsers(newlyAssignedIds, { companyId, type: 'task_assigned', taskId, actorId });
+      await notifyUsers(newlyAssignedIds, {
+        companyId,
+        type: 'task_assigned',
+        taskId,
+        projectId: task.projectId,
+        actorId,
+      });
     } catch (err) {
       console.error('Notifica task_assigned fallita', err);
     }

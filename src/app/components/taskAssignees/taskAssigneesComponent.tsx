@@ -177,7 +177,9 @@ function TaskAssigneesComponent({
                     onClick={(event) => handleOptionClick(employee.id, event)}
                   >
                     <AvatarComponent username={employee.username} size="sm" />
-                    <span className={styles.optionLabel}>{employee.username}</span>
+                    <span className={styles.optionLabel} title={employee.username}>
+                      {employee.username}
+                    </span>
                   </button>
                 );
               })

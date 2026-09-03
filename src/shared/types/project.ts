@@ -23,6 +23,14 @@ export interface Task {
   assignees: TaskAssignee[];
 }
 
+// Usato solo dalla vista calendario aggregata della dashboard (getAllCompanyTasks):
+// il progetto è implicito ovunque un Task viva dentro Project.tasks, ma qui i
+// task di più progetti convivono nella stessa lista.
+export interface TaskWithProject extends Task {
+  projectId: string;
+  projectName: string;
+}
+
 export interface TaskComment {
   id: string;
   taskId: string;

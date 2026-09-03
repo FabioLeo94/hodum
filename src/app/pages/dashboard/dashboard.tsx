@@ -1,18 +1,21 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useNavigate, useOutletContext } from "react-router";
 import ProjectComponent from "../../components/project/projectComponent";
 import CreateProjectModalComponent from "../../components/createProjectModal/createProjectModalComponent";
 import TopbarComponent from "../../components/topbar/topbarComponent";
+import TaskCalendarComponent from "../../components/taskCalendar/taskCalendarComponent";
+import TaskDetailModalComponent from "../../components/taskDetailModal/taskDetailModalComponent";
 import type { AssistantLayoutContext } from "../../components/protectedLayout/protectedLayoutComponent";
 import {
   createProject,
   deleteProject,
+  getAllCompanyTasks,
   getAllProjects,
   updateProject,
 } from "../../services/project/projectService";
 import { subscribeToProjects } from "../../services/realtime/socketService";
 import { logout, useAuthUser } from "../../services/auth/authService";
-import type { Project } from "../../../shared/types/project";
+import type { Project, Task, TaskWithProject } from "../../../shared/types/project";
 import { usePageMeta } from "../../../shared/hooks/usePageMeta";
 import styles from "./dashboard.module.css";
 
@@ -39,6 +42,14 @@ function Dashboard() {
   const [loadError, setLoadError] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createError, setCreateError] = useState("");
+  // Calendario aggregato (task di tutti i progetti): fetch singola all'mount,
+  // nessuna sincronizzazione realtime in questa v1 (a differenza di projects
+  // sopra) — riaprire/navigare la dashboard basta per un refresh, e aggregare
+  // eventi socket cross-progetto qui non è richiesto.
+  const [companyTasks, setCompanyTasks] = useState<TaskWithProject[]>([]);
+  const [isCalendarLoading, setIsCalendarLoading] = useState(true);
+  const [calendarLoadError, setCalendarLoadError] = useState("");
+  const [selectedTask, setSelectedTask] = useState<TaskWithProject | null>(null);
 
   // Il FAB "+" sotto è nascosto ai dipendenti (canManage false): senza questo
   // effect l'icona dell'assistente (montata nel layout, non qui) resterebbe
@@ -68,6 +79,31 @@ function Dashboard() {
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getAllCompanyTasks()
+      .then((data) => {
+        if (!cancelled) setCompanyTasks(data);
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setCalendarLoadError(
+            error instanceof Error
+              ? error.message
+              : "Impossibile caricare il calendario dei task.",
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsCalendarLoading(false);
       });
 
     return () => {
@@ -150,6 +186,26 @@ function Dashboard() {
     setProjects((current) => current.filter((project) => project.id !== id));
   }
 
+  // Indicizzato per id invece di un Array.find ad ogni click: ricalcolato
+  // solo quando companyTasks cambia (fetch iniziale), non ad ogni render.
+  const companyTasksById = useMemo(
+    () => new Map(companyTasks.map((task) => [task.id, task])),
+    [companyTasks],
+  );
+
+  // TaskCalendarComponent è tipizzato su Task (condiviso con la vista
+  // calendario del singolo progetto): il lookup in companyTasksById recupera
+  // l'oggetto TaskWithProject completo (projectId/projectName) senza cast.
+  function handleOpenTaskDetail(task: Task) {
+    const full = companyTasksById.get(task.id);
+    if (full) setSelectedTask(full);
+  }
+
+  function handleGoToTask(task: TaskWithProject) {
+    setSelectedTask(null);
+    navigate(`/dashboard/${task.projectId}/task-list?openTask=${task.id}`);
+  }
+
   return (
     <Fragment>
       <TopbarComponent onLogout={handleLogout} />
@@ -190,6 +246,27 @@ function Dashboard() {
             ))}
           </div>
         ) : null}
+
+        <section className={styles.calendarSection}>
+          {calendarLoadError ? (
+            <p className={styles.calendarStatus} role="alert">
+              {calendarLoadError}
+            </p>
+          ) : isCalendarLoading ? (
+            <p className={styles.calendarStatus} role="status">
+              Caricamento del calendario...
+            </p>
+          ) : (
+            <TaskCalendarComponent tasks={companyTasks} onOpenTask={handleOpenTaskDetail} />
+          )}
+        </section>
+
+        <TaskDetailModalComponent
+          isOpen={selectedTask !== null}
+          task={selectedTask}
+          onClose={() => setSelectedTask(null)}
+          onGoToTask={handleGoToTask}
+        />
 
         {canManage && (
           <Fragment>

@@ -585,6 +585,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
                               <button
                                 type="button"
                                 className={styles.taskTitleButton}
+                                title={task.title}
                                 onClick={() => openEditModal(task)}
                               >
                                 {task.title}

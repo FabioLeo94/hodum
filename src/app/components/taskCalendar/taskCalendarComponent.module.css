@@ -1,10 +1,27 @@
+/* flex: 1 + min-height: 0 non hanno effetto a meno che .calendar non viva
+   dentro un antenato flex ad altezza vincolata (vedi .calendarSection in
+   dashboard.module.css): in quel caso è ciò che permette a .calendar di
+   crescere fino a riempire lo spazio residuo di quell'antenato (altrimenti,
+   senza flex: 1, resterebbe alto quanto il solo .header per costruzione del
+   layout flex a colonna, collassando .gridScroll sotto a 0 di altezza) e a
+   .gridScroll di restringersi e scrollare invece di spingere il contenitore
+   oltre l'altezza disponibile. Nell'uso in taskList.tsx (pagina a scroll
+   intero, nessun antenato flex vincolato) resta un no-op innocuo. */
 .calendar {
   display: flex;
   flex-direction: column;
+  flex: 1;
   gap: var(--m-lg);
+  min-height: 0;
   color: var(--text-primary);
 }
 
+/* Riga unica: mese/anno + controlli a sinistra (.headerMain), legenda spinta
+   in fondo a destra da questo stesso justify-content: space-between. Prima
+   "Calendario task" (titolo di sezione ridondante, rimosso in dashboard.tsx)
+   e la legenda vivevano su righe separate sopra/sotto: qui si condensa tutto
+   in un'unica riga, e flex-wrap fa scendere la legenda sotto .headerMain
+   quando lo spazio orizzontale non basta, senza bisogno di @media dedicate. */
 .header {
   display: flex;
   flex-wrap: wrap;
@@ -13,9 +30,32 @@
   gap: var(--m-md);
 }
 
-.navGroup {
+/* Titolo del mese e controlli (frecce + Oggi) raggruppati come due blocchi
+   distinti, non tre elementi sparsi con il titolo incastrato in mezzo: stesso
+   principio di .taskListHeader/.headerControls in taskList.module.css. Il
+   titolo guida la lettura (è l'informazione primaria di questa vista),
+   i controlli restano un cluster secondario a destra — e con solo due figli
+   flex-wrap impila pulitamente titolo sopra, controlli sotto sugli schermi
+   stretti, senza bisogno di regole @media dedicate. */
+.headerMain {
   display: flex;
-  gap: var(--m-xs);
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--m-md);
+}
+
+/* Freccia | Oggi | freccia come un unico elemento a pillola invece di due
+   controlli separati (gruppo frecce + bottone Oggi affiancati): overflow:
+   hidden + border-radius sul contenitore ritaglia gli angoli dei tre bottoni
+   figli, che restano senza raggio proprio. I separatori verticali sono i
+   bordi laterali di .todayButton (in mezzo), non un elemento a parte. */
+.headerControls {
+  display: flex;
+  align-items: stretch;
+  height: 32px;
+  border-radius: var(--radious-xl);
+  background-color: var(--bg-field);
+  overflow: hidden;
 }
 
 .navButton {
@@ -23,9 +63,6 @@
   align-items: center;
   justify-content: center;
   width: 32px;
-  height: 32px;
-  border-radius: var(--radious-md);
-  background-color: var(--bg-field);
   color: var(--text-primary);
   font-size: 1.1rem;
   line-height: 1;
@@ -37,23 +74,33 @@
   background-color: color-mix(in srgb, var(--bg-field) 60%, var(--bg-main));
 }
 
+/* outline-offset negativo (invece del consueto +2px): un offset positivo
+   verrebbe ritagliato dall'overflow: hidden del contenitore pillola, rendendo
+   l'anello di focus invisibile o troncato sui bottoni ai due estremi. */
 .navButton:focus-visible {
   outline: 2px solid var(--bg-primary);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 
+/* È il titolo della vista (equivalente di .taskListTitle/.calendarTitle
+   altrove): a sinistra, non più centrato a forza tra due gruppi di controlli
+   di larghezza diversa, e con un peso tipografico che lo marca come
+   l'informazione primaria della schermata rispetto ai controlli secondari. */
 .monthTitle {
-  flex: 1;
-  min-width: 140px;
-  text-align: center;
-  font-size: 1.1rem;
+  color: var(--text-primary);
+  font-size: 1.3rem;
   font-weight: 700;
 }
 
+/* Segmento centrale della pillola: i bordi laterali sono i separatori
+   sottili verso le due frecce, non un elemento decorativo a parte. */
 .todayButton {
-  padding: var(--p-xs) var(--p-md);
-  border-radius: var(--radious-xl);
-  background-color: var(--bg-field);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--p-md);
+  border-right: 1px solid color-mix(in srgb, var(--text-muted) 30%, transparent);
+  border-left: 1px solid color-mix(in srgb, var(--text-muted) 30%, transparent);
   color: var(--text-primary);
   font-size: 0.8rem;
   font-weight: 600;
@@ -70,11 +117,64 @@
 
 .todayButton:focus-visible {
   outline: 2px solid var(--bg-primary);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 
+/* Il colore dei dot è l'unico canale che distingue lo stato di un task
+   (progress/review/completed/rejected): senza questa riga quell'informazione
+   sarebbe percepibile solo da chi vede e distingue quei colori. Riga compatta
+   e in tono minore (muted, font piccolo) perché è un riferimento di
+   consultazione, non un elemento su cui l'occhio deve andare per primo. */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--m-md);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: var(--m-xs);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.legendDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Stesso trattamento a "anello" di .dotOverdue/.dotDueSoon ma neutro (nessun
+   colore di stato): qui serve solo a spiegare cosa significa il glifo "!",
+   non a ripetere l'informazione di scadenza in sé. */
+.legendMarker {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background-color: var(--bg-main);
+  box-shadow: 0 0 0 2px var(--text-muted);
+  color: var(--text-primary);
+  font-size: 7px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+/* overflow: auto (non solo -x) + flex/min-height: 0 lasciano che, dentro un
+   antenato flex ad altezza vincolata, sia questo elemento a scrollare
+   verticalmente (griglia giorni) mentre .header sopra resta sempre visibile
+   — vedi il commento su .calendar. */
 .gridScroll {
-  overflow-x: auto;
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 /* Colonna etichetta settimana + sette colonne uguali per i giorni. Il gap di
@@ -157,7 +257,14 @@
   gap: var(--m-xs);
 }
 
+/* Il pallino visibile resta piccolo per non affollare la cella quando un
+   giorno ha molti task, ma il target cliccabile reale è più ampio del
+   pallino: ::before estende l'area di tocco di 5px per lato (24x24px totali,
+   sotto la soglia solo per la parte puramente decorativa) senza toccare le
+   dimensioni/il gap visivo di .dots. position: relative è ciò che ancora
+   ::before al pallino invece che al suo antenato posizionato più vicino. */
 .dot {
+  position: relative;
   display: flex;
   flex-shrink: 0;
   align-items: center;
@@ -168,6 +275,12 @@
   padding: 0;
   cursor: pointer;
   transition: transform 150ms ease;
+}
+
+.dot::before {
+  content: "";
+  position: absolute;
+  inset: -5px;
 }
 
 .dot:hover {
@@ -195,40 +308,88 @@
   background-color: var(--color-danger);
 }
 
-/* Bordo + shadow verso il nero (tema unico, sempre scuro) per non
-   confondersi con lo sfondo della cella: il colore del bordo distingue "in
-   scadenza" (giallo) da "in ritardo" (rosso). */
+/* Doppio anello: uno scuro neutro (--bg-main) a ridosso del pallino, poi
+   quello colorato che distingue "in scadenza" (giallo) da "in ritardo"
+   (rosso). Senza lo spaziatore scuro, un task "In review" (giallo) in
+   scadenza (anello giallo) o "Rifiutato" (rosso) in ritardo (anello rosso) si
+   fonderebbe col pallino: stesso colore su stesso colore, nessun bordo
+   percepibile. Il primo box-shadow elencato è quello dipinto sopra gli altri,
+   quindi copre la fascia 0-1.5px lasciando visibile il colorato solo da
+   1.5 a 3px, un vero anello e non un blob più grande dello stesso colore. */
 .dotDueSoon {
   box-shadow:
-    0 0 0 2px var(--color-warning),
+    0 0 0 1.5px var(--bg-main),
+    0 0 0 3px var(--color-warning),
     0 1px 3px rgba(0, 0, 0, 0.65);
 }
 
 .dotOverdue {
   box-shadow:
-    0 0 0 2px var(--color-danger),
+    0 0 0 1.5px var(--bg-main),
+    0 0 0 3px var(--color-danger),
     0 1px 3px rgba(0, 0, 0, 0.65);
 }
 
+/* Chip di overflow: stessa "pillola" muted di .weekLabelCell/.dayNumber (non
+   un colore di stato, non è un task) per restare leggibile come "controllo
+   della vista" tra i dot colorati. Stessa altezza/target minimo del pallino
+   esteso (~18px) così resta coerente in riga anche visivamente. */
+.moreToggle {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 14px;
+  padding: 0 var(--p-xs);
+  border-radius: var(--radious-xl);
+  background-color: var(--bg-field);
+  color: var(--text-muted);
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.moreToggle:hover {
+  background-color: var(--bg-primary);
+  color: var(--text-on-primary);
+}
+
+.moreToggle:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+/* Chip scuro a contrasto fisso invece di testo colorato: prima il glifo
+   ereditava il colore di stato (warning/danger) esattamente come il pallino
+   sotto di esso, quindi su un dot "In review" (giallo) in scadenza (testo
+   giallo) diventava invisibile — testo e sfondo identici. Sfondo/testo fissi
+   funzionano su tutti e quattro i colori di stato, il colore di urgenza resta
+   comunque leggibile nell'anello del pallino. */
 .dotExclamation {
-  font-size: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  font-size: 8px;
   font-weight: 800;
   line-height: 1;
-}
-
-.dotDueSoon .dotExclamation {
-  color: var(--color-warning);
-}
-
-.dotOverdue .dotExclamation {
-  color: var(--color-danger);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .navButton,
   .todayButton,
   .dayCell,
-  .dot {
+  .dot,
+  .moreToggle {
     transition: none;
   }
 }

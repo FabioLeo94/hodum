@@ -1,13 +1,20 @@
+/* height (non min-height) + overflow: hidden: la pagina non scrolla più per
+   intero come le altre pagine protette (vedi protectedLayoutComponent.module.css,
+   invariato), è .calendarSection sotto a scrollare al proprio interno. 60px =
+   altezza fissa della topbar sticky (topbarComponent.module.css), l'unico
+   altro elemento nel flusso di .mainArea sopra questo contenitore. */
 .dashboardContainer {
   --fab-offset: var(--p-xl);
+  height: calc(100vh - 60px);
   display: flex;
   flex-direction: column;
   gap: var(--m-xl);
   padding: var(--p-xl);
-  padding-bottom: calc(var(--fab-size) + var(--fab-offset) * 2);
+  overflow: hidden;
 }
 
 .dashboardHeader {
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   gap: var(--m-sm);
@@ -24,14 +31,47 @@
   font-size: 0.9rem;
 }
 
+/* Riga singola scrollabile orizzontalmente invece di wrap: le card restano a
+   dimensione fissa (flex-shrink: 0) durante lo scroll, il contenitore stesso
+   non si comprime quando il calendario sotto (flex: 1) reclama lo spazio
+   residuo. */
 .projectsGrid {
+  flex-shrink: 0;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
   gap: var(--m-lg);
 }
 
 .projectsGrid > * {
+  flex-shrink: 0;
   width: 220px;
+}
+
+/* flex: 1 + min-height: 0: occupa tutto lo spazio verticale residuo sotto la
+   griglia progetti e scrolla al proprio interno (min-height: 0 è ciò che
+   permette a un figlio flex di restringersi sotto l'altezza del suo
+   contenuto invece di spingere .dashboardContainer oltre il viewport). Il
+   padding-bottom che prima riservava lo spazio del FAB "+" (fixed rispetto al
+   viewport, vedi fabButton.module.css) vive qui e non più su
+   .dashboardContainer: è questo l'elemento che scrolla per davvero, quindi è
+   qui che l'ultima riga di contenuto rischia di finire coperta dal FAB.
+   border-top separa visivamente la sezione dalla griglia progetti sopra. */
+.calendarSection {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-md);
+  padding-top: var(--m-lg);
+  padding-bottom: calc(var(--fab-size) + var(--fab-offset) * 2);
+  border-top: 1px solid var(--bg-field);
+  overflow-y: auto;
+}
+
+.calendarStatus {
+  color: var(--text-muted);
+  font-size: 0.9rem;
 }
 
 .emptyState {

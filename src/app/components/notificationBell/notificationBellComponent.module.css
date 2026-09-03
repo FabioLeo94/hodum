@@ -54,7 +54,10 @@
   justify-content: center;
   border-radius: var(--radious-xl);
   background-color: var(--color-danger);
-  color: var(--text-primary);
+  /* --text-primary su --color-danger da' un contrasto di ~2.9:1, sotto la
+     soglia AA 4.5:1: --text-on-primary (gia' usato per lo stesso sfondo in
+     .topBar[data-variant="error"] di modalBaseComponent) raggiunge ~5.05:1. */
+  color: var(--text-on-primary);
   font-size: 0.68rem;
   font-weight: 700;
   line-height: 1;
@@ -105,8 +108,8 @@
 
 .item {
   display: flex;
-  flex-direction: column;
-  gap: var(--m-xs);
+  align-items: center;
+  gap: var(--m-sm);
   padding: var(--p-sm) var(--p-md);
   border-radius: var(--radious-sm);
   text-align: left;
@@ -121,6 +124,42 @@
 .item:focus-visible {
   outline: 2px solid var(--bg-primary);
   outline-offset: -2px;
+}
+
+/* Colonna testo/orario: prima era il layout diretto di .item, ora è un
+   figlio in riga insieme all'eventuale chevron (vedi .itemArrow). min-width:
+   0 è necessario perché un figlio flex non si restringe sotto il proprio
+   contenuto per default, e qui serve per far funzionare l'ellissi/line-clamp
+   di .itemText dentro la riga. */
+.itemBody {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--m-xs);
+}
+
+/* Presente solo sulle notifiche che handleNotificationClick naviga
+   davvero (task_assigned, project_assigned): la sua assenza sulle altre
+   voci è essa stessa il segnale "resta qui, segna solo come letta". Colore
+   accento come rinforzo, non come unico canale: la forma (chevron sì/no)
+   basta da sola a comunicare la differenza. */
+.itemArrow {
+  flex-shrink: 0;
+  color: var(--bg-primary);
+  opacity: 0.8;
+  transition: opacity 150ms ease;
+}
+
+.item:hover .itemArrow,
+.item:focus-visible .itemArrow {
+  opacity: 1;
+}
+
+/* Raddoppia per screen reader la distinzione resa visivamente dal chevron:
+   stesso pattern srOnly di inputComponent/textareaComponent. */
+.srOnly {
+  composes: srOnly from "../../../shared/styles/fieldBase.module.css";
 }
 
 .itemText {
@@ -190,7 +229,8 @@
   }
 
   .markAllButton,
-  .item {
+  .item,
+  .itemArrow {
     transition: none;
   }
 

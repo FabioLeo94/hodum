@@ -36,6 +36,13 @@ function describeNotification(notification: Notification): string {
   }
 }
 
+// Stessa condizione usata in handleNotificationClick per decidere se navigare:
+// qui serve solo a mostrare l'indicatore visivo (chevron) coerente con quel
+// comportamento, senza duplicare la logica di navigazione.
+function isNavigableNotification(notification: Notification): boolean {
+  return notification.type === "task_assigned" || notification.type === "project_assigned";
+}
+
 // Campanella + dropdown nel topbar, montata su ogni pagina che include
 // TopbarComponent: nessuno stato sopravvive alla navigazione, il mount
 // successivo rifà la fetch (stesso patto già accettato per companyName/projects
@@ -233,20 +240,48 @@ function NotificationBellComponent() {
             ) : items.length === 0 ? (
               <p className={styles.status}>Nessuna notifica</p>
             ) : (
-              items.map((notification, index) => (
-                <button
-                  key={notification.id}
-                  ref={!showMarkAll && index === 0 ? firstFocusRef : undefined}
-                  type="button"
-                  role="menuitem"
-                  className={styles.item}
-                  data-unread={!notification.read}
-                  onClick={() => handleNotificationClick(notification)}
-                >
-                  <span className={styles.itemText}>{describeNotification(notification)}</span>
-                  <span className={styles.itemTime}>{formatDateTime(notification.createdAt)}</span>
-                </button>
-              ))
+              items.map((notification, index) => {
+                const navigable = isNavigableNotification(notification);
+                return (
+                  <button
+                    key={notification.id}
+                    ref={!showMarkAll && index === 0 ? firstFocusRef : undefined}
+                    type="button"
+                    role="menuitem"
+                    className={styles.item}
+                    data-unread={!notification.read}
+                    onClick={() => handleNotificationClick(notification)}
+                  >
+                    <span className={styles.itemBody}>
+                      <span className={styles.itemText} title={describeNotification(notification)}>
+                        {describeNotification(notification)}
+                      </span>
+                      <span className={styles.itemTime}>
+                        {formatDateTime(notification.createdAt)}
+                      </span>
+                    </span>
+                    {navigable && (
+                      <>
+                        <svg
+                          className={styles.itemArrow}
+                          viewBox="0 0 24 24"
+                          width="16"
+                          height="16"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M9 6l6 6-6 6" />
+                        </svg>
+                        <span className={styles.srOnly}>Apre il dettaglio</span>
+                      </>
+                    )}
+                  </button>
+                );
+              })
             )}
           </div>,
           document.body,

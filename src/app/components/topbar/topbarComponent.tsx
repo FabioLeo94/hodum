@@ -375,6 +375,7 @@ function TopbarComponent({ onLogout }: Prop) {
                         className={styles.projectsMenuItem}
                         to={`/dashboard/${project.id}/task-list`}
                         aria-current={project.id === activeProjectId ? "true" : undefined}
+                        title={project.name}
                         onClick={handleProjectLinkClick}
                       >
                         {project.name}
@@ -393,7 +394,11 @@ function TopbarComponent({ onLogout }: Prop) {
           due blocchi di larghezza diversa (nav pesante vs. sola icona
           account), un centro "vero" indipendente da quell'asimmetria si
           ottiene solo sganciandolo dal flusso. */}
-      {companyName && <span className={styles.companyName}>{companyName}</span>}
+      {companyName && (
+        <span className={styles.companyName} title={companyName}>
+          {companyName}
+        </span>
+      )}
 
       <div className={styles.rightGroup}>
         {canSeeEmployees && (
@@ -431,8 +436,12 @@ function TopbarComponent({ onLogout }: Prop) {
               {authUser && (
                 <>
                   <div className={styles.menuUserInfo}>
-                    <p className={styles.menuUserName}>{authUser.username}</p>
-                    <p className={styles.menuUserEmail}>{authUser.email}</p>
+                    <p className={styles.menuUserName} title={authUser.username}>
+                      {authUser.username}
+                    </p>
+                    <p className={styles.menuUserEmail} title={authUser.email}>
+                      {authUser.email}
+                    </p>
                   </div>
                   <div className={styles.menuSeparator} role="separator" />
                 </>

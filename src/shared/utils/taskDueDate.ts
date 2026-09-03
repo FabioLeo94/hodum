@@ -8,7 +8,10 @@ export const DUE_SOON_THRESHOLD_DAYS = 7;
 // nativo interpreta la stringa come UTC mezzanotte, che può slittare al
 // giorno prima/dopo una volta convertito in ora locale. Qui si costruisce
 // invece la Date direttamente in ora locale.
-function parseDateOnly(value: string): Date {
+// Esportata anche per chi deve solo formattare una dueDate per la UI (es.
+// TaskDetailModalComponent) senza calcolare overdue/dueSoon: stessa esigenza
+// di evitare `new Date(iso)` su una data pura, vedi il commento sopra.
+export function parseDateOnly(value: string): Date {
   const [year, month, day] = value.split("-").map(Number);
   return new Date(year, month - 1, day);
 }

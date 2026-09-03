@@ -29,3 +29,11 @@ export interface Task {
   // stesso ordine della query bulk in taskService.ts.
   assignees: TaskAssignee[];
 }
+
+// Usato solo dall'endpoint aggregato GET /tasks (companyTasksController.ts):
+// il progetto è implicito ovunque un Task venga letto dentro il proprio
+// projectId (/projects/{projectId}/tasks), ma qui i task di più progetti
+// convivono nella stessa lista e serve il nome per distinguerli in UI.
+export interface TaskWithProject extends Task {
+  projectName: string;
+}

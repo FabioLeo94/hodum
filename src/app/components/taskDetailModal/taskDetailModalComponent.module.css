@@ -1,0 +1,116 @@
+/* Stesso layout a due colonne (info + commenti) di .editLayout in
+   taskFormModalComponent.module.css, qui sempre attivo (nessuna modalità
+   "create" a colonna singola: un dettaglio ha sempre sia i campi sia i
+   commenti). */
+.detailLayout {
+  display: flex;
+  gap: var(--m-xl);
+}
+
+.infoColumn {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.commentsColumn {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  /* Stesso motivo di .commentsColumn in taskFormModalComponent.module.css:
+     un'altezza definita, non solo minima, così la lista commenti scrolla al
+     proprio interno invece di far crescere l'intera modale. */
+  height: min(480px, 55vh);
+  border-left: 1px solid var(--bg-field);
+  padding-left: var(--m-xl);
+}
+
+@media (max-width: 700px) {
+  .detailLayout {
+    flex-direction: column;
+  }
+
+  .commentsColumn {
+    flex: none;
+    height: 360px;
+    border-left: none;
+    border-top: 1px solid var(--bg-field);
+    padding-top: var(--m-xl);
+    padding-left: 0;
+  }
+}
+
+.taskTitle {
+  margin: 0 0 var(--m-md);
+  color: var(--text-primary);
+  font-size: 1.1rem;
+}
+
+.description {
+  margin: 0 0 var(--m-lg);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.metaInfo {
+  composes: metaInfo from "../../../shared/styles/modalForm.module.css";
+}
+
+.metaRow {
+  composes: metaRow from "../../../shared/styles/modalForm.module.css";
+}
+
+.metaLabel {
+  composes: metaLabel from "../../../shared/styles/modalForm.module.css";
+}
+
+.metaValue {
+  composes: metaValue from "../../../shared/styles/modalForm.module.css";
+}
+
+.assigneesField {
+  margin-top: var(--m-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--m-sm);
+}
+
+.selectLabel {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.assigneesList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.assigneeRow {
+  display: flex;
+  align-items: center;
+  gap: var(--m-sm);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.noAssignees {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.closeButton {
+  composes: cancelButton from "../../../shared/styles/modalForm.module.css";
+}

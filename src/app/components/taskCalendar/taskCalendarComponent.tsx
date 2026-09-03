@@ -83,6 +83,25 @@ const STATUS_DOT_STYLES: Record<TaskStatus, string> = {
   rejected: styles.dotRejected,
 };
 
+// Stessa terminologia italiana di TaskStatusSelectComponent: qui alimenta
+// solo la legenda colori e il tooltip del dot (mai l'aria-label, che resta
+// il solo titolo del task per non rompere l'accessible name atteso altrove).
+const STATUS_LABELS: Record<TaskStatus, string> = {
+  progress: "In corso",
+  review: "In review",
+  completed: "Completato",
+  rejected: "Rifiutato",
+};
+
+const LEGEND_STATUSES: TaskStatus[] = ["progress", "review", "completed", "rejected"];
+
+// Oltre questa soglia i pallini di un giorno vengono troncati con un chip
+// "+N" espandibile: una cella con 10+ task non deve poter dilatare l'intera
+// riga della griglia (le altre celle della stessa riga si stirano alla sua
+// altezza in un layout a grid), quindi si limita la crescita di default e la
+// si rende opt-in giorno per giorno.
+const DOT_VISIBLE_LIMIT = 6;
+
 interface TaskCalendarComponentProps {
   tasks: Task[];
   onOpenTask: (task: Task) => void;
@@ -93,6 +112,22 @@ interface TaskCalendarComponentProps {
 // del progetto, non raggruppato per stato.
 function TaskCalendarComponent({ tasks, onOpenTask }: TaskCalendarComponentProps) {
   const [viewedMonth, setViewedMonth] = useState(() => startOfMonth(new Date()));
+  // Giorni con la lista task espansa oltre DOT_VISIBLE_LIMIT, opt-in per
+  // singola cella: non si resetta al cambio mese, ma le dateKey sono
+  // univoche a livello globale (AAAA-MM-GG) quindi non c'è collisione.
+  const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
+
+  function toggleExpandedDay(dateKey: string) {
+    setExpandedDays((current) => {
+      const next = new Set(current);
+      if (next.has(dateKey)) {
+        next.delete(dateKey);
+      } else {
+        next.add(dateKey);
+      }
+      return next;
+    });
+  }
 
   function goToPreviousMonth() {
     setViewedMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1));
@@ -113,28 +148,51 @@ function TaskCalendarComponent({ tasks, onOpenTask }: TaskCalendarComponentProps
   return (
     <div className={styles.calendar}>
       <div className={styles.header}>
-        <div className={styles.navGroup}>
-          <button
-            type="button"
-            className={styles.navButton}
-            aria-label="Mese precedente"
-            onClick={goToPreviousMonth}
-          >
-            ‹
-          </button>
-          <button
-            type="button"
-            className={styles.navButton}
-            aria-label="Mese successivo"
-            onClick={goToNextMonth}
-          >
-            ›
-          </button>
+        <div className={styles.headerMain}>
+          <h2 className={styles.monthTitle}>{formatMonthYear(viewedMonth)}</h2>
+          <div className={styles.headerControls}>
+            <button
+              type="button"
+              className={styles.navButton}
+              aria-label="Mese precedente"
+              onClick={goToPreviousMonth}
+            >
+              ‹
+            </button>
+            <button type="button" className={styles.todayButton} onClick={goToToday}>
+              Oggi
+            </button>
+            <button
+              type="button"
+              className={styles.navButton}
+              aria-label="Mese successivo"
+              onClick={goToNextMonth}
+            >
+              ›
+            </button>
+          </div>
         </div>
-        <h2 className={styles.monthTitle}>{formatMonthYear(viewedMonth)}</h2>
-        <button type="button" className={styles.todayButton} onClick={goToToday}>
-          Oggi
-        </button>
+
+        {/* Il colore è l'unico canale che distingue gli stati sui dot: la
+            legenda lo rende leggibile anche a chi non lo percepisce, e chiarisce
+            il marker "!" senza doverlo scoprire cliccando ogni task. */}
+        <div className={styles.legend}>
+          {LEGEND_STATUSES.map((status) => (
+            <span key={status} className={styles.legendItem}>
+              <span
+                className={`${styles.legendDot} ${STATUS_DOT_STYLES[status]}`}
+                aria-hidden="true"
+              />
+              {STATUS_LABELS[status]}
+            </span>
+          ))}
+          <span className={styles.legendItem}>
+            <span className={styles.legendMarker} aria-hidden="true">
+              !
+            </span>
+            In scadenza o in ritardo
+          </span>
+        </div>
       </div>
 
       <div className={styles.gridScroll}>
@@ -156,6 +214,11 @@ function TaskCalendarComponent({ tasks, onOpenTask }: TaskCalendarComponentProps
               {week.map((cell) => {
                 const dayTasks = tasksByDueDate.get(cell.dateKey) ?? [];
                 const isToday = cell.dateKey === todayKey;
+                const isExpanded = expandedDays.has(cell.dateKey);
+                const hasOverflow = dayTasks.length > DOT_VISIBLE_LIMIT;
+                const visibleTasks =
+                  hasOverflow && !isExpanded ? dayTasks.slice(0, DOT_VISIBLE_LIMIT) : dayTasks;
+                const extraCount = dayTasks.length - DOT_VISIBLE_LIMIT;
                 return (
                   <div
                     key={cell.dateKey}
@@ -166,9 +229,14 @@ function TaskCalendarComponent({ tasks, onOpenTask }: TaskCalendarComponentProps
                     <span className={styles.dayNumber}>{cell.date.getDate()}</span>
                     {dayTasks.length > 0 && (
                       <div className={styles.dots}>
-                        {dayTasks.map((task) => {
+                        {visibleTasks.map((task) => {
                           const overdue = isTaskOverdue(task);
                           const dueSoon = !overdue && isTaskDueSoon(task);
+                          const dueState = overdue
+                            ? ", in ritardo"
+                            : dueSoon
+                              ? ", in scadenza"
+                              : "";
                           return (
                             <button
                               key={task.id}
@@ -176,7 +244,7 @@ function TaskCalendarComponent({ tasks, onOpenTask }: TaskCalendarComponentProps
                               className={`${styles.dot} ${STATUS_DOT_STYLES[task.status]} ${
                                 overdue ? styles.dotOverdue : dueSoon ? styles.dotDueSoon : ""
                               }`}
-                              title={task.title}
+                              title={`${task.title} — ${STATUS_LABELS[task.status]}${dueState}`}
                               aria-label={task.title}
                               onClick={() => onOpenTask(task)}
                             >
@@ -188,6 +256,21 @@ function TaskCalendarComponent({ tasks, onOpenTask }: TaskCalendarComponentProps
                             </button>
                           );
                         })}
+                        {hasOverflow && (
+                          <button
+                            type="button"
+                            className={styles.moreToggle}
+                            aria-expanded={isExpanded}
+                            aria-label={
+                              isExpanded
+                                ? "Mostra meno task"
+                                : `Mostra altri ${extraCount} task`
+                            }
+                            onClick={() => toggleExpandedDay(cell.dateKey)}
+                          >
+                            {isExpanded ? "−" : `+${extraCount}`}
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>

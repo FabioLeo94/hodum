@@ -328,7 +328,12 @@
   border-left: 3px solid var(--color-danger);
   border-radius: var(--radious-sm);
   background-color: var(--bg-field);
-  color: var(--color-danger);
+  /* --color-danger puro su --bg-field solido da' un contrasto di ~4.02:1,
+     sotto la soglia AA 4.5:1 per testo 0.8rem: stesso schiarimento all'86%
+     verso il bianco gia' usato per lo stesso sfondo in .groupHeaderRejected
+     (taskList.module.css) e .columnHeaderRejected (taskKanbanBoardComponent),
+     per raggiungere ~4.71:1. */
+  color: color-mix(in srgb, var(--color-danger) 86%, white);
   font-size: 0.8rem;
 }
 

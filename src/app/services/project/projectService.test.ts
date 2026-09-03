@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { getAllProjects, getProjectById, createProject } from "./projectService";
+import { getAllCompanyTasks, getAllProjects, getProjectById, createProject } from "./projectService";
 
 function jsonResponse(status: number, body: unknown): Response {
   return {
@@ -51,6 +51,51 @@ describe("projectService", () => {
 
       await expect(getAllProjects()).rejects.toThrow(
         "Impossibile caricare i progetti.",
+      );
+    });
+  });
+
+  describe("getAllCompanyTasks", () => {
+    it("recupera i task di tutti i progetti con projectId/projectName mantenuti", async () => {
+      vi.mocked(fetch).mockResolvedValue(
+        jsonResponse(200, [
+          {
+            id: "t1",
+            projectId: "1",
+            projectName: "Progetto Demo",
+            title: "Task 1",
+            description: null,
+            status: "progress",
+            priority: 5,
+            dueDate: "2026-01-10",
+            assignees: [],
+          },
+        ]),
+      );
+
+      const tasks = await getAllCompanyTasks();
+
+      expect(tasks).toEqual([
+        {
+          id: "t1",
+          projectId: "1",
+          projectName: "Progetto Demo",
+          title: "Task 1",
+          description: "",
+          status: "progress",
+          priority: 5,
+          dueDate: "2026-01-10",
+          assignees: [],
+        },
+      ]);
+      expect(vi.mocked(fetch).mock.calls[0][0]).toBe("http://localhost:3000/tasks");
+    });
+
+    it("lancia un errore se la richiesta fallisce", async () => {
+      vi.mocked(fetch).mockResolvedValue(jsonResponse(500, {}));
+
+      await expect(getAllCompanyTasks()).rejects.toThrow(
+        "Impossibile caricare i task dell'azienda.",
       );
     });
   });

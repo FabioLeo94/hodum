@@ -122,6 +122,28 @@ function AssistantDrawerComponent({ isOpen, hasLocalFab, onToggle }: Prop) {
   // posizione corrente: usato solo quando è l'utente stesso a inviare.
   const forceScrollRef = useRef(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const toggleButtonRef = useRef<HTMLButtonElement>(null);
+  const composerInputRef = useRef<HTMLInputElement>(null);
+
+  // role="dialog" implica lo stesso contratto tastiera dei popover della
+  // topbar (focus iniziale dentro, Escape chiude e restituisce il focus al
+  // trigger): a differenza di quelli il pannello resta montato (inert quando
+  // chiuso), quindi qui l'effetto si aggancia a isOpen invece che al mount.
+  useEffect(() => {
+    if (!isOpen) return;
+
+    composerInputRef.current?.focus();
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        onToggle();
+        toggleButtonRef.current?.focus();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onToggle]);
 
   function handleClearHistory() {
     setMessages([]);
@@ -204,6 +226,7 @@ function AssistantDrawerComponent({ isOpen, hasLocalFab, onToggle }: Prop) {
   return (
     <>
       <button
+        ref={toggleButtonRef}
         type="button"
         className={styles.toggleButton}
         data-has-local-fab={hasLocalFab}
@@ -361,6 +384,7 @@ function AssistantDrawerComponent({ isOpen, hasLocalFab, onToggle }: Prop) {
 
         <form className={styles.composer} onSubmit={handleSubmit}>
           <input
+            ref={composerInputRef}
             className={styles.composerInput}
             type="text"
             value={input}

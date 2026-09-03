@@ -18,9 +18,15 @@ import styles from "./taskCommentsPanelComponent.module.css";
 interface Prop {
   projectId: string;
   taskId: string;
+  // Usato dalla modale di sola visualizzazione della dashboard
+  // (TaskDetailModalComponent): nasconde sia la casella di invio sia il menù
+  // "altre azioni" (modifica/elimina) dei commenti propri, coerente col
+  // requisito "nessun input editabile". Il fetch iniziale e gli aggiornamenti
+  // realtime restano invariati.
+  readOnly?: boolean;
 }
 
-function TaskCommentsPanelComponent({ projectId, taskId }: Prop) {
+function TaskCommentsPanelComponent({ projectId, taskId, readOnly = false }: Prop) {
   const [comments, setComments] = useState<TaskComment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -353,7 +359,7 @@ function TaskCommentsPanelComponent({ projectId, taskId }: Prop) {
                 <div className={styles.authorRow}>
                   <AvatarComponent username={comment.authorUsername} size="sm" />
                   <span className={styles.author}>{comment.authorUsername}</span>
-                  {isOwn && !isEditingThis && (
+                  {!readOnly && isOwn && !isEditingThis && (
                     <div
                       className={styles.kebabArea}
                       ref={(el) => {
@@ -517,43 +523,47 @@ function TaskCommentsPanelComponent({ projectId, taskId }: Prop) {
             );
           })}
       </div>
-      <div className={styles.composer}>
-        <TextareaComponent
-          label="Scrivi un commento"
-          placeholder="Scrivi un commento... (Invio per inviare, Maiusc+Invio per andare a capo)"
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          onKeyDown={handleKeyDown}
-          rows={2}
-          className={styles.composerTextarea}
-        />
-        <button
-          type="button"
-          className={styles.sendButton}
-          aria-label={isSubmitting ? "Invio in corso" : "Invia commento"}
-          onClick={handleSend}
-          disabled={isSubmitting || draft.trim() === ""}
-        >
-          <svg
-            viewBox="0 0 24 24"
-            width="16"
-            height="16"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <line x1="22" y1="2" x2="11" y2="13" />
-            <polygon points="22 2 15 22 11 13 2 9 22 2" />
-          </svg>
-        </button>
-      </div>
-      {sendError && (
-        <p role="alert" className={styles.sendError}>
-          {sendError}
-        </p>
+      {!readOnly && (
+        <>
+          <div className={styles.composer}>
+            <TextareaComponent
+              label="Scrivi un commento"
+              placeholder="Scrivi un commento... (Invio per inviare, Maiusc+Invio per andare a capo)"
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              onKeyDown={handleKeyDown}
+              rows={2}
+              className={styles.composerTextarea}
+            />
+            <button
+              type="button"
+              className={styles.sendButton}
+              aria-label={isSubmitting ? "Invio in corso" : "Invia commento"}
+              onClick={handleSend}
+              disabled={isSubmitting || draft.trim() === ""}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="16"
+                height="16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+              </svg>
+            </button>
+          </div>
+          {sendError && (
+            <p role="alert" className={styles.sendError}>
+              {sendError}
+            </p>
+          )}
+        </>
       )}
     </div>
   );

@@ -2,10 +2,15 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: var(--m-md);
+  gap: var(--m-sm);
   background-color: var(--bg-surface);
   border-radius: var(--radious-lg);
-  padding: var(--p-lg);
+  /* Padding verticale ridotto rispetto all'orizzontale (var(--p-lg) su
+     entrambi gli assi in origine): la card è alta quanto il donut sotto +
+     header, e questa sezione condivide il viewport con .calendarSection
+     (dashboard.module.css) che ha bisogno dello spazio residuo per mostrare
+     il mese intero senza scroll interno. */
+  padding: var(--p-md) var(--p-lg);
   box-shadow: 0 0 16px rgba(0, 0, 0, 0.35);
   transition:
     transform 250ms ease,
@@ -53,8 +58,6 @@
 
 .cardHeader {
   display: flex;
-  flex-direction: column;
-  gap: var(--m-xs);
 }
 
 .projectName {
@@ -67,25 +70,17 @@
   text-overflow: ellipsis;
 }
 
-.taskTotal {
-  color: var(--text-muted);
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-/* Donut: sostituisce la barra lineare segmentata. Dimensione fissa (140px)
-   pensata per il contenitore a 220px di .projectsGrid: centrata, lascia
-   margini laterali regolari e porta l'altezza complessiva della card vicino
-   alla sua larghezza, per un ingombro più quadrato che rettangolare. */
+/* Donut: sostituisce la barra lineare segmentata. Dimensione fissa (110px,
+   ridotta da 140px) pensata per il contenitore a 220px di .projectsGrid:
+   centrata, lascia margini laterali regolari. L'ingombro verticale della
+   card resta contenuto apposta, per lasciare più spazio residuo in altezza
+   a .calendarSection sotto (dashboard.module.css). */
 .donutWrapper {
   position: relative;
   z-index: 2;
   align-self: center;
-  width: 140px;
-  height: 140px;
+  width: 110px;
+  height: 110px;
   margin-top: var(--m-xs);
   cursor: pointer;
 }
@@ -193,16 +188,18 @@
 
 .donutCenterValue {
   color: var(--text-primary);
-  font-size: 1.5rem;
+  /* Scalato in proporzione al donut (110px, era 140px): stesso rapporto
+     testo/diametro di prima, non un valore arbitrario. */
+  font-size: 1.2rem;
   font-weight: 700;
   line-height: 1.1;
 }
 
 .donutCenterLabel {
-  max-width: 84px;
+  max-width: 66px;
   overflow: hidden;
   color: var(--text-muted);
-  font-size: 0.68rem;
+  font-size: 0.6rem;
   font-weight: 600;
   letter-spacing: 0.01em;
   line-height: 1.2;
@@ -214,7 +211,7 @@
 
 .donutCenterEmpty {
   color: var(--text-muted);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 500;
 }
 
