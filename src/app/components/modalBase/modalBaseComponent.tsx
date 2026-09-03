@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef } from "react";
 import type { ReactNode } from "react";
+import { X } from "lucide-react";
 import styles from "./modalBaseComponent.module.css";
 
 interface Prop {
@@ -80,7 +81,7 @@ function ModalBaseComponent({
             aria-label="Chiudi"
             onClick={onClose}
           >
-            <span aria-hidden="true">&times;</span>
+            <X size={18} aria-hidden="true" />
           </button>
         )}
       </div>

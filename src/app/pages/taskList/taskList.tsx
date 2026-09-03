@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useState } from "react";
 import type { DragEvent } from "react";
 import { useNavigate, useOutletContext, useParams, useSearchParams } from "react-router";
+import { ChevronRight, GripVertical, Plus, Search, X } from "lucide-react";
 import type { Project, Task, TaskStatus } from "../../../shared/types/project";
 import {
   createTask,
@@ -11,6 +12,7 @@ import {
   updateTaskStatus,
 } from "../../services/project/projectService";
 import { subscribeToProjectTasks } from "../../services/realtime/socketService";
+import { getDueUrgency } from "../../../shared/utils/taskDueDate";
 import { logout, type User } from "../../services/auth/authService";
 import { listUsers } from "../../services/user/userService";
 import TopbarComponent from "../../components/topbar/topbarComponent";
@@ -20,6 +22,7 @@ import PrioritySelectComponent from "../../components/prioritySelect/prioritySel
 import TaskAssigneesComponent from "../../components/taskAssignees/taskAssigneesComponent";
 import TaskKanbanBoardComponent from "../../components/taskKanbanBoard/taskKanbanBoardComponent";
 import TaskCalendarComponent from "../../components/taskCalendar/taskCalendarComponent";
+import ExpandableContainerComponent from "../../components/expandableContainer/expandableContainerComponent";
 import type { AssistantLayoutContext } from "../../components/protectedLayout/protectedLayoutComponent";
 import { usePageMeta } from "../../../shared/hooks/usePageMeta";
 import {
@@ -559,21 +562,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
             azzerare, ed è testuale (non richiede di percepire una tinta). */}
         <div className={styles.filterToolbar} role="search" aria-label="Cerca e filtra i task">
           <div className={styles.searchField}>
-            <svg
-              className={styles.searchIcon}
-              aria-hidden="true"
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="11" cy="11" r="7" />
-              <path d="M21 21l-4.3-4.3" />
-            </svg>
+            <Search className={styles.searchIcon} size={14} strokeWidth={2.5} aria-hidden="true" />
             <input
               type="search"
               className={styles.searchInput}
@@ -589,7 +578,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
                 aria-label="Cancella la ricerca"
                 onClick={() => setSearchQuery("")}
               >
-                ×
+                <X size={14} aria-hidden="true" />
               </button>
             )}
           </div>
@@ -710,112 +699,155 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
               </thead>
               {STATUS_ORDER.map((status) => {
                 const tasks = sortTasksByPriority(groupedTasks[status], prioritySort);
+                const isEmpty = tasks.length === 0;
+                // Il messaggio "nessun task corrispondente ai filtri" e il lock
+                // in apertura valgono solo quando è il filtro Stato in toolbar,
+                // non un altro criterio, a isolare proprio questo stato vuoto:
+                // per ogni altro caso di gruppo vuoto (nessun filtro, oppure
+                // filtri diversi dallo Stato) resta la riga singola attenuata.
+                const isFilteredEmptyForThisStatus = isEmpty && statusFilter === status;
+                const panelId = `task-status-panel-${status}`;
                 return (
-                  <tbody
-                    key={status}
-                    className={
-                      dragOverStatus === status ? styles.dragOverGroup : undefined
-                    }
-                    onDragOver={(event) => handleGroupDragOver(event, status)}
-                    onDragLeave={handleGroupDragLeave}
-                    onDrop={(event) => handleGroupDrop(event, status)}
-                  >
-                    <tr>
-                      <th
-                        className={`${styles.groupHeaderCell} ${STATUS_STYLES[status]}`}
-                        colSpan={5}
-                        scope="colgroup"
+                  <ExpandableContainerComponent key={status} locked={isEmpty}>
+                    {({ isOpen, toggle, locked }) => (
+                      <tbody
+                        id={panelId}
+                        className={
+                          dragOverStatus === status ? styles.dragOverGroup : undefined
+                        }
+                        onDragOver={(event) => handleGroupDragOver(event, status)}
+                        onDragLeave={handleGroupDragLeave}
+                        onDrop={(event) => handleGroupDrop(event, status)}
                       >
-                        {STATUS_GROUP_LABELS[status]} ({tasks.length})
-                      </th>
-                    </tr>
-                    {tasks.length === 0 ? (
-                      <tr>
-                        <td
-                          className={styles.emptyRow}
-                          data-drop-target={dragOverStatus === status}
-                          colSpan={5}
-                        >
-                          {dragOverStatus === status
-                            ? "Rilascia qui per spostare il task"
-                            : hasActiveFilters
-                              ? "Nessun task corrisponde ai filtri"
-                              : "Nessun task"}
-                        </td>
-                      </tr>
-                    ) : (
-                      tasks.map((task) => (
-                        <tr
-                          key={task.id}
-                          className={styles.taskRow}
-                          draggable
-                          onDragStart={(event) => handleDragStart(event, task.id)}
-                          onDragEnd={handleGroupDragLeave}
-                        >
-                          <td>
-                            <div className={styles.titleCell}>
+                        <tr>
+                          <th
+                            className={`${styles.groupHeaderCell} ${STATUS_STYLES[status]}`}
+                            colSpan={5}
+                            scope="colgroup"
+                          >
+                            {locked ? (
                               <span
-                                className={styles.dragHandle}
-                                aria-hidden="true"
-                                title="Trascina per cambiare stato"
+                                className={`${styles.groupHeaderLabel} ${
+                                  isFilteredEmptyForThisStatus ? "" : styles.groupHeaderDimmed
+                                }`}
                               >
-                                <svg
-                                  width="10"
-                                  height="16"
-                                  viewBox="0 0 10 16"
-                                  fill="currentColor"
-                                >
-                                  <circle cx="2" cy="2" r="1.5" />
-                                  <circle cx="8" cy="2" r="1.5" />
-                                  <circle cx="2" cy="8" r="1.5" />
-                                  <circle cx="8" cy="8" r="1.5" />
-                                  <circle cx="2" cy="14" r="1.5" />
-                                  <circle cx="8" cy="14" r="1.5" />
-                                </svg>
+                                {STATUS_GROUP_LABELS[status]} ({tasks.length})
                               </span>
+                            ) : (
                               <button
                                 type="button"
-                                className={styles.taskTitleButton}
-                                title={task.title}
-                                onClick={() => openEditModal(task)}
+                                className={styles.groupHeaderToggle}
+                                onClick={toggle}
+                                aria-expanded={isOpen}
+                                aria-controls={panelId}
                               >
-                                {task.title}
+                                <ChevronRight
+                                  className={styles.groupHeaderChevron}
+                                  data-open={isOpen}
+                                  size={10}
+                                  strokeWidth={3}
+                                  aria-hidden="true"
+                                />
+                                {STATUS_GROUP_LABELS[status]} ({tasks.length})
                               </button>
-                            </div>
-                          </td>
-                          <td className={styles.descriptionCell} title={task.description}>
-                            {task.description}
-                          </td>
-                          <td>
-                            <TaskStatusSelectComponent
-                              status={task.status}
-                              taskTitle={task.title}
-                              onChange={(newStatus) =>
-                                handleStatusChange(task.id, newStatus)
-                              }
-                            />
-                          </td>
-                          <td>
-                            <PrioritySelectComponent
-                              priority={task.priority}
-                              taskTitle={task.title}
-                              onChange={(newPriority) =>
-                                handlePriorityChange(task.id, newPriority)
-                              }
-                            />
-                          </td>
-                          <td>
-                            <TaskAssigneesComponent
-                              employees={employees}
-                              selectedIds={task.assignees.map((assignee) => assignee.id)}
-                              taskTitle={task.title}
-                              onChange={(userIds) => handleAssigneesChange(task.id, userIds)}
-                            />
-                          </td>
+                            )}
+                          </th>
                         </tr>
-                      ))
+                        {isOpen && (
+                          <Fragment>
+                            {isEmpty
+                              ? (dragOverStatus === status || isFilteredEmptyForThisStatus) && (
+                                  <tr>
+                                    <td
+                                      className={styles.emptyRow}
+                                      data-drop-target={dragOverStatus === status}
+                                      colSpan={5}
+                                    >
+                                      {dragOverStatus === status
+                                        ? "Rilascia qui per spostare il task"
+                                        : "Nessun task corrispondente ai filtri"}
+                                    </td>
+                                  </tr>
+                                )
+                              : tasks.map((task) => {
+                                  const urgency = getDueUrgency(task);
+                                  return (
+                                  <tr
+                                    key={task.id}
+                                    className={styles.taskRow}
+                                    draggable
+                                    onDragStart={(event) => handleDragStart(event, task.id)}
+                                    onDragEnd={handleGroupDragLeave}
+                                  >
+                                    <td>
+                                      <div className={styles.titleCell}>
+                                        <span
+                                          className={styles.dragHandle}
+                                          aria-hidden="true"
+                                          title="Trascina per cambiare stato"
+                                        >
+                                          <GripVertical size={16} aria-hidden="true" />
+                                        </span>
+                                        {urgency && (
+                                          <span
+                                            className={`${styles.urgencyBadge} ${
+                                              urgency.level === "overdue"
+                                                ? styles.urgencyBadgeOverdue
+                                                : styles.urgencyBadgeDueSoon
+                                            }`}
+                                            title={urgency.label}
+                                            aria-label={`${task.title} — ${urgency.label}`}
+                                          >
+                                            !
+                                          </span>
+                                        )}
+                                        <button
+                                          type="button"
+                                          className={styles.taskTitleButton}
+                                          title={task.title}
+                                          onClick={() => openEditModal(task)}
+                                        >
+                                          {task.title}
+                                        </button>
+                                      </div>
+                                    </td>
+                                    <td className={styles.descriptionCell} title={task.description}>
+                                      {task.description}
+                                    </td>
+                                    <td>
+                                      <TaskStatusSelectComponent
+                                        status={task.status}
+                                        taskTitle={task.title}
+                                        onChange={(newStatus) =>
+                                          handleStatusChange(task.id, newStatus)
+                                        }
+                                      />
+                                    </td>
+                                    <td>
+                                      <PrioritySelectComponent
+                                        priority={task.priority}
+                                        taskTitle={task.title}
+                                        onChange={(newPriority) =>
+                                          handlePriorityChange(task.id, newPriority)
+                                        }
+                                      />
+                                    </td>
+                                    <td>
+                                      <TaskAssigneesComponent
+                                        employees={employees}
+                                        selectedIds={task.assignees.map((assignee) => assignee.id)}
+                                        taskTitle={task.title}
+                                        onChange={(userIds) => handleAssigneesChange(task.id, userIds)}
+                                      />
+                                    </td>
+                                  </tr>
+                                  );
+                                })}
+                          </Fragment>
+                        )}
+                      </tbody>
                     )}
-                  </tbody>
+                  </ExpandableContainerComponent>
                 );
               })}
             </table>
@@ -834,19 +866,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
           aria-label="Crea nuovo task"
           onClick={openCreateModal}
         >
-          <svg
-            className={styles.fabIcon}
-            viewBox="0 0 24 24"
-            width="24"
-            height="24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            aria-hidden="true"
-          >
-            <path d="M12 5v14M5 12h14" />
-          </svg>
+          <Plus className={styles.fabIcon} size={24} strokeWidth={2.5} aria-hidden="true" />
         </button>
 
         <TaskFormModalComponent

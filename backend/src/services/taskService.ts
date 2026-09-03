@@ -71,6 +71,15 @@ const TASK_WITH_PROJECT_SELECT = `SELECT t.id, t.project_id, t.title, t.descript
      JOIN task_status ts ON ts.id = t.status
      JOIN projects p ON p.id = t.project_id`;
 
+// Stessa forma di TASK_WITH_PROJECT_SELECT più t.status_changed_at: usata
+// solo da listStaleTasks, l'unica query che deve sapere da quanto tempo un
+// task è fermo nello stato attuale (le altre non ne hanno bisogno, quindi non
+// è nella select condivisa).
+const STALE_TASK_SELECT = `SELECT t.id, t.project_id, t.title, t.description, t.priority, t.due_date, ts.name AS status_name, p.name AS project_name, t.status_changed_at
+     FROM tasks t
+     JOIN task_status ts ON ts.id = t.status
+     JOIN projects p ON p.id = t.project_id`;
+
 // 1 = priorità più alta, 10 = più bassa (vedi models/task.ts): stesso vincolo
 // del CHECK a livello di DB (migration 0012), ripetuto qui perché un valore
 // fuori range deve essere rifiutato dal controller con un 422 prima di
@@ -134,6 +143,13 @@ interface TaskWithProjectRow extends TaskRow {
 
 function toTaskWithProject(row: TaskWithProjectRow, assignees: TaskAssignee[]): TaskWithProject {
   return { ...toTask(row, assignees), projectName: row.project_name };
+}
+
+// Riga di STALE_TASK_SELECT: come TaskWithProjectRow più status_changed_at,
+// che il driver pg restituisce come Date (colonna timestamptz) esattamente
+// come già avviene per due_date (vedi commento su TaskRow).
+interface StaleTaskRow extends TaskWithProjectRow {
+  status_changed_at: Date;
 }
 
 // Bulk, non N+1: una sola query per l'intero elenco di task_id invece di una
@@ -379,12 +395,47 @@ export async function updateTaskStatus(
   }
 
   const statusName = SLUG_TO_STATUS_NAME[status];
+
+  // Letto PRIMA dell'UPDATE, stesso principio di previousIds in
+  // setTaskAssignees più sotto in questo file: serve a calcolare la
+  // transizione di stato confrontando il valore attuale con quello in arrivo,
+  // cosa che l'UPDATE da solo non può fare senza una CTE. Stesso filtro
+  // id+project_id della query sotto, quindi se non trova la riga è lo stesso
+  // "non trovato" che altrimenti emergerebbe solo dal rowCount === 0
+  // dell'UPDATE.
+  const currentResult = await pool.query<{ status_name: string }>(
+    `SELECT ts.name AS status_name FROM tasks t JOIN task_status ts ON ts.id = t.status WHERE t.id = $1 AND t.project_id = $2`,
+    [taskId, projectId],
+  );
+  const currentRow = currentResult.rows[0];
+  if (!currentRow) {
+    throw new TaskNotFoundError(taskId);
+  }
+  const isRealTransition = currentRow.status_name !== statusName;
+
+  // Stesso pattern di SET clause condizionale di updateTask per dueDate:
+  // status_changed_at si aggiorna SOLO su una transizione reale (una
+  // chiamata ridondante con lo stesso stato non deve "resettare l'orologio"
+  // di quanto un task è fermo). completed_at si valorizza solo entrando in
+  // "completed" da un altro stato, e si azzera solo uscendo da "completed"
+  // verso un altro stato: se la transizione è reale ma tra due stati diversi
+  // da "completed" su entrambi i lati, completed_at non va toccato affatto.
+  const setClauses = ['status = (SELECT id FROM task_status WHERE name = $3)'];
+  if (isRealTransition) {
+    setClauses.push('status_changed_at = now()');
+    if (statusName === 'completed') {
+      setClauses.push('completed_at = now()');
+    } else if (currentRow.status_name === 'completed') {
+      setClauses.push('completed_at = NULL');
+    }
+  }
+
   // Il filtro su project_id impedisce di spostare un task passando l'id del
   // progetto sbagliato nell'URL (project_id non combacia -> 0 righe -> 404,
   // non un aggiornamento silenzioso su un task di un altro progetto).
   const result = await pool.query(
     `UPDATE tasks
-     SET status = (SELECT id FROM task_status WHERE name = $3)
+     SET ${setClauses.join(', ')}
      WHERE id = $1 AND project_id = $2`,
     [taskId, projectId, statusName],
   );
@@ -555,4 +606,170 @@ export async function deleteTask(projectId: string, taskId: string, companyId?: 
     throw new TaskNotFoundError(taskId);
   }
   emitTaskDeleted(projectId, taskId);
+}
+
+// Consumate solo da assistantService.ts (i tool get_stale_tasks/
+// get_completion_trend): a differenza di Task/TaskWithProject in
+// models/task.ts, questi due tipi non sono esposti da alcun controller REST,
+// quindi restano locali qui invece di finire nel modello condiviso.
+export interface StaleTask extends TaskWithProject {
+  // Timestamp completo (non una data sola come dueDate): a differenza di
+  // due_date, status_changed_at è un timestamptz dove l'ora conta (due task
+  // "fermi da 7 giorni" possono differire di ore), quindi una stringa ISO
+  // completa via toISOString() invece di formatDateOnly, che tronca l'ora.
+  statusChangedAt: string;
+  daysSinceStatusChange: number;
+}
+
+// Usata dal tool "get_stale_tasks" dell'assistente per individuare task
+// aperti (non completed/rejected: quelli sono terminali, "fermi" per
+// definizione, non "abbandonati") che non cambiano stato da troppo tempo.
+// Stesso principio di bulk-loading di listTasksByCompany: una query per
+// l'elenco più una per gli assegnatari (loadAssigneesByTaskIds), niente N+1.
+export async function listStaleTasks(
+  companyId: string | null,
+  thresholdDays: number,
+  projectId?: string,
+): Promise<StaleTask[]> {
+  // Stesso pattern di SET/WHERE clause condizionale di updateTask per
+  // dueDate: il filtro su project_id si aggiunge solo se il chiamante lo ha
+  // fornito, invece di obbligare sempre a uno scope di singolo progetto.
+  const values: unknown[] = [companyId, thresholdDays];
+  let projectFilter = '';
+  if (projectId !== undefined) {
+    values.push(projectId);
+    projectFilter = ` AND t.project_id = $${values.length}`;
+  }
+
+  const result = await pool.query<StaleTaskRow>(
+    `${STALE_TASK_SELECT}
+     WHERE p.company_id = $1
+       AND ts.name IN ('in progress', 'review')
+       AND t.status_changed_at < now() - ($2 || ' days')::interval${projectFilter}
+     ORDER BY t.status_changed_at ASC`,
+    values,
+  );
+  const assigneesByTaskId = await loadAssigneesByTaskIds(result.rows.map((row) => row.id));
+  const now = Date.now();
+  return result.rows.map((row) => {
+    const task = toTaskWithProject(row, assigneesByTaskId.get(row.id) ?? []);
+    // Arrotondato a un intero di giorni: coerente con thresholdDays, che è
+    // anch'esso un numero intero di giorni, non con la precisione in ore del
+    // timestamp sottostante.
+    const daysSinceStatusChange = Math.round((now - row.status_changed_at.getTime()) / (1000 * 60 * 60 * 24));
+    return { ...task, statusChangedAt: row.status_changed_at.toISOString(), daysSinceStatusChange };
+  });
+}
+
+export interface CompletionTrendPoint {
+  // YYYY-MM-DD: qui invece formatDateOnly è corretto, perché date_trunc
+  // riduce già il timestamp a un confine di settimana/mese, l'ora residua
+  // (sempre mezzanotte) non porta informazione.
+  periodStart: string;
+  completedCount: number;
+}
+
+// Usata dal tool "get_completion_trend" dell'assistente. granularity è
+// tipizzata TS ('week' | 'month', vincolata anche lato tool schema in
+// assistantService.ts a un enum chiuso) prima di arrivare qui: passata come
+// parametro SQL a date_trunc($2, ...) invece che concatenata a mano nella
+// stringa, ma essendo comunque ristretta a due valori noti a tempo di
+// compilazione (non input utente diretto) non serve una validazione
+// aggiuntiva in questa funzione.
+export async function getCompletionTrend(
+  companyId: string | null,
+  granularity: 'week' | 'month',
+  projectId?: string,
+): Promise<CompletionTrendPoint[]> {
+  const values: unknown[] = [companyId, granularity];
+  let projectFilter = '';
+  if (projectId !== undefined) {
+    values.push(projectId);
+    projectFilter = ` AND t.project_id = $${values.length}`;
+  }
+
+  // COUNT(*)::int, stesso cast già usato in notificationService.ts: senza,
+  // il driver pg restituirebbe un bigint come stringa (per non perdere
+  // precisione su valori enormi), che qui non serve dato il volume atteso.
+  const result = await pool.query<{ period_start: Date; completed_count: number }>(
+    `SELECT date_trunc($2, t.completed_at) AS period_start, COUNT(*)::int AS completed_count
+     FROM tasks t
+     JOIN projects p ON p.id = t.project_id
+     WHERE p.company_id = $1
+       AND t.completed_at IS NOT NULL${projectFilter}
+     GROUP BY period_start
+     ORDER BY period_start`,
+    values,
+  );
+  return result.rows.map((row) => ({
+    periodStart: formatDateOnly(row.period_start),
+    completedCount: row.completed_count,
+  }));
+}
+
+// Confronto a livello di giorno intero, non di millisecondi grezzi: sottrarre
+// direttamente due Date.getTime() e dividere per 86400000 si rompe quando in
+// mezzo cade un cambio ora legale (un giorno locale non è sempre esattamente
+// 24h). Si estraggono invece i componenti di calendario locali di ciascuna
+// data (stesso principio del round-trip via componenti già usato in
+// isValidDueDate sopra, qui applicato a due oggetti Date reali invece che a
+// una stringa) e si ricostruiscono entrambe come mezzanotte UTC dello stesso
+// giorno: in UTC l'aritmetica in millisecondi è sempre pulita perché non
+// esiste ora legale.
+function daysBetweenCalendarDates(from: Date, to: Date): number {
+  const fromUtc = Date.UTC(from.getFullYear(), from.getMonth(), from.getDate());
+  const toUtc = Date.UTC(to.getFullYear(), to.getMonth(), to.getDate());
+  return Math.round((toUtc - fromUtc) / (1000 * 60 * 60 * 24));
+}
+
+// Consumata solo da assistantService.ts (tool "get_due_tasks"), stesso
+// trattamento di StaleTask/CompletionTrendPoint sopra: nessun controller REST
+// la espone, quindi resta locale qui invece di finire nel modello condiviso.
+export interface DueTask extends TaskWithProject {
+  // Negativo = in ritardo di N giorni, 0 = scade oggi, positivo = scade tra N
+  // giorni. Calcolato a livello di data (non di orario), stesso principio
+  // già usato in isValidDueDate per il confronto calendaricale invece che sui
+  // millisecondi grezzi (evita off-by-one dovuti al fuso orario locale).
+  daysUntilDue: number;
+}
+
+// Usata dal tool "get_due_tasks" dell'assistente per individuare task aperti
+// (non completed/rejected: un task chiuso non è "in ritardo", è terminato,
+// stesso principio già applicato in listStaleTasks) con una scadenza già
+// passata o imminente. Il confronto `due_date <= CURRENT_DATE + N giorni` in
+// una sola condizione copre sia i task già scaduti (due_date nel passato
+// soddisfa comunque la disequazione) sia quelli in scadenza entro withinDays,
+// senza bisogno di due filtri separati. Stesso bulk-loading assegnatari e
+// stesso filtro opzionale su projectId di listStaleTasks/getCompletionTrend.
+export async function listDueTasks(
+  companyId: string | null,
+  withinDays: number,
+  projectId?: string,
+): Promise<DueTask[]> {
+  const values: unknown[] = [companyId, withinDays];
+  let projectFilter = '';
+  if (projectId !== undefined) {
+    values.push(projectId);
+    projectFilter = ` AND t.project_id = $${values.length}`;
+  }
+
+  const result = await pool.query<TaskWithProjectRow>(
+    `${TASK_WITH_PROJECT_SELECT}
+     WHERE p.company_id = $1
+       AND ts.name NOT IN ('completed', 'rejected')
+       AND t.due_date IS NOT NULL
+       AND t.due_date <= CURRENT_DATE + ($2 || ' days')::interval${projectFilter}
+     ORDER BY t.due_date ASC`,
+    values,
+  );
+  const assigneesByTaskId = await loadAssigneesByTaskIds(result.rows.map((row) => row.id));
+  const today = new Date();
+  return result.rows.map((row) => {
+    const task = toTaskWithProject(row, assigneesByTaskId.get(row.id) ?? []);
+    // row.due_date non è mai null qui (filtrato in WHERE), ma la colonna resta
+    // tipizzata `Date | null` in TaskRow: il non-null assertion documenta
+    // esplicitamente questa garanzia della query invece di un cast silenzioso.
+    const daysUntilDue = daysBetweenCalendarDates(today, row.due_date as Date);
+    return { ...task, daysUntilDue };
+  });
 }

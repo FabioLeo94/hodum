@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { DragEvent } from "react";
 import type { Task, TaskStatus } from "../../../shared/types/project";
 import { STATUS_ORDER, STATUS_GROUP_LABELS } from "../../../shared/constants/taskStatus";
+import { getDueUrgency } from "../../../shared/utils/taskDueDate";
 import type { User } from "../../services/auth/authService";
 import TaskStatusSelectComponent from "../taskStatusSelect/taskStatusSelectComponent";
 import PrioritySelectComponent from "../prioritySelect/prioritySelectComponent";
@@ -119,7 +120,9 @@ function TaskKanbanBoardComponent({
                       : "Nessun task"}
                 </p>
               ) : (
-                tasks.map((task) => (
+                tasks.map((task) => {
+                  const urgency = getDueUrgency(task);
+                  return (
                   <div
                     key={task.id}
                     className={styles.card}
@@ -134,6 +137,17 @@ function TaskKanbanBoardComponent({
                     >
                       {task.title}
                     </button>
+                    {urgency && (
+                      <span
+                        className={`${styles.urgencyTag} ${
+                          urgency.level === "overdue"
+                            ? styles.urgencyTagOverdue
+                            : styles.urgencyTagDueSoon
+                        }`}
+                      >
+                        {urgency.label}
+                      </span>
+                    )}
                     {task.description && (
                       <p className={styles.cardDescription} title={task.description}>
                         {task.description}
@@ -158,7 +172,8 @@ function TaskKanbanBoardComponent({
                       />
                     </div>
                   </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>

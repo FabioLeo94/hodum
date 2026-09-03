@@ -1,6 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router";
+import { ChevronDown } from "lucide-react";
 import { updateStoredUser, useAuthUser } from "../../services/auth/authService";
 import { getCompanyName } from "../../services/company/companyService";
 import { getProjectName, listProjectsSummary } from "../../services/project/projectService";
@@ -332,21 +333,13 @@ function TopbarComponent({ onLogout }: Prop) {
                   {activeProjectLabel}
                 </span>
               )}
-              <svg
+              <ChevronDown
                 className={styles.chevronIcon}
                 data-open={isProjectsMenuOpen}
-                viewBox="0 0 24 24"
-                width="14"
-                height="14"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+                size={14}
+                strokeWidth={2.5}
                 aria-hidden="true"
-              >
-                <path d="M6 9l6 6 6-6" />
-              </svg>
+              />
             </button>
 
             {isProjectsMenuOpen &&

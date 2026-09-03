@@ -1,6 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
+import { Bell, ChevronRight } from "lucide-react";
 import { formatDateTime } from "../../../shared/utils/formatDate";
 import { formatDateOnly } from "../../../shared/utils/taskDueDate";
 import {
@@ -193,20 +194,7 @@ function NotificationBellComponent() {
         aria-controls={menuId}
         onClick={() => setIsOpen((current) => !current)}
       >
-        <svg
-          viewBox="0 0 24 24"
-          width="20"
-          height="20"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-        </svg>
+        <Bell size={20} aria-hidden="true" />
         {unreadCount > 0 && <span className={styles.badge}>{badgeLabel}</span>}
       </button>
 
@@ -262,20 +250,11 @@ function NotificationBellComponent() {
                     </span>
                     {navigable && (
                       <>
-                        <svg
+                        <ChevronRight
                           className={styles.itemArrow}
-                          viewBox="0 0 24 24"
-                          width="16"
-                          height="16"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
+                          size={16}
                           aria-hidden="true"
-                        >
-                          <path d="M9 6l6 6-6 6" />
-                        </svg>
+                        />
                         <span className={styles.srOnly}>Apre il dettaglio</span>
                       </>
                     )}

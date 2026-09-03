@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { SubmitEvent } from "react";
 import { useLocation, useNavigate } from "react-router";
+import { ArrowDown, MapPin, MessageSquare } from "lucide-react";
 import { sendAssistantMessage } from "../../services/assistant/assistantService";
 import type { AssistantMessage, PageContext } from "../../services/assistant/assistantService";
 import { getProjectName } from "../../services/project/projectService";
@@ -236,20 +237,7 @@ function AssistantDrawerComponent({ isOpen, hasLocalFab, onToggle }: Prop) {
         aria-controls={panelId}
         onClick={onToggle}
       >
-        <svg
-          className={styles.toggleIcon}
-          viewBox="0 0 24 24"
-          width="24"
-          height="24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4.5V16H6.5A2.5 2.5 0 0 1 4 13.5v-8Z" />
-        </svg>
+        <MessageSquare className={styles.toggleIcon} size={24} aria-hidden="true" />
       </button>
 
       {/* inert quando chiuso: fuori schermo (transform), non focalizzabile né
@@ -289,21 +277,7 @@ function AssistantDrawerComponent({ isOpen, hasLocalFab, onToggle }: Prop) {
                   : "I messaggi non includono la pagina in cui ti trovi: dovrai nominare esplicitamente progetto e task."
               }
             >
-              <svg
-                className={styles.contextIcon}
-                viewBox="0 0 24 24"
-                width="14"
-                height="14"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M12 21s-7-6.1-7-11a7 7 0 0 1 14 0c0 4.9-7 11-7 11Z" />
-                <circle cx="12" cy="10" r="2.5" />
-              </svg>
+              <MapPin className={styles.contextIcon} size={14} aria-hidden="true" />
               {isContextEnabled ? `Contesto: ${contextLabel}` : "Contesto disattivato"}
             </button>
           )}
@@ -359,19 +333,7 @@ function AssistantDrawerComponent({ isOpen, hasLocalFab, onToggle }: Prop) {
               onClick={handleScrollToBottom}
               aria-label="Torna al messaggio più recente"
             >
-              <svg
-                viewBox="0 0 24 24"
-                width="16"
-                height="16"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M12 4v16M6 14l6 6 6-6" />
-              </svg>
+              <ArrowDown size={16} strokeWidth={2.5} aria-hidden="true" />
             </button>
           )}
         </div>

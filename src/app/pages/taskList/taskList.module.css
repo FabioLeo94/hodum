@@ -296,7 +296,10 @@
    azionabili (apri il task, cambia stato, cambia priorità) e restano compatte
    e stabili; la descrizione è di supporto e assorbe lo spazio restante,
    troncata riga per riga (vedi .descriptionCell) invece di dettare l'altezza
-   riga. */
+   riga. Il badge di urgenza non ha una colonna propria (vedi .urgencyBadge):
+   una colonna dedicata lascerebbe uno spazio vuoto fisso sulle righe senza
+   scadenza, quindi vive dentro .titleCell e occupa solo lo spazio del
+   simbolo stesso. */
 .colTitle {
   width: 24%;
 }
@@ -348,6 +351,61 @@
   color: color-mix(in srgb, var(--color-danger) 86%, white);
 }
 
+/* Spoiler dei gruppi di stato: il bottone rimpiazza il testo statico
+   dell'header quando il gruppo ha almeno un task (quindi ha senso
+   richiuderlo). Reset dei default nativi del button, resta il colore
+   semantico ereditato da .groupHeaderProgress/Review/Completed/Rejected. */
+.groupHeaderToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--m-sm);
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: opacity 150ms ease;
+}
+
+.groupHeaderToggle:hover {
+  opacity: 0.8;
+}
+
+.groupHeaderToggle:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+  border-radius: var(--radious-xs);
+}
+
+.groupHeaderChevron {
+  flex-shrink: 0;
+  transition: transform 150ms ease;
+}
+
+.groupHeaderChevron[data-open="true"] {
+  transform: rotate(90deg);
+}
+
+/* Etichetta statica dei gruppi "locked" (senza task): stesso layout del
+   bottone ma senza semantica interattiva, niente cursore/hover a suggerire
+   un'azione che non farebbe nulla (non c'e' contenuto da aprire/chiudere). */
+.groupHeaderLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--m-sm);
+  cursor: default;
+}
+
+/* Riga singola attenuata per un gruppo vuoto per motivi diversi dal filtro
+   Stato (nessun filtro attivo, oppure un filtro diverso che ha svuotato il
+   gruppo): niente testo "nessun task", solo il gruppo che si segnala come
+   vuoto tramite opacita' ridotta. */
+.groupHeaderDimmed {
+  opacity: 0.55;
+}
+
 .titleCell {
   display: flex;
   align-items: center;
@@ -357,7 +415,10 @@
 
 /* Indizio visivo di trascinabilità, discreto finché la riga non è a fuoco:
    senza questo la sola cursor:grab (visibile solo in hover) non basta a far
-   scoprire il drag & drop come alternativa al select di stato. */
+   scoprire il drag & drop come alternativa al select di stato. Sempre il
+   primo elemento di .titleCell (prima del badge di urgenza): è l'affordance
+   di interazione della riga, non un'informazione sul task, e deve restare
+   nella stessa posizione a colpo d'occhio su ogni riga. */
 .dragHandle {
   display: flex;
   flex-shrink: 0;
@@ -369,6 +430,35 @@
 
 .taskRow:hover .dragHandle {
   opacity: 1;
+}
+
+/* Stesso schema colore/contrasto di .badge in notificationBellComponent.module.css
+   (background-color: --color-danger/--color-warning + color: --text-on-primary,
+   ~5:1 su danger): a differenza di quel badge non è in absolute (nessuna
+   icona sotto da sovrapporre), vive come normale figlio flex di .titleCell,
+   subito dopo la maniglia di trascinamento. flex-shrink: 0 evita che un
+   titolo lungo lo schiacci, essendo un cerchio a dimensione fissa. */
+.urgencyBadge {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: var(--text-on-primary);
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: default;
+}
+
+.urgencyBadgeDueSoon {
+  background-color: var(--color-warning);
+}
+
+.urgencyBadgeOverdue {
+  background-color: var(--color-danger);
 }
 
 .taskTitleButton {
@@ -475,7 +565,9 @@
   .searchClear,
   .toolbarSelect,
   .clearFiltersButton,
-  .viewSwitchButton {
+  .viewSwitchButton,
+  .groupHeaderToggle,
+  .groupHeaderChevron {
     transition: none;
   }
 }

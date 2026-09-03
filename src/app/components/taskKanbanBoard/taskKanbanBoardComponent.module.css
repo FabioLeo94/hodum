@@ -182,6 +182,29 @@
   border-radius: var(--radious-xs);
 }
 
+/* Tag testuale di urgenza (in scadenza/in ritardo): stesso schema
+   background-color: --color-warning/--color-danger + color: --text-on-primary
+   di .urgencyBadge in taskList.module.css (~5:1 su danger, ancora più alto su
+   warning), qui come pillola leggibile senza hover invece che un pallino "!". */
+.urgencyTag {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: var(--p-xs) var(--p-sm);
+  border-radius: var(--radious-xl);
+  color: var(--text-on-primary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.urgencyTagDueSoon {
+  background-color: var(--color-warning);
+}
+
+.urgencyTagOverdue {
+  background-color: var(--color-danger);
+}
+
 .cardDescription {
   overflow: hidden;
   display: -webkit-box;

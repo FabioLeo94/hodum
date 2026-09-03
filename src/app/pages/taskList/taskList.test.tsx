@@ -434,4 +434,102 @@ describe("TaskList", () => {
     fireEvent.change(sortSelect, { target: { value: "urgent-last" } });
     expect(getTitleOrder()).toEqual(["Task bassa", "Task media", "Task alta"]);
   });
+
+  it("richiude e riapre un gruppo di stato con task tramite il suo header", async () => {
+    vi.mocked(fetch).mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === "http://localhost:3000/projects/1") {
+        return jsonResponse(200, { id: "1", name: "Progetto Demo", isActive: true });
+      }
+      if (url === "http://localhost:3000/projects/1/tasks") {
+        return jsonResponse(200, [
+          {
+            id: "t1",
+            projectId: "1",
+            title: "FIX: rendering auth form",
+            description: "Il form non renderizza correttamente",
+            status: "progress",
+            priority: 3,
+            assignees: [],
+          },
+        ]);
+      }
+      throw new Error(`URL non atteso: ${url}`);
+    });
+
+    renderAt("/dashboard/1/task-list");
+
+    expect(await screen.findByRole("heading", { name: "Progetto Demo" })).toBeInTheDocument();
+    const toggle = screen.getByRole("button", { name: "In corso (1)" });
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("FIX: rendering auth form")).toBeInTheDocument();
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText("FIX: rendering auth form")).not.toBeInTheDocument();
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("FIX: rendering auth form")).toBeInTheDocument();
+  });
+
+  it("mostra un gruppo senza task come riga singola, senza toggle né testo 'Nessun task'", async () => {
+    vi.mocked(fetch).mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === "http://localhost:3000/projects/1") {
+        return jsonResponse(200, { id: "1", name: "Progetto Demo", isActive: true });
+      }
+      if (url === "http://localhost:3000/projects/1/tasks") {
+        return jsonResponse(200, []);
+      }
+      throw new Error(`URL non atteso: ${url}`);
+    });
+
+    renderAt("/dashboard/1/task-list");
+
+    expect(await screen.findByRole("heading", { name: "Progetto Demo" })).toBeInTheDocument();
+    expect(screen.getByText("In corso (0)")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "In corso (0)" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Nessun task/)).not.toBeInTheDocument();
+  });
+
+  it("blocca aperto il gruppo e mostra il messaggio filtri quando lo stato selezionato è vuoto", async () => {
+    vi.mocked(fetch).mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === "http://localhost:3000/projects/1") {
+        return jsonResponse(200, { id: "1", name: "Progetto Demo", isActive: true });
+      }
+      if (url === "http://localhost:3000/projects/1/tasks") {
+        return jsonResponse(200, [
+          {
+            id: "t1",
+            projectId: "1",
+            title: "FIX: rendering auth form",
+            description: "Il form non renderizza correttamente",
+            status: "progress",
+            priority: 3,
+            assignees: [],
+          },
+        ]);
+      }
+      throw new Error(`URL non atteso: ${url}`);
+    });
+
+    renderAt("/dashboard/1/task-list");
+
+    expect(await screen.findByRole("heading", { name: "Progetto Demo" })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Stato" }), {
+      target: { value: "completed" },
+    });
+
+    expect(
+      await screen.findByText("Nessun task corrispondente ai filtri"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Completati (0)" }),
+    ).not.toBeInTheDocument();
+  });
 });
