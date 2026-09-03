@@ -22,19 +22,6 @@ const COLUMN_COUNT_STYLES: Record<TaskStatus, string> = {
   rejected: styles.columnCountRejected,
 };
 
-// Cerca senza allocare un array intermedio (niente flatMap): scorre i gruppi
-// nell'ordine di STATUS_ORDER e si ferma al primo match.
-function findTaskById(
-  groupedTasks: Record<TaskStatus, Task[]>,
-  taskId: string,
-): Task | undefined {
-  for (const status of STATUS_ORDER) {
-    const found = groupedTasks[status].find((candidate) => candidate.id === taskId);
-    if (found) return found;
-  }
-  return undefined;
-}
-
 interface TaskKanbanBoardComponentProps {
   groupedTasks: Record<TaskStatus, Task[]>;
   onStatusChange: (taskId: string, status: TaskStatus) => void;
@@ -42,6 +29,10 @@ interface TaskKanbanBoardComponentProps {
   onOpenTask: (task: Task) => void;
   employees: User[];
   onAssigneesChange: (taskId: string, userIds: string[]) => void;
+  /** True quando la toolbar di ricerca/filtri di taskList.tsx ha almeno un
+   * criterio attivo: distingue "colonna vuota perché non ci sono task in
+   * questo stato" da "colonna vuota perché i filtri hanno escluso tutto". */
+  hasActiveFilters?: boolean;
 }
 
 // Il drag & drop tra colonne è incapsulato qui (stato dragOverStatus locale):
@@ -55,12 +46,30 @@ function TaskKanbanBoardComponent({
   onOpenTask,
   employees,
   onAssigneesChange,
+  hasActiveFilters = false,
 }: TaskKanbanBoardComponentProps) {
   const [dragOverStatus, setDragOverStatus] = useState<TaskStatus | null>(null);
+  // Stato di partenza del drag, catturato al dragstart invece di essere
+  // ricercato in groupedTasks al drop: groupedTasks riflette ora i filtri
+  // attivi, quindi un aggiornamento realtime che fa uscire il task trascinato
+  // dal set filtrato (es. un altro utente ne cambia l'assegnatario mentre il
+  // filtro assegnatario è attivo) farebbe fallire silenziosamente la ricerca
+  // e quindi il drop, senza che l'utente capisca perché.
+  const [draggedTaskStatus, setDraggedTaskStatus] = useState<TaskStatus | null>(null);
 
-  function handleCardDragStart(event: DragEvent<HTMLDivElement>, taskId: string) {
+  function handleCardDragStart(
+    event: DragEvent<HTMLDivElement>,
+    taskId: string,
+    status: TaskStatus,
+  ) {
     event.dataTransfer.setData("text/plain", taskId);
     event.dataTransfer.effectAllowed = "move";
+    setDraggedTaskStatus(status);
+  }
+
+  function handleCardDragEnd() {
+    setDragOverStatus(null);
+    setDraggedTaskStatus(null);
   }
 
   function handleColumnDragOver(event: DragEvent<HTMLDivElement>, status: TaskStatus) {
@@ -76,10 +85,10 @@ function TaskKanbanBoardComponent({
     event.preventDefault();
     setDragOverStatus(null);
     const taskId = event.dataTransfer.getData("text/plain");
-    const task = findTaskById(groupedTasks, taskId);
-    if (task && task.status !== status) {
+    if (taskId && draggedTaskStatus !== null && draggedTaskStatus !== status) {
       onStatusChange(taskId, status);
     }
+    setDraggedTaskStatus(null);
   }
 
   return (
@@ -103,7 +112,11 @@ function TaskKanbanBoardComponent({
             <div className={styles.columnBody}>
               {tasks.length === 0 ? (
                 <p className={styles.emptyColumn} data-drop-target={dragOverStatus === status}>
-                  {dragOverStatus === status ? "Rilascia qui" : "Nessun task"}
+                  {dragOverStatus === status
+                    ? "Rilascia qui"
+                    : hasActiveFilters
+                      ? "Nessun task corrisponde ai filtri"
+                      : "Nessun task"}
                 </p>
               ) : (
                 tasks.map((task) => (
@@ -111,8 +124,8 @@ function TaskKanbanBoardComponent({
                     key={task.id}
                     className={styles.card}
                     draggable
-                    onDragStart={(event) => handleCardDragStart(event, task.id)}
-                    onDragEnd={handleColumnDragLeave}
+                    onDragStart={(event) => handleCardDragStart(event, task.id, task.status)}
+                    onDragEnd={handleCardDragEnd}
                   >
                     <button
                       type="button"

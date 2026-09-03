@@ -41,6 +41,55 @@ function sortTasksByPriority(tasks: Task[], order: PrioritySortOrder): Task[] {
   return [...tasks].sort((a, b) => (a.priority - b.priority) * direction);
 }
 
+type StatusFilter = "all" | TaskStatus;
+type PriorityTierFilter = "all" | "high" | "medium" | "low";
+
+// Stesse tre fasce e soglie di PrioritySelectComponent (1-3/4-6/7-10), non
+// esportate da lì perché pensate per un singolo task selezionato, non per un
+// filtro con opzione "Tutte". Duplicate qui, non importate, per non accoppiare
+// un componente di editing inline a un concetto di filtro che non gli
+// appartiene.
+const PRIORITY_TIER_FILTER_OPTIONS: { value: PriorityTierFilter; label: string }[] = [
+  { value: "all", label: "Tutte le priorità" },
+  { value: "high", label: "Alta (1-3)" },
+  { value: "medium", label: "Media (4-6)" },
+  { value: "low", label: "Bassa (7-10)" },
+];
+
+function matchesPriorityTier(priority: number, tier: PriorityTierFilter): boolean {
+  if (tier === "all") return true;
+  if (tier === "high") return priority <= 3;
+  if (tier === "medium") return priority >= 4 && priority <= 6;
+  return priority >= 7;
+}
+
+// Le quattro dimensioni di filtro della toolbar, valutate in AND: un task deve
+// soddisfarle tutte per restare visibile. normalizedQuery arriva già trim() +
+// lowerCase() dal chiamante, per non ripetere la normalizzazione ad ogni task.
+function taskMatchesFilters(
+  task: Task,
+  normalizedQuery: string,
+  statusFilter: StatusFilter,
+  priorityTierFilter: PriorityTierFilter,
+  assigneeFilter: string,
+): boolean {
+  if (statusFilter !== "all" && task.status !== statusFilter) return false;
+  if (!matchesPriorityTier(task.priority, priorityTierFilter)) return false;
+  if (
+    assigneeFilter !== "all" &&
+    !task.assignees.some((assignee) => assignee.id === assigneeFilter)
+  ) {
+    return false;
+  }
+  if (
+    normalizedQuery &&
+    !`${task.title} ${task.description}`.toLowerCase().includes(normalizedQuery)
+  ) {
+    return false;
+  }
+  return true;
+}
+
 type ViewMode = "list" | "kanban" | "calendar";
 
 const VIEW_MODE_KEY = "taskList.viewMode";
@@ -120,6 +169,15 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
   const [dragOverStatus, setDragOverStatus] = useState<TaskStatus | null>(null);
   const [prioritySort, setPrioritySort] = useState<PrioritySortOrder>("none");
   const [viewMode, setViewMode] = useState<ViewMode>(readViewModePreference);
+  // Ricerca/filtri della toolbar: restano condivisi tra le tre view (un solo
+  // set di controlli, montato una volta sopra il contenuto) e persistono al
+  // cambio vista. Il restringimento vero e proprio di righe/card/eventi in
+  // base a questi valori arriva in un passaggio successivo: qui vive solo il
+  // controllo e il suo stato, non ancora la logica di matching.
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [priorityTierFilter, setPriorityTierFilter] = useState<PriorityTierFilter>("all");
+  const [assigneeFilter, setAssigneeFilter] = useState("all");
   // Elenco dei dipendenti della company, per il picker degli assegnatari
   // (card lista/kanban + modale di creazione). Un fallimento qui non deve
   // impedire di vedere i task: resta semplicemente [], il picker degraderà
@@ -350,6 +408,19 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
     }
   }
 
+  const hasActiveFilters =
+    searchQuery.trim() !== "" ||
+    statusFilter !== "all" ||
+    priorityTierFilter !== "all" ||
+    assigneeFilter !== "all";
+
+  function resetFilters() {
+    setSearchQuery("");
+    setStatusFilter("all");
+    setPriorityTierFilter("all");
+    setAssigneeFilter("all");
+  }
+
   if (isLoading) {
     return (
       <Fragment>
@@ -397,7 +468,22 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
   // declaration definite più sotto sono considerate chiamabili da qualunque punto
   // del flusso, quindi TS non propaga al loro interno il narrowing di `if (!project) return`.
   const currentProject = project;
-  const groupedTasks = groupTasksByStatus(currentProject.tasks);
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const filteredTasks = currentProject.tasks.filter((task) =>
+    taskMatchesFilters(task, normalizedQuery, statusFilter, priorityTierFilter, assigneeFilter),
+  );
+  const groupedTasks = groupTasksByStatus(filteredTasks);
+  // Il Calendario riceve sempre l'elenco completo (vedi TaskCalendarComponent):
+  // a differenza di Lista/Kanban non nasconde i task filtrati, li attenua, per
+  // non lasciare celle vuote indistinguibili da giorni davvero senza task.
+  const filteredTaskIds = new Set(filteredTasks.map((task) => task.id));
+  const dimmedTaskIds = hasActiveFilters
+    ? new Set(
+        currentProject.tasks
+          .filter((task) => !filteredTaskIds.has(task.id))
+          .map((task) => task.id),
+      )
+    : undefined;
   const editingTask = taskModal?.mode === "edit" ? taskModal.task : null;
   const taskModalKey =
     taskModal === null ? "closed" : editingTask ? `edit-${editingTask.id}` : "create";
@@ -438,51 +524,149 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
       <div className={styles.taskListContainer}>
         <header className={styles.taskListHeader}>
           <h1 className={styles.taskListTitle}>{project.name}</h1>
-          <div className={styles.headerControls}>
-            {viewMode === "list" && (
-              <label className={styles.sortControl}>
-                <span className={styles.sortLabel}>Ordina per priorità</span>
-                <select
-                  className={styles.sortSelect}
-                  value={prioritySort}
-                  onChange={(event) =>
-                    setPrioritySort(event.target.value as PrioritySortOrder)
-                  }
-                >
-                  <option value="none">Nessun ordinamento</option>
-                  <option value="urgent-first">Più urgenti prima</option>
-                  <option value="urgent-last">Meno urgenti prima</option>
-                </select>
-              </label>
-            )}
-            <div className={styles.viewSwitch} role="group" aria-label="Modalità di visualizzazione">
-              <button
-                type="button"
-                className={styles.viewSwitchButton}
-                aria-pressed={viewMode === "list"}
-                onClick={() => setViewMode("list")}
-              >
-                Lista
-              </button>
-              <button
-                type="button"
-                className={styles.viewSwitchButton}
-                aria-pressed={viewMode === "kanban"}
-                onClick={() => setViewMode("kanban")}
-              >
-                Kanban
-              </button>
-              <button
-                type="button"
-                className={styles.viewSwitchButton}
-                aria-pressed={viewMode === "calendar"}
-                onClick={() => setViewMode("calendar")}
-              >
-                Calendario
-              </button>
-            </div>
+          <div className={styles.viewSwitch} role="group" aria-label="Modalità di visualizzazione">
+            <button
+              type="button"
+              className={styles.viewSwitchButton}
+              aria-pressed={viewMode === "list"}
+              onClick={() => setViewMode("list")}
+            >
+              Lista
+            </button>
+            <button
+              type="button"
+              className={styles.viewSwitchButton}
+              aria-pressed={viewMode === "kanban"}
+              onClick={() => setViewMode("kanban")}
+            >
+              Kanban
+            </button>
+            <button
+              type="button"
+              className={styles.viewSwitchButton}
+              aria-pressed={viewMode === "calendar"}
+              onClick={() => setViewMode("calendar")}
+            >
+              Calendario
+            </button>
           </div>
         </header>
+
+        {/* Ricerca + filtri + ordinamento: un solo pannello di controllo,
+            condiviso dalle tre view (a differenza del cambio vista sopra, che
+            resta nell'header). Il colore non è l'unico segnale di "filtro
+            attivo": .clearFiltersButton compare solo quando c'è qualcosa da
+            azzerare, ed è testuale (non richiede di percepire una tinta). */}
+        <div className={styles.filterToolbar} role="search" aria-label="Cerca e filtra i task">
+          <div className={styles.searchField}>
+            <svg
+              className={styles.searchIcon}
+              aria-hidden="true"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="11" cy="11" r="7" />
+              <path d="M21 21l-4.3-4.3" />
+            </svg>
+            <input
+              type="search"
+              className={styles.searchInput}
+              placeholder="Cerca per titolo o descrizione"
+              aria-label="Cerca task per titolo o descrizione"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                className={styles.searchClear}
+                aria-label="Cancella la ricerca"
+                onClick={() => setSearchQuery("")}
+              >
+                ×
+              </button>
+            )}
+          </div>
+
+          <label className={styles.toolbarField}>
+            <span className={styles.toolbarFieldLabel}>Stato</span>
+            <select
+              className={styles.toolbarSelect}
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
+            >
+              <option value="all">Tutti gli stati</option>
+              {STATUS_ORDER.map((status) => (
+                <option key={status} value={status}>
+                  {STATUS_GROUP_LABELS[status]}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className={styles.toolbarField}>
+            <span className={styles.toolbarFieldLabel}>Priorità</span>
+            <select
+              className={styles.toolbarSelect}
+              value={priorityTierFilter}
+              onChange={(event) =>
+                setPriorityTierFilter(event.target.value as PriorityTierFilter)
+              }
+            >
+              {PRIORITY_TIER_FILTER_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className={styles.toolbarField}>
+            <span className={styles.toolbarFieldLabel}>Assegnatario</span>
+            <select
+              className={styles.toolbarSelect}
+              value={assigneeFilter}
+              onChange={(event) => setAssigneeFilter(event.target.value)}
+            >
+              <option value="all">Tutti gli assegnatari</option>
+              {employees.map((employee) => (
+                <option key={employee.id} value={employee.id}>
+                  {employee.username}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {viewMode === "list" && (
+            <label className={styles.toolbarField}>
+              <span className={styles.toolbarFieldLabel}>Ordina per priorità</span>
+              <select
+                className={styles.toolbarSelect}
+                value={prioritySort}
+                onChange={(event) =>
+                  setPrioritySort(event.target.value as PrioritySortOrder)
+                }
+              >
+                <option value="none">Nessun ordinamento</option>
+                <option value="urgent-first">Più urgenti prima</option>
+                <option value="urgent-last">Meno urgenti prima</option>
+              </select>
+            </label>
+          )}
+
+          {hasActiveFilters && (
+            <button type="button" className={styles.clearFiltersButton} onClick={resetFilters}>
+              Cancella filtri
+            </button>
+          )}
+        </div>
+
         {viewMode === "kanban" ? (
           <TaskKanbanBoardComponent
             groupedTasks={groupedTasks}
@@ -491,9 +675,14 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
             onOpenTask={openEditModal}
             employees={employees}
             onAssigneesChange={handleAssigneesChange}
+            hasActiveFilters={hasActiveFilters}
           />
         ) : viewMode === "calendar" ? (
-          <TaskCalendarComponent tasks={currentProject.tasks} onOpenTask={openEditModal} />
+          <TaskCalendarComponent
+            tasks={currentProject.tasks}
+            onOpenTask={openEditModal}
+            dimmedTaskIds={dimmedTaskIds}
+          />
         ) : (
           <div className={styles.taskTableCard}>
             <table className={styles.taskTable}>
@@ -549,7 +738,9 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
                         >
                           {dragOverStatus === status
                             ? "Rilascia qui per spostare il task"
-                            : "Nessun task"}
+                            : hasActiveFilters
+                              ? "Nessun task corrisponde ai filtri"
+                              : "Nessun task"}
                         </td>
                       </tr>
                     ) : (

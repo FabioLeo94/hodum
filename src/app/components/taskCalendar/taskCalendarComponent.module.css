@@ -292,6 +292,20 @@
   outline-offset: 2px;
 }
 
+/* Task che non corrisponde a un filtro attivo (vedi dimmedTaskIds nel
+   componente): stessa opacità di .dayCell[data-muted] per riusare lo stesso
+   linguaggio visivo di "presente ma secondario" già stabilito per i giorni
+   fuori mese, invece di introdurne uno nuovo. Resta cliccabile (nessun
+   pointer-events: none): un task filtrato non è inaccessibile, è solo meno
+   rilevante nel contesto della ricerca corrente. */
+.dot[data-dimmed="true"] {
+  opacity: 0.4;
+}
+
+.dot[data-dimmed="true"]:hover {
+  opacity: 1;
+}
+
 .dotProgress {
   background-color: var(--color-info);
 }

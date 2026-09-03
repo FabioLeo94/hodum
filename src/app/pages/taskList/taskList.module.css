@@ -20,8 +20,9 @@
   border: 0;
 }
 
-/* Riga anziché colonna: il titolo resta l'ancora a sinistra, il controllo di
-   ordinamento è un'azione secondaria sulla tabella e vive alla sua destra,
+/* Riga anziché colonna: il titolo resta l'ancora a sinistra, il cambio vista
+   è l'unico controllo rimasto in questa riga (ricerca/filtri/ordinamento
+   vivono ora in .filterToolbar sotto, vedi più giù) e vive alla sua destra,
    sulla stessa altezza. wrap per non stringere il titolo su viewport stretti
    (vedi anche la regola @media più sotto). */
 .taskListHeader {
@@ -38,21 +39,10 @@
   font-weight: 700;
 }
 
-.headerControls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--m-md);
-}
-
-.sortControl {
-  display: flex;
-  align-items: center;
-  gap: var(--m-sm);
-}
-
-/* Segmented control neutro (stesso principio di .sortSelect: è un controllo
-   della vista, non uno stato del task, quindi niente tinta semantica). */
+/* Segmented control neutro (stesso principio di .toolbarSelect: è un
+   controllo della vista, non uno stato del task, quindi niente tinta
+   semantica). Resta nell'header, separato dalla toolbar sotto: cambiare
+   vista non è un filtro sul contenuto, è un modo diverso di guardarlo. */
 .viewSwitch {
   display: inline-flex;
   padding: 2px;
@@ -88,7 +78,115 @@
   color: var(--text-on-primary);
 }
 
-.sortLabel {
+/* Fascia dedicata a ricerca/filtri/ordinamento, separata dall'header (che
+   resta titolo + cambio vista): raggruppa tutto ciò che restringe o riordina
+   i task già visibili, indipendentemente dalla vista attiva. Stesso
+   trattamento "card" di .taskTableCard (bg-surface + radious-lg) così legge
+   come un unico pannello di controllo coerente col resto della pagina,
+   invece di pillole sparse direttamente sullo sfondo. flex-wrap: i controlli
+   scendono su più righe su viewport stretti, nessuna media query dedicata. */
+.filterToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--m-md);
+  padding: var(--p-md) var(--p-lg);
+  background-color: var(--bg-surface);
+  border-radius: var(--radious-lg);
+}
+
+/* Primo controllo della toolbar (ricerca libera su titolo/descrizione):
+   riceve più spazio orizzontale degli altri campi perché il testo digitato
+   è meno prevedibile di un valore da select, ma resta comunque limitato da
+   max-width per non spingere gli altri filtri fuori riga su schermi larghi. */
+.searchField {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1 1 200px;
+  min-width: 160px;
+  max-width: 340px;
+}
+
+.searchIcon {
+  position: absolute;
+  left: var(--p-md);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+/* Stesso raggio/sfondo a pillola di .toolbarSelect (vedi sotto), ma è un
+   input di testo libero, non un valore chiuso: niente freccia disegnata,
+   spazio a sinistra per l'icona di ricerca e a destra per il pulsante "×"
+   quando c'è del testo da cancellare. */
+.searchInput {
+  width: 100%;
+  padding: var(--p-sm) var(--p-xl) var(--p-sm) calc(var(--p-xl) + var(--p-xs));
+  border: 1px solid var(--bg-field);
+  border-radius: var(--radious-xl);
+  background-color: var(--bg-field);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.searchInput::placeholder {
+  color: var(--text-muted);
+}
+
+/* Il reset personalizzato (.searchClear) rimpiazza quello nativo: senza
+   questa regola Chrome/Safari mostrerebbero anche la propria "×" per
+   type="search", duplicando il controllo. */
+.searchInput::-webkit-search-cancel-button {
+  display: none;
+}
+
+.searchInput:hover {
+  border-color: var(--bg-primary);
+}
+
+.searchInput:focus-visible {
+  border-color: var(--bg-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--bg-primary) 25%, transparent);
+}
+
+.searchClear {
+  position: absolute;
+  right: var(--p-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.searchClear:hover {
+  background-color: var(--bg-field);
+  color: var(--text-primary);
+}
+
+.searchClear:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+.toolbarField {
+  display: flex;
+  align-items: center;
+  gap: var(--m-sm);
+}
+
+.toolbarFieldLabel {
   color: var(--text-muted);
   font-size: 0.75rem;
   font-weight: 700;
@@ -97,10 +195,12 @@
   white-space: nowrap;
 }
 
-/* Stesso trattamento a "pillola" degli altri select della pagina (freccia
-   disegnata, stessi raggio/transizioni), ma neutro: non è uno stato del task,
-   è un controllo della vista, quindi niente tinta semantica. */
-.sortSelect {
+/* Stesso trattamento a "pillola" per tutti i select della toolbar (stato,
+   priorità, assegnatario, ordinamento): freccia disegnata, stessi
+   raggio/transizioni, ma neutro perché qui è un criterio di ricerca/vista,
+   non uno stato del task (quello ha una tinta semantica propria in
+   TaskStatusSelectComponent/PrioritySelectComponent). */
+.toolbarSelect {
   padding: var(--p-xs) var(--p-lg) var(--p-xs) var(--p-md);
   border: 1px solid var(--bg-field);
   border-radius: var(--radious-xl);
@@ -123,18 +223,44 @@
     box-shadow 150ms ease;
 }
 
-.sortSelect:hover {
+.toolbarSelect:hover {
   border-color: var(--bg-primary);
 }
 
-.sortSelect:focus-visible {
+.toolbarSelect:focus-visible {
   border-color: var(--bg-primary);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--bg-primary) 25%, transparent);
 }
 
-.sortSelect option {
+.toolbarSelect option {
   background-color: var(--bg-surface);
   color: var(--text-primary);
+}
+
+/* Compare solo quando almeno un filtro è attivo (vedi hasActiveFilters in
+   taskList.tsx): un pulsante sempre presente inviterebbe a cliccarlo anche a
+   vuoto. Tono neutro (non --color-danger): resetta una preferenza di vista,
+   non cancella dati. */
+.clearFiltersButton {
+  padding: var(--p-xs) var(--p-md);
+  border-radius: var(--radious-xl);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.clearFiltersButton:hover {
+  background-color: var(--bg-field);
+  color: var(--text-primary);
+}
+
+.clearFiltersButton:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
 }
 
 .taskTableCard {
@@ -345,7 +471,10 @@
   .taskRow,
   .dragHandle,
   .emptyRow,
-  .sortSelect,
+  .searchInput,
+  .searchClear,
+  .toolbarSelect,
+  .clearFiltersButton,
   .viewSwitchButton {
     transition: none;
   }
@@ -358,5 +487,14 @@
 
   .taskListContainer {
     --fab-offset: var(--p-lg);
+  }
+
+  /* Sotto questa soglia anche il campo di ricerca (l'unico con una
+     max-width propria) va a piena larghezza quando va a capo da solo:
+     altrimenti resterebbe ingiustificatamente stretto rispetto ai select
+     che gli stanno sotto. */
+  .searchField {
+    max-width: none;
+    flex-basis: 100%;
   }
 }

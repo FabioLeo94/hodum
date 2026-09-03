@@ -105,12 +105,23 @@ const DOT_VISIBLE_LIMIT = 6;
 interface TaskCalendarComponentProps {
   tasks: Task[];
   onOpenTask: (task: Task) => void;
+  /** Id dei task che NON corrispondono a un filtro attivo altrove (ricerca
+   * testo/stato/priorità/assegnatario nella pagina task, vedi taskList.tsx).
+   * A differenza di Lista/Kanban, dove i filtri nascondono le righe/card che
+   * non corrispondono, qui i dot restano tutti al proprio posto: nascondere
+   * eventi lascerebbe celle vuote indistinguibili da giorni davvero senza
+   * task, rompendo la leggibilità della griglia mensile. I task filtrati
+   * vengono invece attenuati (stesso trattamento di opacità dei giorni fuori
+   * mese, vedi .dayCell[data-muted]), restando comunque cliccabili. Opzionale
+   * e senza default "computato": il chiamante decide se e quando passarlo,
+   * la logica di matching vera e propria non vive qui. */
+  dimmedTaskIds?: Set<string>;
 }
 
 // Vista Calendario dei task con scadenza: nessun task senza dueDate compare
 // qui (a differenza di Lista/Kanban), quindi riceve l'elenco piatto dei task
 // del progetto, non raggruppato per stato.
-function TaskCalendarComponent({ tasks, onOpenTask }: TaskCalendarComponentProps) {
+function TaskCalendarComponent({ tasks, onOpenTask, dimmedTaskIds }: TaskCalendarComponentProps) {
   const [viewedMonth, setViewedMonth] = useState(() => startOfMonth(new Date()));
   // Giorni con la lista task espansa oltre DOT_VISIBLE_LIMIT, opt-in per
   // singola cella: non si resetta al cambio mese, ma le dateKey sono
@@ -237,6 +248,7 @@ function TaskCalendarComponent({ tasks, onOpenTask }: TaskCalendarComponentProps
                             : dueSoon
                               ? ", in scadenza"
                               : "";
+                          const isDimmed = dimmedTaskIds?.has(task.id) ?? false;
                           return (
                             <button
                               key={task.id}
@@ -244,6 +256,7 @@ function TaskCalendarComponent({ tasks, onOpenTask }: TaskCalendarComponentProps
                               className={`${styles.dot} ${STATUS_DOT_STYLES[task.status]} ${
                                 overdue ? styles.dotOverdue : dueSoon ? styles.dotDueSoon : ""
                               }`}
+                              data-dimmed={isDimmed}
                               title={`${task.title} — ${STATUS_LABELS[task.status]}${dueState}`}
                               aria-label={task.title}
                               onClick={() => onOpenTask(task)}
