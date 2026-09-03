@@ -15,7 +15,11 @@ import {
 } from "../../services/project/projectService";
 import { subscribeToProjects } from "../../services/realtime/socketService";
 import { logout, useAuthUser } from "../../services/auth/authService";
-import type { Project, Task, TaskWithProject } from "../../../shared/types/project";
+import type {
+  Project,
+  Task,
+  TaskWithProject,
+} from "../../../shared/types/project";
 import { usePageMeta } from "../../../shared/hooks/usePageMeta";
 import styles from "./dashboard.module.css";
 
@@ -49,7 +53,9 @@ function Dashboard() {
   const [companyTasks, setCompanyTasks] = useState<TaskWithProject[]>([]);
   const [isCalendarLoading, setIsCalendarLoading] = useState(true);
   const [calendarLoadError, setCalendarLoadError] = useState("");
-  const [selectedTask, setSelectedTask] = useState<TaskWithProject | null>(null);
+  const [selectedTask, setSelectedTask] = useState<TaskWithProject | null>(
+    null,
+  );
 
   // Il FAB "+" sotto è nascosto ai dipendenti (canManage false): senza questo
   // effect l'icona dell'assistente (montata nel layout, non qui) resterebbe
@@ -121,18 +127,25 @@ function Dashboard() {
           if (current.some((existing) => existing.id === project.id)) {
             return current;
           }
-          return [...current, { id: project.id, name: project.name, tasks: [] }];
+          return [
+            ...current,
+            { id: project.id, name: project.name, tasks: [] },
+          ];
         });
       },
       onProjectUpdated: (project) => {
         setProjects((current) =>
           current.map((existing) =>
-            existing.id === project.id ? { ...existing, name: project.name } : existing,
+            existing.id === project.id
+              ? { ...existing, name: project.name }
+              : existing,
           ),
         );
       },
       onProjectDeleted: (projectId) => {
-        setProjects((current) => current.filter((project) => project.id !== projectId));
+        setProjects((current) =>
+          current.filter((project) => project.id !== projectId),
+        );
       },
     });
 
@@ -212,13 +225,6 @@ function Dashboard() {
       <div className={styles.dashboardContainer}>
         <header className={styles.dashboardHeader}>
           <h1 className={styles.dashboardTitle}>I tuoi progetti</h1>
-          <p className={styles.dashboardSubtitle} role="status">
-            {isLoading
-              ? "Caricamento dei progetti..."
-              : projects.length === 0
-                ? "Nessun progetto attivo al momento."
-                : `${projects.length} progett${projects.length === 1 ? "o" : "i"} attiv${projects.length === 1 ? "o" : "i"}.`}
-          </p>
         </header>
 
         {loadError ? (
@@ -257,7 +263,10 @@ function Dashboard() {
               Caricamento del calendario...
             </p>
           ) : (
-            <TaskCalendarComponent tasks={companyTasks} onOpenTask={handleOpenTaskDetail} />
+            <TaskCalendarComponent
+              tasks={companyTasks}
+              onOpenTask={handleOpenTaskDetail}
+            />
           )}
         </section>
 

@@ -8,7 +8,7 @@
   height: calc(100vh - 60px);
   display: flex;
   flex-direction: column;
-  gap: var(--m-xl);
+  gap: var(--m-md);
   padding: var(--p-xl);
   overflow: hidden;
 }
@@ -34,13 +34,17 @@
 /* Riga singola scrollabile orizzontalmente invece di wrap: le card restano a
    dimensione fissa (flex-shrink: 0) durante lo scroll, il contenitore stesso
    non si comprime quando il calendario sotto (flex: 1) reclama lo spazio
-   residuo. */
+   residuo. Il gap di .dashboardContainer sopra è stato ridotto apposta: lo
+   spazio così risparmiato torna qui come padding verticale, per dare alla
+   scrollbar nativa (che nasce a ridosso del padding-box) respiro dalle card
+   invece di restarci incollata sotto. */
 .projectsGrid {
   flex-shrink: 0;
   display: flex;
   flex-wrap: nowrap;
   overflow-x: auto;
   gap: var(--m-lg);
+  padding: var(--m-md) 0 var(--m-lg) 0;
 }
 
 .projectsGrid > * {
