@@ -60,7 +60,12 @@
   color: var(--text-on-primary);
   font-size: 0.68rem;
   font-weight: 700;
-  line-height: 1;
+  /* line-height: 1 non basta: --font-display (Verdana/Lucida) ha ascent/
+     descent molto sbilanciati, quindi anche a 1 il "line-box" riserva più
+     spazio sotto la cifra che sopra e il centraggio flex la sposta in alto.
+     line-height: 0 collassa la riga al minimo, così align-items: center
+     centra il glifo reale invece del line-box gonfiato dal font. */
+  line-height: 0;
   border: 2px solid var(--bg-surface);
 }
 
