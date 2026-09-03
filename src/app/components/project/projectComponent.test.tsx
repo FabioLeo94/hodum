@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import ProjectComponent from "./projectComponent";
 import type { Project } from "../../../shared/types/project";
@@ -52,24 +52,20 @@ describe("ProjectComponent", () => {
     ).toHaveAttribute("href", "/dashboard/1/task-list");
   });
 
-  it("exposes rename and delete actions as accessible buttons, not nested inside the link", () => {
+  it("exposes rename, delete and download actions inside the kebab menu", () => {
     renderProject();
-    expect(
-      screen.getByRole("button", { name: "Rinomina progetto Progetto Demo" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Elimina progetto Progetto Demo" }),
-    ).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Altre azioni per Progetto Demo" }),
+    );
+
+    expect(screen.getByRole("menuitem", { name: "Rinomina" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Elimina" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Scarica..." })).toBeInTheDocument();
   });
 
-  it("hides rename/delete/kebab actions when canManage is false", () => {
+  it("hides the kebab menu entirely when canManage is false", () => {
     renderProject(false);
-    expect(
-      screen.queryByRole("button", { name: "Rinomina progetto Progetto Demo" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "Elimina progetto Progetto Demo" }),
-    ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Altre azioni per Progetto Demo" }),
     ).not.toBeInTheDocument();

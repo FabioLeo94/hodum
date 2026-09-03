@@ -215,48 +215,6 @@
   font-weight: 500;
 }
 
-.hoverActions {
-  position: absolute;
-  top: var(--p-md);
-  right: var(--p-md);
-  z-index: 2;
-  display: none;
-}
-
-.iconButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background-color: var(--bg-field);
-  color: var(--text-primary);
-  cursor: pointer;
-  transition:
-    background-color 150ms ease,
-    color 150ms ease,
-    transform 100ms ease;
-}
-
-.iconButton:hover {
-  background-color: color-mix(in srgb, var(--bg-field) 80%, white 20%);
-}
-
-.iconButton:focus-visible {
-  outline: 2px solid var(--bg-primary);
-  outline-offset: 2px;
-}
-
-.iconButton:active {
-  transform: scale(0.94);
-}
-
-.iconButtonDanger:hover {
-  background-color: var(--color-danger);
-  color: var(--text-on-primary);
-}
-
 .kebabArea {
   position: absolute;
   top: var(--p-md);
@@ -331,6 +289,13 @@
   outline-offset: -2px;
 }
 
+.popoverSeparator {
+  height: 1px;
+  margin: var(--p-xs) var(--p-sm);
+  background-color: var(--bg-surface);
+  opacity: 0.6;
+}
+
 @keyframes popoverPopIn {
   from {
     opacity: 0;
@@ -343,35 +308,11 @@
   }
 }
 
-@media (hover: hover) and (pointer: fine) {
-  .hoverActions {
-    display: flex;
-    gap: var(--m-sm);
-    opacity: 0;
-    transition: opacity 150ms ease;
-  }
-
-  .projectCard:hover .hoverActions,
-  .projectCard:focus-within .hoverActions {
-    opacity: 1;
-  }
-
-  .kebabArea {
-    display: none;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .hoverActions {
-    transition: none;
-  }
-
-  .iconButton,
   .kebabButton {
     transition: none;
   }
 
-  .iconButton:active,
   .kebabButton:active {
     transform: none;
   }

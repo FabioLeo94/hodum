@@ -1,0 +1,119 @@
+.description {
+  margin-bottom: var(--m-lg);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+/* Griglia 2x2: con quattro opzioni e la larghezza standard della modale
+   (min(480px, 92vw)) due colonne tengono ogni card leggibile e riconoscibile
+   a colpo d'occhio come "bottone", invece della singola colonna stretta che
+   la faceva leggere come testo in elenco. */
+.formatGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--m-md);
+}
+
+/* Card-bottone: bordo + sfondo pieno (non solo testo su hover) per leggersi
+   come superficie cliccabile fin dallo stato di riposo, coerente con
+   .contextToggle di assistantDrawerComponent per lo stesso pattern
+   "toggle a card" già in uso nel progetto. */
+.formatOption {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--m-xs);
+  min-height: 64px;
+  padding: var(--p-md) var(--p-lg);
+  border: 1px solid var(--bg-field);
+  border-radius: var(--radious-md);
+  background-color: var(--bg-field);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    transform 100ms ease;
+}
+
+.formatOption:hover {
+  border-color: color-mix(in srgb, var(--bg-primary) 60%, var(--bg-field));
+  background-color: color-mix(in srgb, var(--bg-field) 80%, white 20%);
+}
+
+.formatOption:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+.formatOption:active {
+  transform: scale(0.98);
+}
+
+/* Stato selezionato: bordo + sfondo tinti di menta e non solo il segno di
+   spunta, cosi' resta distinguibile anche senza percepire colore/icona. */
+.formatOption[data-selected="true"] {
+  border-color: var(--bg-primary);
+  background-color: color-mix(in srgb, var(--bg-primary) 16%, var(--bg-field));
+}
+
+.formatOption[data-selected="true"] .formatName {
+  color: var(--text-primary);
+}
+
+.checkIcon {
+  position: absolute;
+  top: var(--p-sm);
+  right: var(--p-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: var(--bg-primary);
+  color: var(--text-on-primary);
+  padding: 2px;
+}
+
+.formatName {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding-right: var(--p-xl);
+}
+
+.formatDescription {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+@media (max-width: 420px) {
+  /* Sotto i 420px la modale e' quasi a tutta larghezza ma il padding interno
+     (--p-lg, vedi modalBaseComponent.module.css) lascia poco margine per due
+     colonne leggibili: una card per riga evita testo troppo compresso. */
+  .formatGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.submitError {
+  composes: submitError from "../../../shared/styles/modalForm.module.css";
+}
+
+.cancelButton {
+  composes: cancelButton from "../../../shared/styles/modalForm.module.css";
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .formatOption {
+    transition: none;
+  }
+
+  .formatOption:active {
+    transform: none;
+  }
+}

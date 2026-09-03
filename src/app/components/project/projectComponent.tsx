@@ -1,9 +1,14 @@
 import { Fragment, useEffect, useId, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { EllipsisVertical, Pencil, Trash2 } from "lucide-react";
+import { EllipsisVertical } from "lucide-react";
 import type { Project } from "../../../shared/types/project";
 import RenameProjectModalComponent from "../renameProjectModal/renameProjectModalComponent";
 import DeleteProjectModalComponent from "../deleteProjectModal/deleteProjectModalComponent";
+import DownloadProjectModalComponent from "../downloadProjectModal/downloadProjectModalComponent";
+import {
+  downloadProject,
+  type ExportFormat,
+} from "../../../shared/utils/projectExport";
 import styles from "./projectComponent.module.css";
 
 interface Prop extends Project {
@@ -15,7 +20,7 @@ interface Prop extends Project {
   canManage: boolean;
 }
 
-type ActiveModal = "rename" | "delete" | null;
+type ActiveModal = "rename" | "delete" | "download" | null;
 
 // Raggio e spessore del donut in unità di viewBox (0-100): definiscono uno
 // spessore dell'anello proporzionalmente simile alla vecchia barra lineare,
@@ -147,8 +152,17 @@ function ProjectComponent({
     setActiveModal("delete");
   }
 
+  function openDownloadModal() {
+    setIsMenuOpen(false);
+    setActiveModal("download");
+  }
+
   function closeModal() {
     setActiveModal(null);
+  }
+
+  function handleDownload(format: ExportFormat) {
+    downloadProject({ id, name, tasks }, format);
   }
 
   async function handleRename(newName: string) {
@@ -259,25 +273,6 @@ function ProjectComponent({
 
       {canManage && (
         <Fragment>
-          <div className={styles.hoverActions}>
-            <button
-              type="button"
-              className={styles.iconButton}
-              aria-label={`Rinomina progetto ${name}`}
-              onClick={openRenameModal}
-            >
-              <Pencil size={16} aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              className={`${styles.iconButton} ${styles.iconButtonDanger}`}
-              aria-label={`Elimina progetto ${name}`}
-              onClick={openDeleteModal}
-            >
-              <Trash2 size={16} aria-hidden="true" />
-            </button>
-          </div>
-
           <div className={styles.kebabArea} ref={kebabContainerRef}>
             <button
               ref={kebabButtonRef}
@@ -310,6 +305,15 @@ function ProjectComponent({
                 >
                   Elimina
                 </button>
+                <div className={styles.popoverSeparator} role="separator" />
+                <button
+                  type="button"
+                  role="menuitem"
+                  className={styles.popoverItem}
+                  onClick={openDownloadModal}
+                >
+                  Scarica...
+                </button>
               </div>
             )}
           </div>
@@ -328,6 +332,12 @@ function ProjectComponent({
             projectName={name}
             onConfirm={handleDelete}
             submitError={deleteError}
+          />
+          <DownloadProjectModalComponent
+            key={activeModal === "download" ? "download-open" : "download-closed"}
+            isOpen={activeModal === "download"}
+            onClose={closeModal}
+            onDownload={handleDownload}
           />
         </Fragment>
       )}
