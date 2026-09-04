@@ -2,6 +2,7 @@ import { useState } from "react";
 import styles from "./registerFormComponent.module.css";
 import InputComponent from "../input/inputComponent";
 import ButtonComponent from "../button/buttonComponent";
+import RecoveryCodeDisplayComponent from "../recoveryCodeDisplay/recoveryCodeDisplayComponent";
 import { registerCompany } from "../../services/company/companyService";
 import { persistSession } from "../../services/auth/authService";
 import {
@@ -20,6 +21,10 @@ function RegisterFormComponent() {
   const [formError, setFormError] = useState("");
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Non-null solo tra la registrazione riuscita e la conferma dell'utente:
+  // finché è valorizzato, il form lascia il posto a
+  // RecoveryCodeDisplayComponent invece di navigare subito alla dashboard.
+  const [recoveryCode, setRecoveryCode] = useState<string | null>(null);
 
   const companyNameError =
     submitAttempted && companyName.trim() === ""
@@ -66,14 +71,16 @@ function RegisterFormComponent() {
 
     setIsSubmitting(true);
     try {
-      const { token, user } = await registerCompany({
+      const { token, user, recoveryCode: newRecoveryCode } = await registerCompany({
         companyName,
         username,
         email,
         password,
       });
+      // La sessione parte già da qui (come prima): il codice di recupero va
+      // solo mostrato prima di lasciare la pagina, non blocca l'accesso.
       persistSession(token, user, true);
-      navigate("/dashboard");
+      setRecoveryCode(newRecoveryCode);
     } catch (error) {
       setFormError(
         error instanceof Error
@@ -83,6 +90,15 @@ function RegisterFormComponent() {
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  if (recoveryCode) {
+    return (
+      <RecoveryCodeDisplayComponent
+        recoveryCode={recoveryCode}
+        onConfirm={() => navigate("/dashboard")}
+      />
+    );
   }
 
   return (

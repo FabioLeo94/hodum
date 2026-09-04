@@ -23,6 +23,10 @@ export interface RegisterCompanyResult {
   // Token già firmato dal backend (vedi companyController.ts): la
   // registrazione non richiede più una POST /auth/login separata subito dopo.
   token: string;
+  // In chiaro, una volta sola (vedi backend/src/services/companyService.ts):
+  // va mostrato all'utente con un avviso esplicito prima di procedere, non
+  // sarà più recuperabile da qui.
+  recoveryCode: string;
 }
 
 export async function registerCompany(

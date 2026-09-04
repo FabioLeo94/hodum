@@ -4,7 +4,7 @@ import InputComponent from "../input/inputComponent";
 import ButtonComponent from "../button/buttonComponent";
 import { login, persistSession, RateLimitError } from "../../services/auth/authService";
 import { validateEmail } from "../../services/validation/validationService";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 
 // mm:ss invece del solo numero di secondi: più leggibile quando il rate
 // limit di /auth/login (15 minuti, vedi backend/src/app.ts) è quasi intero.
@@ -108,6 +108,9 @@ function AuthFormComponent() {
         />
         Resta connesso
       </label>
+      <Link to="/recover-password" className={styles.authFormForgotPassword}>
+        Password dimenticata?
+      </Link>
       {isRateLimited && (
         <p role="alert" className={styles.authFormError}>
           Troppi tentativi di accesso. Riprova tra {formatCountdown(retrySecondsLeft)}.

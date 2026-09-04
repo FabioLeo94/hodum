@@ -29,6 +29,10 @@ export interface RegisterCompanyResponse {
   // POST /auth/login subito dopo la registrazione (come faceva il vecchio
   // flusso self-signup, vedi registerFormComponent.tsx).
   token: string;
+  // In chiaro, una volta sola (vedi companyService.registerCompany): il
+  // frontend deve mostrarlo con un avviso esplicito prima di procedere alla
+  // dashboard, perché non sarà più recuperabile da qui.
+  recoveryCode: string;
 }
 
 export interface CreateEmployeeRequest {
@@ -83,7 +87,7 @@ export class CompanyController extends Controller {
     }
 
     try {
-      const { user, company } = await registerCompany({
+      const { user, company, recoveryCode } = await registerCompany({
         companyName: body.companyName,
         username: body.username,
         email: body.email,
@@ -91,7 +95,7 @@ export class CompanyController extends Controller {
       });
       const token = signSessionToken(user.id);
       this.setStatus(201);
-      return { user, company, token };
+      return { user, company, token, recoveryCode };
     } catch (err) {
       if (err instanceof UserConflictError) {
         this.setStatus(409);

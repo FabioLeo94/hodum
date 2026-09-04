@@ -2,6 +2,7 @@ import "./App.css";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import Auth from "./app/pages/auth/auth";
 import ChangePassword from "./app/pages/changePassword/changePassword";
+import RecoverPassword from "./app/pages/recoverPassword/recoverPassword";
 import Dashboard from "./app/pages/dashboard/dashboard";
 import Employees from "./app/pages/employees/employees";
 import TaskList from "./app/pages/taskList/taskList";
@@ -13,6 +14,9 @@ function App() {
       <Routes>
         <Route path="" element={<Navigate to={"/auth"} />} />
         <Route path="auth" element={<Auth />} />
+        {/* Pubblica come "auth": è l'unico modo di recuperare l'accesso
+            senza avere già una sessione (vedi recoverPassword.tsx). */}
+        <Route path="recover-password" element={<RecoverPassword />} />
         {/* Fuori da ProtectedRouteComponent: ha una guardia propria
             (vedi changePassword.tsx) equivalente ma che non redirige verso
             se stessa quando mustChangePassword è true. */}

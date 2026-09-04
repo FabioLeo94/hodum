@@ -56,6 +56,22 @@ export async function createApp(): Promise<Express> {
     }),
   );
 
+  // Stesso limite di /auth/login, stesso motivo: anche se l'80 bit di entropia
+  // del recovery code (utils/recoveryCode.ts) rende un brute-force già
+  // impraticabile da solo, resta l'unica rotta pubblica che accetta un
+  // segreto lato utente senza passare da qui — difesa in profondità, non
+  // l'unica barriera.
+  app.use(
+    '/auth/recover-password',
+    rateLimit({
+      windowMs: 15 * 60 * 1000,
+      limit: 10,
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: { message: 'Troppi tentativi di recupero, riprova più tardi' },
+    }),
+  );
+
   // /docs e /swagger.json espongono la mappa completa delle rotte interne
   // (path, forma di request/response, quali richiedono 'owner'/'manager'):
   // informazione utile a chi sviluppa, ma superficie di ricognizione gratuita

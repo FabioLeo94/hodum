@@ -22,3 +22,29 @@
 .authFormError {
   composes: formError from "../../../shared/styles/formCard.module.css";
 }
+
+.authFormForgotPassword {
+  align-self: flex-start;
+  margin-top: calc(var(--m-sm) * -1);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 150ms ease;
+}
+
+.authFormForgotPassword:hover {
+  color: var(--text-primary);
+}
+
+.authFormForgotPassword:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+  border-radius: var(--radious-xs);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .authFormForgotPassword {
+    transition: none;
+  }
+}

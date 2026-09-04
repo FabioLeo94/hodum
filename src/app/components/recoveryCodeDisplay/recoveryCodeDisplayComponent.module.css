@@ -1,0 +1,81 @@
+.recoveryCodeCard {
+  composes: formCard from "../../../shared/styles/formCard.module.css";
+}
+
+.recoveryCodeTitle {
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.recoveryCodeDescription {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.recoveryCodeBox {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--m-md);
+  padding: var(--p-md) var(--p-lg);
+  border-radius: var(--radious-md);
+  background-color: var(--bg-field);
+}
+
+.recoveryCodeValue {
+  color: var(--bg-primary);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  word-break: break-all;
+}
+
+.recoveryCodeCopyButton {
+  flex-shrink: 0;
+  padding: var(--p-sm) var(--p-md);
+  border: 1px solid var(--text-muted);
+  border-radius: var(--radious-sm);
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
+}
+
+.recoveryCodeCopyButton:hover {
+  background-color: var(--bg-primary);
+  border-color: var(--bg-primary);
+  color: var(--text-on-primary);
+}
+
+.recoveryCodeCopyButton:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+.recoveryCodeAck {
+  display: flex;
+  align-items: center;
+  gap: var(--m-sm);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.recoveryCodeAck:hover .recoveryCodeCheckbox {
+  border-color: var(--bg-primary);
+}
+
+.recoveryCodeCheckbox {
+  composes: checkboxBase from "../../../shared/styles/checkboxBase.module.css";
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recoveryCodeCopyButton {
+    transition: none;
+  }
+}

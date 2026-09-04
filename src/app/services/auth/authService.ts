@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { API_BASE_URL } from "../httpClient";
+import { API_BASE_URL, readErrorMessage } from "../httpClient";
 
 // Il token JWT sostituisce il vecchio flag booleano: la sessione ora sa
 // "chi" è l'utente autenticato, non solo che qualcuno lo è.
@@ -31,6 +31,15 @@ export interface User {
 interface LoginResponseBody {
   user: User;
   token: string;
+}
+
+interface RecoverPasswordResponseBody {
+  user: User;
+  token: string;
+  // Nuovo codice, sostituisce quello appena consumato: da mostrare
+  // all'utente esattamente come il primo ricevuto in registrazione (vedi
+  // RecoveryCodeDisplayComponent), perché non sarà più recuperabile da qui.
+  recoveryCode: string;
 }
 
 // Lanciato da login() quando /auth/login risponde 429 (rate limit per IP,
@@ -71,6 +80,36 @@ export async function login(
     return null;
   }
   const body = (await response.json()) as LoginResponseBody;
+  return body;
+}
+
+// null su 401 (email o codice non validi, stesso principio di InvalidCredentialsError
+// per non distinguere quale dei due è sbagliato); lancia Error sul 422
+// (newPassword non rispetta la policy) con il messaggio del backend, e
+// RateLimitError sul 429 — stesso schema di login() sopra.
+export async function recoverPassword(
+  email: string,
+  recoveryCode: string,
+  newPassword: string,
+): Promise<{ user: User; token: string; recoveryCode: string } | null> {
+  const response = await fetch(`${API_BASE_URL}/auth/recover-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, recoveryCode, newPassword }),
+  });
+  if (response.status === 429) {
+    const resetHeader = response.headers.get("RateLimit-Reset");
+    const parsed = resetHeader !== null ? Number(resetHeader) : NaN;
+    throw new RateLimitError(Number.isFinite(parsed) && parsed > 0 ? parsed : 60);
+  }
+  if (response.status === 401) {
+    return null;
+  }
+  if (!response.ok) {
+    const message = await readErrorMessage(response);
+    throw new Error(message ?? "Recupero password non riuscito. Riprova più tardi.");
+  }
+  const body = (await response.json()) as RecoverPasswordResponseBody;
   return body;
 }
 

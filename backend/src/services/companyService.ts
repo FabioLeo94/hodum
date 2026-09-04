@@ -3,6 +3,7 @@ import { DatabaseError } from 'pg';
 import { pool } from '../db/pool';
 import type { Company } from '../models/company';
 import type { User } from '../models/user';
+import { generateRecoveryCode, normalizeRecoveryCode } from '../utils/recoveryCode';
 import { hashPassword, mapUserUniqueViolation, toUser, USER_COLUMNS, type UserRow } from './userService';
 
 // Riga così come esce da pg per l'INSERT su companies: snake_case, coerente
@@ -27,6 +28,13 @@ export interface RegisterCompanyInput {
 export interface RegisterCompanyResult {
   user: User;
   company: Company;
+  // In chiaro, una volta sola: da qui in poi ne esiste solo l'hash
+  // (recovery_code_hash, migrations/0027). Il chiamante (companyController)
+  // lo restituisce nella risposta di registrazione e non è più recuperabile —
+  // se l'owner lo perde, resta solo il flusso "password dimenticata" con
+  // l'ultimo codice ancora valido, o nessuno se anche quello è già stato
+  // consumato.
+  recoveryCode: string;
 }
 
 export interface CreateEmployeeInput {
@@ -56,12 +64,16 @@ export async function registerCompany(input: RegisterCompanyInput): Promise<Regi
     // companies.id che invece ce l'ha (0013).
     const userId = randomUUID();
     const passwordHash = await hashPassword(input.password);
-    await client.query('INSERT INTO users (id, username, email, password) VALUES ($1, $2, $3, $4)', [
-      userId,
-      input.username,
-      input.email,
-      passwordHash,
-    ]);
+    // Generato qui e non in un secondo momento: solo l'owner (creato da
+    // registerCompany) ha mai un recovery code, mai i dipendenti/manager
+    // creati da createEmployee sotto, che vengono invece resettati
+    // dall'owner stesso (PUT /users/{id}, userController.ts).
+    const recoveryCode = generateRecoveryCode();
+    const recoveryCodeHash = await hashPassword(normalizeRecoveryCode(recoveryCode));
+    await client.query(
+      'INSERT INTO users (id, username, email, password, recovery_code_hash) VALUES ($1, $2, $3, $4, $5)',
+      [userId, input.username, input.email, passwordHash, recoveryCodeHash],
+    );
 
     // owner_id è NOT NULL su companies (0013): l'utente va creato prima e
     // referenziato qui, non il contrario.
@@ -79,7 +91,7 @@ export async function registerCompany(input: RegisterCompanyInput): Promise<Regi
     );
 
     await client.query('COMMIT');
-    return { user: toUser(userResult.rows[0]), company };
+    return { user: toUser(userResult.rows[0]), company, recoveryCode };
   } catch (err) {
     await client.query('ROLLBACK');
     // Solo lo username/email di users ha vincoli UNIQUE raggiungibili qui:
