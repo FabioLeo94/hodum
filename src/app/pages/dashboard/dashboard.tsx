@@ -13,6 +13,7 @@ import {
   getAllCompanyTasks,
   getAllProjects,
   updateProject,
+  updateTask,
 } from "../../services/project/projectService";
 import { subscribeToProjects } from "../../services/realtime/socketService";
 import { logout, useAuthUser } from "../../services/auth/authService";
@@ -54,6 +55,7 @@ function Dashboard() {
   const [companyTasks, setCompanyTasks] = useState<TaskWithProject[]>([]);
   const [isCalendarLoading, setIsCalendarLoading] = useState(true);
   const [calendarLoadError, setCalendarLoadError] = useState("");
+  const [calendarUpdateError, setCalendarUpdateError] = useState("");
   const [selectedTask, setSelectedTask] = useState<TaskWithProject | null>(
     null,
   );
@@ -220,6 +222,37 @@ function Dashboard() {
     navigate(`/dashboard/${task.projectId}/task-list?openTask=${task.id}`);
   }
 
+  // Drag & drop di un dot su un altro giorno (vedi onDueDateChange in
+  // TaskCalendarComponent): a differenza di taskList.tsx qui il task non
+  // porta con sé il projectId (TaskCalendarComponent lavora su Task, non
+  // TaskWithProject), quindi va risolto tramite lo stesso lookup di
+  // handleOpenTaskDetail prima di poter chiamare updateTask.
+  async function handleDueDateChange(task: Task, dueDate: string) {
+    const full = companyTasksById.get(task.id);
+    if (!full) return;
+    try {
+      const updatedTask = await updateTask(
+        full.projectId,
+        task.id,
+        task.title,
+        task.description,
+        dueDate,
+      );
+      setCompanyTasks((current) =>
+        current.map((existing) =>
+          existing.id === updatedTask.id ? { ...existing, ...updatedTask } : existing,
+        ),
+      );
+      setCalendarUpdateError("");
+    } catch (error) {
+      setCalendarUpdateError(
+        error instanceof Error
+          ? error.message
+          : "Impossibile aggiornare la scadenza del task.",
+      );
+    }
+  }
+
   return (
     <Fragment>
       <TopbarComponent onLogout={handleLogout} />
@@ -267,7 +300,13 @@ function Dashboard() {
             <TaskCalendarComponent
               tasks={companyTasks}
               onOpenTask={handleOpenTaskDetail}
+              onDueDateChange={handleDueDateChange}
             />
+          )}
+          {calendarUpdateError && (
+            <p role="alert" className={styles.calendarUpdateError}>
+              {calendarUpdateError}
+            </p>
           )}
         </section>
 

@@ -411,6 +411,27 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
     }
   }
 
+  // Drag & drop di un dot su un altro giorno nella vista Calendario (vedi
+  // onDueDateChange in TaskCalendarComponent): riusa updateTask, lo stesso
+  // endpoint della modale di modifica, non ce n'è uno dedicato alla sola
+  // dueDate. title/description vengono dal task trascinato (già completo),
+  // non serve un secondo fetch.
+  async function handleDueDateChange(task: Task, dueDate: string) {
+    try {
+      const updatedTask = await updateTask(progettoId, task.id, task.title, task.description, dueDate);
+      setProject((current) =>
+        current ? replaceTaskInProject(current, updatedTask) : current,
+      );
+      setInlineUpdateError("");
+    } catch (error) {
+      setInlineUpdateError(
+        error instanceof Error
+          ? error.message
+          : "Impossibile aggiornare la scadenza del task.",
+      );
+    }
+  }
+
   const hasActiveFilters =
     searchQuery.trim() !== "" ||
     statusFilter !== "all" ||
@@ -671,6 +692,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
             tasks={currentProject.tasks}
             onOpenTask={openEditModal}
             dimmedTaskIds={dimmedTaskIds}
+            onDueDateChange={handleDueDateChange}
           />
         ) : (
           <div className={styles.taskTableCard}>

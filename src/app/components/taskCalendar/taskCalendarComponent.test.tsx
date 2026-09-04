@@ -56,6 +56,70 @@ describe("TaskCalendarComponent", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("does not make dots draggable when onDueDateChange is not provided", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 8, 15));
+    const task = buildTask({ dueDate: "2026-09-15" });
+
+    render(<TaskCalendarComponent tasks={[task]} onOpenTask={() => {}} />);
+
+    const dot = screen.getByRole("button", { name: "Task di prova" });
+    expect(dot).toHaveAttribute("draggable", "false");
+  });
+
+  it("moves a task's due date when its dot is dropped on another day", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 8, 15));
+    const onDueDateChange = vi.fn();
+    const task = buildTask({ dueDate: "2026-09-15" });
+
+    render(
+      <TaskCalendarComponent
+        tasks={[task]}
+        onOpenTask={() => {}}
+        onDueDateChange={onDueDateChange}
+      />,
+    );
+
+    const dot = screen.getByRole("button", { name: "Task di prova" });
+    const targetCell = screen
+      .getAllByText("20")
+      .map((el) => el.closest("[data-muted]"))
+      .find((el) => el?.getAttribute("data-muted") === "false") as HTMLElement;
+
+    const dataTransfer = { setData: vi.fn(), effectAllowed: "" };
+    fireEvent.dragStart(dot, { dataTransfer });
+    fireEvent.dragOver(targetCell, { dataTransfer });
+    fireEvent.drop(targetCell, { dataTransfer });
+
+    expect(onDueDateChange).toHaveBeenCalledWith(task, "2026-09-20");
+  });
+
+  it("does not call onDueDateChange when dropped back on the same day", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 8, 15));
+    const onDueDateChange = vi.fn();
+    const task = buildTask({ dueDate: "2026-09-15" });
+
+    render(
+      <TaskCalendarComponent
+        tasks={[task]}
+        onOpenTask={() => {}}
+        onDueDateChange={onDueDateChange}
+      />,
+    );
+
+    const dot = screen.getByRole("button", { name: "Task di prova" });
+    const sameCell = dot.closest("[data-muted]") as HTMLElement;
+
+    const dataTransfer = { setData: vi.fn(), effectAllowed: "" };
+    fireEvent.dragStart(dot, { dataTransfer });
+    fireEvent.dragOver(sameCell, { dataTransfer });
+    fireEvent.drop(sameCell, { dataTransfer });
+
+    expect(onDueDateChange).not.toHaveBeenCalled();
+  });
+
   it("moves to the next/previous month and back to today via the nav buttons", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 8, 15));

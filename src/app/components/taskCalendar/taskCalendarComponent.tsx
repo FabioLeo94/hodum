@@ -1,4 +1,5 @@
 import { Fragment, useState } from "react";
+import type { DragEvent } from "react";
 import type { Task, TaskStatus } from "../../../shared/types/project";
 import { formatDateOnly, isTaskDueSoon, isTaskOverdue } from "../../../shared/utils/taskDueDate";
 import styles from "./taskCalendarComponent.module.css";
@@ -116,17 +117,70 @@ interface TaskCalendarComponentProps {
    * e senza default "computato": il chiamante decide se e quando passarlo,
    * la logica di matching vera e propria non vive qui. */
   dimmedTaskIds?: Set<string>;
+  /** Trascinare un dot su un altro giorno ne sposta la scadenza a quel
+   * giorno. Opzionale: quando assente i dot restano statici (nessun
+   * draggable) invece di offrire un'interazione che non avrebbe effetto —
+   * il chiamante decide se e come persistere il cambio (endpoint diverso in
+   * taskList.tsx, che conosce già il progetto, rispetto alla vista aggregata
+   * della dashboard, che deve risalire al progetto del task). */
+  onDueDateChange?: (task: Task, newDueDate: string) => void;
 }
 
 // Vista Calendario dei task con scadenza: nessun task senza dueDate compare
 // qui (a differenza di Lista/Kanban), quindi riceve l'elenco piatto dei task
 // del progetto, non raggruppato per stato.
-function TaskCalendarComponent({ tasks, onOpenTask, dimmedTaskIds }: TaskCalendarComponentProps) {
+function TaskCalendarComponent({
+  tasks,
+  onOpenTask,
+  dimmedTaskIds,
+  onDueDateChange,
+}: TaskCalendarComponentProps) {
   const [viewedMonth, setViewedMonth] = useState(() => startOfMonth(new Date()));
   // Giorni con la lista task espansa oltre DOT_VISIBLE_LIMIT, opt-in per
   // singola cella: non si resetta al cambio mese, ma le dateKey sono
   // univoche a livello globale (AAAA-MM-GG) quindi non c'è collisione.
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
+  // Task attualmente trascinato, catturato al dragstart (stesso motivo del
+  // draggedTaskStatus in TaskKanbanBoardComponent): serve sia a sapere quale
+  // task spostare al drop, sia a confrontare la sua dueDate originale con la
+  // cella di destinazione per non generare un update no-op quando si rilascia
+  // sullo stesso giorno da cui si è partiti.
+  const [draggedTask, setDraggedTask] = useState<Task | null>(null);
+  const [dragOverDateKey, setDragOverDateKey] = useState<string | null>(null);
+
+  function handleDotDragStart(event: DragEvent<HTMLButtonElement>, task: Task) {
+    event.dataTransfer.effectAllowed = "move";
+    // dataTransfer non è letto al drop (il task trascinato è già in stato
+    // locale, più comodo perché è l'oggetto Task completo e non solo l'id):
+    // il setData resta comunque necessario perché Firefox richiede almeno
+    // un dato impostato per avviare il drag nativo.
+    event.dataTransfer.setData("text/plain", task.id);
+    setDraggedTask(task);
+  }
+
+  function handleDotDragEnd() {
+    setDraggedTask(null);
+    setDragOverDateKey(null);
+  }
+
+  function handleDayDragOver(event: DragEvent<HTMLDivElement>, dateKey: string) {
+    if (!draggedTask) return;
+    event.preventDefault();
+    setDragOverDateKey(dateKey);
+  }
+
+  function handleDayDragLeave(dateKey: string) {
+    setDragOverDateKey((current) => (current === dateKey ? null : current));
+  }
+
+  function handleDayDrop(event: DragEvent<HTMLDivElement>, dateKey: string) {
+    event.preventDefault();
+    setDragOverDateKey(null);
+    if (draggedTask && onDueDateChange && draggedTask.dueDate !== dateKey) {
+      onDueDateChange(draggedTask, dateKey);
+    }
+    setDraggedTask(null);
+  }
 
   function toggleExpandedDay(dateKey: string) {
     setExpandedDays((current) => {
@@ -236,6 +290,10 @@ function TaskCalendarComponent({ tasks, onOpenTask, dimmedTaskIds }: TaskCalenda
                     className={styles.dayCell}
                     data-muted={!cell.isCurrentMonth}
                     data-today={isToday}
+                    data-drag-over={dragOverDateKey === cell.dateKey}
+                    onDragOver={(event) => handleDayDragOver(event, cell.dateKey)}
+                    onDragLeave={() => handleDayDragLeave(cell.dateKey)}
+                    onDrop={(event) => handleDayDrop(event, cell.dateKey)}
                   >
                     <span className={styles.dayNumber}>{cell.date.getDate()}</span>
                     {dayTasks.length > 0 && (
@@ -257,9 +315,13 @@ function TaskCalendarComponent({ tasks, onOpenTask, dimmedTaskIds }: TaskCalenda
                                 overdue ? styles.dotOverdue : dueSoon ? styles.dotDueSoon : ""
                               }`}
                               data-dimmed={isDimmed}
+                              data-dragging={draggedTask?.id === task.id}
+                              draggable={onDueDateChange !== undefined}
                               title={`${task.title} — ${STATUS_LABELS[task.status]}${dueState}`}
                               aria-label={task.title}
                               onClick={() => onOpenTask(task)}
+                              onDragStart={(event) => handleDotDragStart(event, task)}
+                              onDragEnd={handleDotDragEnd}
                             >
                               {(overdue || dueSoon) && (
                                 <span aria-hidden="true" className={styles.dotExclamation}>

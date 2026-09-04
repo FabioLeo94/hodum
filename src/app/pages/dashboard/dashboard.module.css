@@ -78,6 +78,16 @@
   font-size: 0.9rem;
 }
 
+/* Stesso trattamento di .statusUpdateError in taskList.module.css: errore di
+   un aggiornamento inline (qui, spostare la scadenza trascinando un dot), non
+   di caricamento — non deve nascondere l'intero calendario come farebbe
+   .calendarStatus rimpiazzando il contenuto della sezione. */
+.calendarUpdateError {
+  color: var(--color-danger);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
 .emptyState {
   composes: messageCard from "../../../shared/styles/messageCard.module.css";
 }

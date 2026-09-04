@@ -239,6 +239,17 @@
   box-shadow: inset 0 0 0 2px var(--bg-primary);
 }
 
+/* Stesso linguaggio visivo di .columnDragOver in taskKanbanBoardComponent
+   (outline tratteggiato, non un box-shadow pieno come .dayCell[data-today]):
+   qui i due stati non sono mai co-presenti nella pratica (si trascina su un
+   giorno diverso da oggi), ma restare su un canale visivo distinto evita
+   comunque ambiguità se un domani lo fossero. */
+.dayCell[data-drag-over="true"] {
+  background-color: color-mix(in srgb, var(--bg-primary) 12%, var(--bg-surface));
+  outline: 2px dashed var(--bg-primary);
+  outline-offset: -2px;
+}
+
 .dayNumber {
   color: var(--text-muted);
   font-size: 0.8rem;
@@ -285,6 +296,17 @@
 
 .dot:hover {
   transform: scale(1.3);
+}
+
+.dot[draggable="true"] {
+  cursor: grab;
+}
+
+/* Il pallino resta al suo posto durante il drag nativo (che ne genera già
+   un'anteprima trascinata dal browser): l'opacità qui segnala solo che
+   quell'istanza è "in volo", non un secondo elemento aggiunto al DOM. */
+.dot[data-dragging="true"] {
+  opacity: 0.35;
 }
 
 .dot:focus-visible {
