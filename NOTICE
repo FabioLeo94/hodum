@@ -1,0 +1,34 @@
+Hodum
+Copyright (C) 2026 Fabio Leo
+
+This program is licensed under the GNU Affero General Public License,
+version 3 or (at your option) any later version (AGPL-3.0-or-later).
+See the LICENSE file for the full license text, including the additional
+terms added under section 7 of the AGPLv3 that this NOTICE file supports.
+
+Original repository: https://github.com/FabioLeo94/hodum
+
+
+Required attribution notice for forks and derivative works
+------------------------------------------------------------
+
+Under the additional term added pursuant to AGPLv3 section 7(b) (see
+LICENSE), anyone who conveys a modified version of this Program, or who
+makes a modified version available to users over a network, must include
+a reasonable legal notice stating that the work is based on Hodum, with a
+link to the original repository above.
+
+A notice satisfying this requirement reads, verbatim or in substance:
+
+    This project is based on Hodum (https://github.com/FabioLeo94/hodum),
+    originally created by Fabio Leo, licensed under the GNU Affero
+    General Public License v3.0 (or later).
+
+Place this notice in a location a recipient or user would reasonably see
+it — e.g. this NOTICE file (updated to also credit your own contribution),
+the README, or an "About"/credits screen of the running application.
+
+This requirement is in addition to, and does not replace, the obligation
+under AGPLv3 sections 5 and 13 to keep the work under the same license and
+to make the Corresponding Source available to every user who interacts
+with it remotely over a network.

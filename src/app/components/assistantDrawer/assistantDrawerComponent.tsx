@@ -50,6 +50,11 @@ interface Prop {
   // da un dipendente, che non può creare progetti), il pulsante scivola nello
   // spazio che il FAB avrebbe occupato invece di lasciarlo vuoto.
   hasLocalFab: boolean;
+  // Pagine come "gestione aziendale" non hanno un contesto progetti/task a cui
+  // l'assistente possa essere utile: qui non renderizza nulla, ma il
+  // componente resta montato (vedi ProtectedLayoutComponent) così la
+  // conversazione sulle altre pagine non viene persa.
+  isHidden: boolean;
   onToggle: () => void;
 }
 
@@ -60,7 +65,7 @@ const BOTTOM_THRESHOLD_PX = 24;
 // Montato una sola volta da ProtectedLayoutComponent, fuori dall'Outlet: la
 // conversazione (messages, input) sopravvive alla navigazione tra pagine,
 // che invece rimonta solo il contenuto dell'Outlet.
-function AssistantDrawerComponent({ isOpen, hasLocalFab, onToggle }: Prop) {
+function AssistantDrawerComponent({ isOpen, hasLocalFab, isHidden, onToggle }: Prop) {
   const panelId = useId();
   const navigate = useNavigate();
   const location = useLocation();
@@ -223,6 +228,8 @@ function AssistantDrawerComponent({ isOpen, hasLocalFab, onToggle }: Prop) {
       setIsSending(false);
     }
   }
+
+  if (isHidden) return null;
 
   return (
     <>

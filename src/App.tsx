@@ -9,9 +9,13 @@ import CompanyManagement from "./app/pages/companyManagement/companyManagement";
 import TaskList from "./app/pages/taskList/taskList";
 import ProtectedRouteComponent from "./app/components/protectedRoute/protectedRouteComponent";
 import ProtectedLayoutComponent from "./app/components/protectedLayout/protectedLayoutComponent";
+import NotifyComponent from "./app/components/notify/notifyComponent";
 function App() {
   return (
     <BrowserRouter>
+      {/* Fuori da <Routes>: deve restare montato su ogni rotta (auth incluso,
+          es. errori di login), senza dipendere da quale pagina è attiva. */}
+      <NotifyComponent />
       <Routes>
         <Route path="" element={<Navigate to={"/auth"} />} />
         <Route path="auth" element={<Auth />} />

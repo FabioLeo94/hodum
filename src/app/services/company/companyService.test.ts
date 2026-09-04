@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { createEmployee } from "./companyService";
+import { createEmployee, updateCompany } from "./companyService";
 import { AUTH_TOKEN_KEY } from "../auth/authService";
 
 function jsonResponse(status: number, body: unknown = {}): Response {
@@ -80,5 +80,86 @@ describe("companyService.createEmployee", () => {
         password: "Password1",
       }),
     ).rejects.toThrow("Creazione del dipendente non riuscita. Riprova più tardi.");
+  });
+});
+
+const updatedCompany = {
+  id: "10",
+  name: "Azienda Srl",
+  ownerId: "1",
+  ragioneSociale: "Azienda Società a responsabilità limitata",
+  piva: "12345678901",
+  codiceFiscale: "12345678901",
+  indirizzo: "Via Roma 1, Milano",
+  pec: "azienda@pec.it",
+  createdAt: "2026-01-01T00:00:00.000Z",
+};
+
+describe("companyService.updateCompany", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("invia una PUT JSON con il token di sessione e risolve l'azienda aggiornata", async () => {
+    sessionStorage.setItem(AUTH_TOKEN_KEY, "signed-jwt-token");
+    vi.mocked(fetch).mockResolvedValue(jsonResponse(200, updatedCompany));
+
+    const input = {
+      name: "Azienda Srl",
+      ragioneSociale: "Azienda Società a responsabilità limitata",
+      piva: "12345678901",
+      codiceFiscale: "12345678901",
+      indirizzo: "Via Roma 1, Milano",
+      pec: "azienda@pec.it",
+    };
+
+    await expect(updateCompany("10", input)).resolves.toEqual(updatedCompany);
+
+    const [url, options] = vi.mocked(fetch).mock.calls[0];
+    expect(url).toBe("http://localhost:3000/companies/10");
+    expect(options?.method).toBe("PUT");
+    expect(options?.headers).toMatchObject({
+      "Content-Type": "application/json",
+      Authorization: "Bearer signed-jwt-token",
+    });
+    expect(JSON.parse(options?.body as string)).toEqual(input);
+  });
+
+  it("lancia un errore con il messaggio del backend su 422", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse(422, { message: "piva deve essere composta da 11 cifre" }),
+    );
+
+    await expect(
+      updateCompany("10", {
+        name: "Azienda Srl",
+        ragioneSociale: null,
+        piva: "123",
+        codiceFiscale: null,
+        indirizzo: null,
+        pec: null,
+      }),
+    ).rejects.toThrow("piva deve essere composta da 11 cifre");
+  });
+
+  it("lancia un errore generico di fallback per altri status non ok", async () => {
+    vi.mocked(fetch).mockResolvedValue(jsonResponse(404));
+
+    await expect(
+      updateCompany("10", {
+        name: "Azienda Srl",
+        ragioneSociale: null,
+        piva: null,
+        codiceFiscale: null,
+        indirizzo: null,
+        pec: null,
+      }),
+    ).rejects.toThrow("Impossibile salvare i dati aziendali.");
   });
 });

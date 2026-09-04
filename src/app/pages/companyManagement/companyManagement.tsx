@@ -1,9 +1,10 @@
 import { Fragment, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { DatabaseBackup } from "lucide-react";
+import { Building2, DatabaseBackup } from "lucide-react";
 import TopbarComponent from "../../components/topbar/topbarComponent";
 import ManagementCardComponent from "../../components/managementCard/managementCardComponent";
 import BackupSettingsDrawerComponent from "../../components/backupSettingsDrawer/backupSettingsDrawerComponent";
+import EditCompanyDrawerComponent from "../../components/editCompanyDrawer/editCompanyDrawerComponent";
 import { getUser, isAuthenticated, logout, useAuthUser } from "../../services/auth/authService";
 import { usePageMeta } from "../../../shared/hooks/usePageMeta";
 import styles from "./companyManagement.module.css";
@@ -20,6 +21,7 @@ function CompanyManagement() {
   usePageMeta({ title: "Gestione aziendale", robots: "noindex, nofollow" });
 
   const [isBackupDrawerOpen, setIsBackupDrawerOpen] = useState(false);
+  const [isEditCompanyDrawerOpen, setIsEditCompanyDrawerOpen] = useState(false);
 
   // Solo il redirect qui dentro: niente setState nell'effect (stesso motivo
   // già commentato in topbarComponent.tsx per isLoadingProjects, evita
@@ -54,6 +56,12 @@ function CompanyManagement() {
         {companyId && (
           <div className={styles.cardsGrid}>
             <ManagementCardComponent
+              icon={<Building2 size={26} strokeWidth={2} aria-hidden="true" />}
+              title="Modifica dati aziendali"
+              description="Nome, ragione sociale, P.IVA, codice fiscale, indirizzo e PEC della tua azienda."
+              onClick={() => setIsEditCompanyDrawerOpen(true)}
+            />
+            <ManagementCardComponent
               icon={<DatabaseBackup size={26} strokeWidth={2} aria-hidden="true" />}
               title="Backup"
               description="Gestisci i backup del database della tua azienda: frequenza, quanti conservarne e come nominarli."
@@ -63,6 +71,13 @@ function CompanyManagement() {
         )}
       </div>
 
+      {companyId && (
+        <EditCompanyDrawerComponent
+          isOpen={isEditCompanyDrawerOpen}
+          onClose={() => setIsEditCompanyDrawerOpen(false)}
+          companyId={companyId}
+        />
+      )}
       {companyId && (
         <BackupSettingsDrawerComponent
           isOpen={isBackupDrawerOpen}

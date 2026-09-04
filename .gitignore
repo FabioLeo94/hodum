@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Variabili di docker-compose.yml (credenziali, JWT_SECRET): mai committato,
+# vedi .env.example.
+.env
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

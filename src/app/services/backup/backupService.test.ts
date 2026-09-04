@@ -1,5 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { getBackupSettings, listBackups, runBackupNow, updateBackupSettings } from "./backupService";
+import {
+  deleteBackup,
+  getBackupSettings,
+  listBackups,
+  restoreBackup,
+  runBackupNow,
+  updateBackupSettings,
+} from "./backupService";
 import { AUTH_TOKEN_KEY } from "../auth/authService";
 
 function jsonResponse(status: number, body: unknown = {}): Response {
@@ -86,5 +93,42 @@ describe("backupService", () => {
     vi.mocked(fetch).mockResolvedValue(jsonResponse(200, history));
 
     await expect(listBackups("10")).resolves.toEqual(history);
+  });
+
+  it("deleteBackup invia una DELETE con il token", async () => {
+    vi.mocked(fetch).mockResolvedValue(jsonResponse(204));
+
+    await expect(deleteBackup("10", "b1")).resolves.toBeUndefined();
+
+    const [url, options] = vi.mocked(fetch).mock.calls[0];
+    expect(url).toBe("http://localhost:3000/companies/10/backups/b1");
+    expect(options?.method).toBe("DELETE");
+    expect(options?.headers).toMatchObject({ Authorization: "Bearer signed-jwt-token" });
+  });
+
+  it("deleteBackup lancia un errore con il messaggio del backend su 404", async () => {
+    vi.mocked(fetch).mockResolvedValue(jsonResponse(404, { message: "Backup non trovato" }));
+
+    await expect(deleteBackup("10", "b1")).rejects.toThrow("Backup non trovato");
+  });
+
+  it("restoreBackup invia una POST verso l'endpoint restore", async () => {
+    vi.mocked(fetch).mockResolvedValue(jsonResponse(204));
+
+    await expect(restoreBackup("10", "b1")).resolves.toBeUndefined();
+
+    const [url, options] = vi.mocked(fetch).mock.calls[0];
+    expect(url).toBe("http://localhost:3000/companies/10/backups/b1/restore");
+    expect(options?.method).toBe("POST");
+  });
+
+  it("restoreBackup lancia un errore dedicato su 409 (backup/ripristino già in corso)", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse(409, { message: "Un backup o ripristino per questa azienda è già in corso" }),
+    );
+
+    await expect(restoreBackup("10", "b1")).rejects.toThrow(
+      "Un backup o ripristino per questa azienda è già in corso",
+    );
   });
 });

@@ -10,12 +10,61 @@ Task manager full-stack con assistente AI integrato: React 19 + TypeScript + Vit
 
 ## Prerequisiti
 
+Con Docker (vedi sezione sotto) serve solo Docker Compose: Postgres, `pg_dump`
+e le dipendenze Node sono già dentro le immagini. Per un setup senza Docker:
+
 - Node.js 20+
 - Un'istanza PostgreSQL raggiungibile
 - `pg_dump` disponibile nel PATH del server backend, stessa versione major del PostgreSQL usato (client tools ufficiali, es. pacchetto `postgresql-client`): richiesto dalla feature di backup (Gestione aziendale > Backup, owner-only), che lo invoca come processo esterno
 - Ollama in esecuzione localmente, con il modello configurato già scaricato (`ollama pull <modello>`, default `qwen2.5:14b`)
 
-## Setup
+## Avvio con Docker Compose (consigliato per il self-hosting)
+
+Il modo più semplice per avviare l'app su un server aziendale senza installare
+Node/PostgreSQL a mano: `docker-compose.yml` mette su Postgres, backend e
+frontend, con le migration applicate automaticamente all'avvio del backend.
+
+```bash
+cp .env.example .env   # valorizza POSTGRES_PASSWORD e JWT_SECRET come minimo
+docker compose up -d --build
+```
+
+Il frontend è raggiungibile su `http://localhost:8080` (porta configurabile
+con `FRONTEND_PORT` in `.env`), il backend su `http://localhost:3000`
+(`BACKEND_PORT`). Per l'accesso da altri PC della rete/VPN, sostituisci
+`localhost` con l'IP o l'hostname del server in `VITE_API_URL` e
+`FRONTEND_ORIGIN` dentro `.env`, poi ripeti `docker compose up -d --build`
+(il frontend è una SPA statica: `VITE_API_URL` viene incorporato nel bundle a
+build time, non letto a runtime).
+
+**Ollama**: di default il backend containerizzato cerca un'istanza Ollama in
+esecuzione **sull'host** (raggiunta via `host.docker.internal`) — installala e
+avviala normalmente sull'host (`ollama serve`, poi `ollama pull <modello>`),
+è il modo più semplice per sfruttare GPU/CPU della macchina senza passare da
+Docker. In alternativa, per containerizzare anche Ollama:
+
+```bash
+docker compose --profile ollama up -d
+```
+
+e imposta `OLLAMA_BASE_URL=http://ollama:11434` in `.env` prima di rifare
+`docker compose up -d`. Con GPU NVIDIA disponibile, decommenta il blocco
+`deploy` del servizio `ollama` in `docker-compose.yml` (richiede anche
+`nvidia-container-toolkit` installato sull'host).
+
+I dump generati dalla feature di backup (Gestione aziendale > Backup)
+persistono nel volume Docker `backend-backups` anche se il container viene
+ricreato.
+
+Comandi utili:
+
+```bash
+docker compose logs -f backend   # segue i log del backend (incluse le migration all'avvio)
+docker compose down              # ferma i container, mantiene i volumi (dati)
+docker compose down -v           # ferma e cancella anche i volumi: PERDE i dati del database
+```
+
+## Setup senza Docker (sviluppo)
 
 ```bash
 # Frontend (root del repo)
@@ -70,3 +119,19 @@ npm run db:check         # verifica la connessione al database
 - `backend/src/controllers|services/` — controller TSOA e logica di business (auth, progetti, task, assistente)
 - `backend/src/realtime/` — gateway Socket.IO
 - `backend/migrations/` — migration SQL numerate
+
+## Licenza
+
+Hodum è distribuito sotto **GNU Affero General Public License v3.0 o
+successiva** (AGPL-3.0-or-later) — vedi [`LICENSE`](./LICENSE). In sintesi:
+puoi usare, modificare e ridistribuire liberamente il progetto, anche per
+scopi commerciali (es. supporto o hosting a pagamento), ma qualunque
+versione modificata — anche se offerta solo come servizio via rete, senza
+distribuzione di binari — deve restare open source con la stessa licenza,
+e ogni utente che ci interagisce ha diritto al codice sorgente completo
+di quella versione (AGPLv3 §13).
+
+La licenza include inoltre un termine aggiuntivo (AGPLv3 §7) che richiede
+di mantenere, in ogni fork o versione derivata, una nota che ne dichiari
+la derivazione da questo progetto: vedi [`NOTICE`](./NOTICE) per il testo
+esatto della nota richiesta.

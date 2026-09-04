@@ -8,7 +8,7 @@ export interface BackupSettings {
   lastBackupAt: string | null;
 }
 
-export type BackupTrigger = 'manual' | 'scheduled';
+export type BackupTrigger = 'manual' | 'scheduled' | 'pre-restore';
 
 export interface BackupRecord {
   id: string;

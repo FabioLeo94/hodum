@@ -2,9 +2,14 @@ import { useEffect, useId, useRef, useState } from "react";
 import { X } from "lucide-react";
 import InputComponent from "../input/inputComponent";
 import ButtonComponent from "../button/buttonComponent";
+import BackupHistoryItemComponent from "../backupHistoryItem/backupHistoryItemComponent";
+import DeleteBackupModalComponent from "../deleteBackupModal/deleteBackupModalComponent";
+import RestoreBackupModalComponent from "../restoreBackupModal/restoreBackupModalComponent";
 import {
+  deleteBackup,
   getBackupSettings,
   listBackups,
+  restoreBackup,
   runBackupNow,
   updateBackupSettings,
 } from "../../services/backup/backupService";
@@ -19,14 +24,14 @@ interface Prop {
   companyId: string;
 }
 
-// Solo consumatore di questa formattazione (a differenza di formatDate.ts,
-// condiviso da più punti): resta locale al componente finché non serve altrove.
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  const kb = bytes / 1024;
-  if (kb < 1024) return `${kb.toFixed(1)} KB`;
-  return `${(kb / 1024).toFixed(1)} MB`;
-}
+// Discriminata per tipo invece di due modali sempre montate con un booleano a
+// testa: "quale backup" e "quale azione" sono sempre la stessa domanda,
+// tenerli in un solo stato evita che i due possano disallinearsi (es. modal
+// di ripristino aperta ma riferita al backup sbagliato).
+type BackupActionModal =
+  | { type: "delete" | "restore"; backup: BackupRecord }
+  | { type: "bulk-delete"; count: number }
+  | null;
 
 // Form precompilato dal fetch (non da una prop "current*" come
 // EditAccountModalComponent): qui il valore iniziale arriva da una chiamata
@@ -47,6 +52,9 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [runError, setRunError] = useState("");
+  const [actionModal, setActionModal] = useState<BackupActionModal>(null);
+  const [actionError, setActionError] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const { isSubmitting: isSaving, submit: submitSave } = useAsyncSubmit();
   const { isSubmitting: isRunning, submit: submitRun } = useAsyncSubmit();
@@ -81,6 +89,7 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
   useEffect(() => {
     if (!isOpen) return;
     let cancelled = false;
+    setSelectedIds(new Set());
 
     getBackupSettings(companyId)
       .then((loaded) => {
@@ -112,8 +121,14 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
     };
   }, [isOpen, companyId]);
 
+  // Se una modale di conferma (elimina/applica backup) è aperta SOPRA il
+  // drawer, il suo <dialog> nativo gestisce Escape per conto proprio
+  // (onCancel in ModalBaseComponent, chiude solo la modale): il keydown
+  // however continua a risalire fino a qui, quindi senza questa guardia lo
+  // stesso Escape chiuderebbe anche il drawer sottostante, un effetto a
+  // cascata che l'utente non si aspetta annullando solo la conferma.
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || actionModal) return;
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") onClose();
@@ -121,7 +136,7 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, actionModal]);
 
   const parsedInterval = Number(intervalMinutes);
   const intervalError =
@@ -187,6 +202,108 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
         throw error;
       }
     });
+  }
+
+  function openDeleteBackupModal(backup: BackupRecord) {
+    setActionError("");
+    setActionModal({ type: "delete", backup });
+  }
+
+  function openRestoreBackupModal(backup: BackupRecord) {
+    setActionError("");
+    setActionModal({ type: "restore", backup });
+  }
+
+  function openBulkDeleteModal() {
+    if (selectedIds.size === 0) return;
+    setActionError("");
+    setActionModal({ type: "bulk-delete", count: selectedIds.size });
+  }
+
+  function closeActionModal() {
+    setActionModal(null);
+  }
+
+  function toggleBackupSelection(backup: BackupRecord) {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(backup.id)) {
+        next.delete(backup.id);
+      } else {
+        next.add(backup.id);
+      }
+      return next;
+    });
+  }
+
+  // Niente rethrow (come ProjectComponent.handleDelete): l'errore resta nello
+  // state actionError, il submit della modale (useAsyncSubmit) lo considera
+  // comunque concluso e riabilita il bottone senza bisogno di propagarlo.
+  async function handleConfirmDeleteBackup() {
+    if (!actionModal || actionModal.type !== "delete") return;
+    setActionError("");
+    try {
+      await deleteBackup(companyId, actionModal.backup.id);
+      const deletedId = actionModal.backup.id;
+      setActionModal(null);
+      setSelectedIds((current) => {
+        if (!current.has(deletedId)) return current;
+        const next = new Set(current);
+        next.delete(deletedId);
+        return next;
+      });
+      loadHistory();
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Impossibile eliminare il backup.");
+    }
+  }
+
+  // Nessun endpoint di bulk delete dedicato lato backend: si riusa
+  // deleteBackup per ogni id selezionato. Promise.allSettled (non
+  // Promise.all) perché con più richieste indipendenti un singolo fallimento
+  // non deve nascondere gli altri successi: la history viene ricaricata
+  // comunque, e solo gli id falliti restano selezionati per un nuovo
+  // tentativo mirato.
+  async function handleConfirmBulkDelete() {
+    if (!actionModal || actionModal.type !== "bulk-delete") return;
+    setActionError("");
+    const ids = Array.from(selectedIds);
+    const results = await Promise.allSettled(ids.map((backupId) => deleteBackup(companyId, backupId)));
+    loadHistory();
+
+    const failedIds = ids.filter((_, index) => results[index].status === "rejected");
+    if (failedIds.length > 0) {
+      setSelectedIds(new Set(failedIds));
+      setActionModal({ type: "bulk-delete", count: failedIds.length });
+      setActionError(
+        failedIds.length === ids.length
+          ? "Impossibile eliminare i backup selezionati."
+          : `Impossibile eliminare ${failedIds.length} backup su ${ids.length}.`,
+      );
+      return;
+    }
+
+    setActionModal(null);
+    setSelectedIds(new Set());
+  }
+
+  // Il ripristino cambia anche last_backup_at (lo snapshot pre-restore creato
+  // dal backend conta come un backup a tutti gli effetti): risincronizza
+  // anche settings, non solo la history, altrimenti "Ultimo backup" nella
+  // sezione "Esegui ora" resterebbe indietro finché il drawer non viene
+  // riaperto.
+  async function handleConfirmRestoreBackup() {
+    if (!actionModal || actionModal.type !== "restore") return;
+    setActionError("");
+    try {
+      await restoreBackup(companyId, actionModal.backup.id);
+      setActionModal(null);
+      loadHistory();
+      const freshSettings = await getBackupSettings(companyId);
+      applySettings(freshSettings);
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Ripristino del backup non riuscito.");
+    }
   }
 
   return (
@@ -284,7 +401,24 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
             </section>
 
             <section className={styles.section}>
-              <h3 className={styles.sectionTitle}>Storico</h3>
+              <div className={styles.sectionHeaderRow}>
+                <h3 className={styles.sectionTitle}>Storico</h3>
+                {selectedIds.size > 0 && (
+                  <div className={styles.selectionToolbar}>
+                    <span className={styles.selectionCount}>{selectedIds.size} selezionati</span>
+                    <button
+                      type="button"
+                      className={styles.cancelButton}
+                      onClick={() => setSelectedIds(new Set())}
+                    >
+                      Annulla
+                    </button>
+                    <ButtonComponent onClick={openBulkDeleteModal} variant="danger">
+                      Elimina
+                    </ButtonComponent>
+                  </div>
+                )}
+              </div>
               {historyError ? (
                 <p role="alert" className={styles.errorBanner}>
                   {historyError}
@@ -294,19 +428,14 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
               ) : (
                 <ul className={styles.historyList}>
                   {history.map((backup) => (
-                    <li key={backup.id} className={styles.historyItem}>
-                      <div className={styles.historyMain}>
-                        <span className={styles.historyFilename} title={backup.filename}>
-                          {backup.filename}
-                        </span>
-                        <span className={styles.historyMeta}>
-                          {formatDateTime(backup.createdAt)} · {formatFileSize(backup.sizeBytes)}
-                        </span>
-                      </div>
-                      <span className={styles.historyBadge} data-trigger={backup.triggeredBy}>
-                        {backup.triggeredBy === "manual" ? "Manuale" : "Automatico"}
-                      </span>
-                    </li>
+                    <BackupHistoryItemComponent
+                      key={backup.id}
+                      backup={backup}
+                      selected={selectedIds.has(backup.id)}
+                      onToggleSelect={toggleBackupSelection}
+                      onRequestRestore={openRestoreBackupModal}
+                      onRequestDelete={openDeleteBackupModal}
+                    />
                   ))}
                 </ul>
               )}
@@ -318,6 +447,22 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
           </p>
         )}
       </div>
+
+      <DeleteBackupModalComponent
+        isOpen={actionModal?.type === "delete" || actionModal?.type === "bulk-delete"}
+        onClose={closeActionModal}
+        backupFilename={actionModal?.type === "delete" ? actionModal.backup.filename : ""}
+        count={actionModal?.type === "bulk-delete" ? actionModal.count : undefined}
+        onConfirm={actionModal?.type === "bulk-delete" ? handleConfirmBulkDelete : handleConfirmDeleteBackup}
+        submitError={actionError}
+      />
+      <RestoreBackupModalComponent
+        isOpen={actionModal?.type === "restore"}
+        onClose={closeActionModal}
+        backupFilename={actionModal?.type === "restore" ? actionModal.backup.filename : ""}
+        onConfirm={handleConfirmRestoreBackup}
+        submitError={actionError}
+      />
     </>
   );
 }

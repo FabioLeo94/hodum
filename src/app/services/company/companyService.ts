@@ -9,10 +9,19 @@ export interface RegisterCompanyInput {
   password: string;
 }
 
+// Stessa forma di Company esposta dal backend (vedi
+// backend/src/models/company.ts): i campi anagrafici sono null finché
+// l'owner non li compila dal drawer "Modifica dati aziendali".
 export interface RegisteredCompany {
   id: string;
   name: string;
   ownerId: string;
+  ragioneSociale: string | null;
+  piva: string | null;
+  codiceFiscale: string | null;
+  indirizzo: string | null;
+  pec: string | null;
+  createdAt: string;
 }
 
 export interface RegisterCompanyResult {
@@ -55,7 +64,7 @@ export async function registerCompany(
 // Stessa forma di getProjectName in projectService.ts: undefined su 404 (id
 // fuori dalla propria company) invece di lanciare, così il chiamante può
 // scegliere di non mostrare nulla senza dover distinguere un errore vero.
-export async function getCompanyName(id: string): Promise<string | undefined> {
+export async function getCompany(id: string): Promise<RegisteredCompany | undefined> {
   const response = await authFetch(`${API_BASE_URL}/companies/${id}`, { headers: authHeader() });
   if (response.status === 404) {
     return undefined;
@@ -64,8 +73,41 @@ export async function getCompanyName(id: string): Promise<string | undefined> {
     const message = await readErrorMessage(response);
     throw new Error(message ?? "Impossibile caricare l'azienda.");
   }
-  const company = (await response.json()) as RegisteredCompany;
-  return company.name;
+  return (await response.json()) as RegisteredCompany;
+}
+
+export async function getCompanyName(id: string): Promise<string | undefined> {
+  const company = await getCompany(id);
+  return company?.name;
+}
+
+export interface UpdateCompanyInput {
+  name: string;
+  ragioneSociale: string | null;
+  piva: string | null;
+  codiceFiscale: string | null;
+  indirizzo: string | null;
+  pec: string | null;
+}
+
+// Riservato all'owner (backend @Security('owner')): stesso principio di
+// createEmployee sotto, il token va sempre in header.
+export async function updateCompany(id: string, input: UpdateCompanyInput): Promise<RegisteredCompany> {
+  const response = await authFetch(`${API_BASE_URL}/companies/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    body: JSON.stringify(input),
+  });
+
+  if (!response.ok) {
+    const message = await readErrorMessage(response);
+    if (response.status === 422) {
+      throw new Error(message ?? "Dati non validi. Controlla i campi inseriti.");
+    }
+    throw new Error(message ?? "Impossibile salvare i dati aziendali.");
+  }
+
+  return (await response.json()) as RegisteredCompany;
 }
 
 export interface CreateEmployeeInput {

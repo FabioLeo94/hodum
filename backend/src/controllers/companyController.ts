@@ -1,12 +1,21 @@
 import type { Request as ExRequest } from 'express';
-import { Body, Controller, Get, Path, Post, Request, Response, Route, Security, SuccessResponse } from 'tsoa';
+import { Body, Controller, Get, Path, Post, Put, Request, Response, Route, Security, SuccessResponse } from 'tsoa';
 import { getAuthenticatedUser } from '../middleware/authentication';
 import type { Company } from '../models/company';
 import type { User } from '../models/user';
-import { createEmployee, getCompanyById, registerCompany } from '../services/companyService';
+import { createEmployee, getCompanyById, registerCompany, updateCompany } from '../services/companyService';
 import { signSessionToken } from '../services/tokenService';
 import { UserConflictError } from '../services/userService';
 import { isValidEmail, isValidPassword, PASSWORD_POLICY_MESSAGE } from '../utils/validation';
+
+// Campi opzionali, ma quando presenti (stringa non vuota) devono avere un
+// formato plausibile: P.IVA italiana a 11 cifre, codice fiscale a 11 cifre
+// (azienda) o 16 caratteri alfanumerici (persona fisica, es. ditta
+// individuale). Non è una validazione di checksum: come isValidEmail/
+// isValidPassword in utils/validation.ts, scarta solo i casi palesemente
+// sbagliati prima che finiscano su un documento fiscale.
+const PIVA_REGEX = /^\d{11}$/;
+const CODICE_FISCALE_REGEX = /^(\d{11}|[A-Za-z0-9]{16})$/;
 
 // Nome distinto dagli omonimi "ErrorResponse" degli altri controller: tsoa
 // risolve i modelli per nome dell'interfaccia a livello globale (non per
@@ -33,6 +42,18 @@ export interface RegisterCompanyResponse {
   // frontend deve mostrarlo con un avviso esplicito prima di procedere alla
   // dashboard, perché non sarà più recuperabile da qui.
   recoveryCode: string;
+}
+
+// Stringa vuota e null sono equivalenti in ingresso ("campo non compilato"):
+// il controller normalizza entrambi a null prima di passarli al service,
+// così l'owner può anche svuotare un campo già compilato in precedenza.
+export interface UpdateCompanyRequest {
+  name: string;
+  ragioneSociale?: string | null;
+  piva?: string | null;
+  codiceFiscale?: string | null;
+  indirizzo?: string | null;
+  pec?: string | null;
 }
 
 export interface CreateEmployeeRequest {
@@ -129,6 +150,56 @@ export class CompanyController extends Controller {
       return companyNotFoundResponse(id);
     }
     return company;
+  }
+
+  // Riservato all'owner (a differenza di getCompany sopra, visibile a
+  // chiunque nella company): sono gli stessi dati che finiscono in fattura,
+  // stesso livello di riservatezza dei backup (backupController.ts) e della
+  // gestione dipendenti sotto.
+  @Put('{id}')
+  @Security('owner')
+  @Response<CompanyErrorResponse>(404, 'Company non trovata')
+  @Response<CompanyErrorResponse>(422, 'name, piva, codiceFiscale o pec non validi')
+  public async updateCompany(
+    @Path() id: string,
+    @Body() body: UpdateCompanyRequest,
+    @Request() request: ExRequest,
+  ): Promise<Company | CompanyErrorResponse> {
+    const requester = getAuthenticatedUser(request);
+    if (requester.companyId === null || id !== requester.companyId) {
+      this.setStatus(404);
+      return companyNotFoundResponse(id);
+    }
+
+    if (body.name.trim().length === 0) {
+      this.setStatus(422);
+      return { message: "Il nome dell'azienda non può essere vuoto" };
+    }
+    const piva = body.piva?.trim() || null;
+    if (piva !== null && !PIVA_REGEX.test(piva)) {
+      this.setStatus(422);
+      return { message: 'piva deve essere composta da 11 cifre' };
+    }
+    const codiceFiscale = body.codiceFiscale?.trim() || null;
+    if (codiceFiscale !== null && !CODICE_FISCALE_REGEX.test(codiceFiscale)) {
+      this.setStatus(422);
+      return { message: 'codiceFiscale deve essere di 11 cifre o 16 caratteri alfanumerici' };
+    }
+    const pec = body.pec?.trim() || null;
+    if (pec !== null && !isValidEmail(pec)) {
+      this.setStatus(422);
+      return { message: 'pec non valida' };
+    }
+
+    const updated = await updateCompany(id, {
+      name: body.name.trim(),
+      ragioneSociale: body.ragioneSociale?.trim() || null,
+      piva,
+      codiceFiscale,
+      indirizzo: body.indirizzo?.trim() || null,
+      pec,
+    });
+    return updated;
   }
 
   // Nessun self-signup per dipendenti: solo l'owner autenticato della

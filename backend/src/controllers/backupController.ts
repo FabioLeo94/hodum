@@ -1,12 +1,15 @@
 import type { Request as ExRequest } from 'express';
-import { Body, Controller, Get, Path, Post, Put, Request, Response, Route, Security, SuccessResponse } from 'tsoa';
+import { Body, Controller, Delete, Get, Path, Post, Put, Request, Response, Route, Security, SuccessResponse } from 'tsoa';
 import { getAuthenticatedUser } from '../middleware/authentication';
 import type { BackupRecord, BackupSettings } from '../models/backup';
 import {
   BackupInProgressError,
+  BackupNotFoundError,
   CompanyNotFoundForBackupError,
+  deleteBackup,
   getBackupSettings,
   listBackups,
+  restoreBackup,
   runBackup,
   updateBackupSettings,
 } from '../services/backupService';
@@ -25,6 +28,8 @@ interface BackupErrorResponse {
 function companyNotFoundResponse(id: string): BackupErrorResponse {
   return { message: `Company non trovata: ${id}` };
 }
+
+const backupNotFoundResponse: BackupErrorResponse = { message: 'Backup non trovato' };
 
 export interface UpdateBackupSettingsRequest {
   intervalMinutes: number;
@@ -150,5 +155,71 @@ export class BackupController extends Controller {
       return companyNotFoundResponse(id);
     }
     return listBackups(id);
+  }
+
+  @Delete('{id}/backups/{backupId}')
+  @Security('owner')
+  @SuccessResponse(204, 'Backup eliminato')
+  @Response<BackupErrorResponse>(404, 'Company o backup non trovato')
+  public async deleteCompanyBackup(
+    @Path() id: string,
+    @Path() backupId: string,
+    @Request() request: ExRequest,
+  ): Promise<void | BackupErrorResponse> {
+    const requester = getAuthenticatedUser(request);
+    if (requester.companyId === null || id !== requester.companyId) {
+      this.setStatus(404);
+      return companyNotFoundResponse(id);
+    }
+
+    try {
+      await deleteBackup(id, backupId);
+      this.setStatus(204);
+    } catch (err) {
+      if (err instanceof BackupNotFoundError) {
+        this.setStatus(404);
+        return backupNotFoundResponse;
+      }
+      throw err;
+    }
+  }
+
+  // Sincrono come '{id}/backups/run' (attende pg_dump + pg_restore prima di
+  // rispondere): stessa scelta, stesso ordine di grandezza di dati per una
+  // PMI/freelance.
+  @Post('{id}/backups/{backupId}/restore')
+  @Security('owner')
+  @SuccessResponse(204, 'Backup ripristinato')
+  @Response<BackupErrorResponse>(404, 'Company o backup non trovato')
+  @Response<BackupErrorResponse>(409, 'Un backup o ripristino per questa azienda è già in corso')
+  public async restoreCompanyBackup(
+    @Path() id: string,
+    @Path() backupId: string,
+    @Request() request: ExRequest,
+  ): Promise<void | BackupErrorResponse> {
+    const requester = getAuthenticatedUser(request);
+    if (requester.companyId === null || id !== requester.companyId) {
+      this.setStatus(404);
+      return companyNotFoundResponse(id);
+    }
+
+    try {
+      await restoreBackup(id, backupId);
+      this.setStatus(204);
+    } catch (err) {
+      if (err instanceof BackupNotFoundError) {
+        this.setStatus(404);
+        return backupNotFoundResponse;
+      }
+      if (err instanceof BackupInProgressError) {
+        this.setStatus(409);
+        return { message: err.message };
+      }
+      if (err instanceof CompanyNotFoundForBackupError) {
+        this.setStatus(404);
+        return companyNotFoundResponse(id);
+      }
+      throw err;
+    }
   }
 }

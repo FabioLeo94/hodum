@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Outlet } from "react-router";
+import { Outlet, useLocation } from "react-router";
 import AssistantDrawerComponent from "../assistantDrawer/assistantDrawerComponent";
 import { subscribeToOwnUserUpdates } from "../../services/realtime/socketService";
 import styles from "./protectedLayoutComponent.module.css";
@@ -21,10 +21,17 @@ export interface AssistantLayoutContext {
 // componente - e quindi AssistantDrawerComponent con la sua conversazione -
 // non viene mai smontato.
 function ProtectedLayoutComponent() {
+  const location = useLocation();
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   // True di default: la maggior parte delle pagine (task-list, dipendenti) ha
   // sempre un FAB locale e non ha bisogno di dichiararlo esplicitamente.
   const [hasLocalFab, setHasLocalFab] = useState(true);
+
+  // Nella gestione aziendale non ha senso parlare di progetti/task: l'assistente
+  // resta montato (la conversazione sulle altre pagine non va persa) ma non si
+  // mostra, vedi isHidden in AssistantDrawerComponent.
+  const isAssistantHidden = location.pathname.startsWith("/company-management");
+  const isAssistantOpenAndVisible = isAssistantOpen && !isAssistantHidden;
 
   // Sottoscritto una sola volta per l'intera sessione protetta (questo
   // componente non si smonta tra una pagina e l'altra, vedi commento sopra):
@@ -34,15 +41,19 @@ function ProtectedLayoutComponent() {
 
   return (
     <>
-      <div className={styles.mainArea} data-assistant-open={isAssistantOpen}>
+      <div className={styles.mainArea} data-assistant-open={isAssistantOpenAndVisible}>
         <Outlet
           context={
-            { isAssistantOpen, setHasLocalFab } satisfies AssistantLayoutContext
+            {
+              isAssistantOpen: isAssistantOpenAndVisible,
+              setHasLocalFab,
+            } satisfies AssistantLayoutContext
           }
         />
       </div>
       <AssistantDrawerComponent
-        isOpen={isAssistantOpen}
+        isOpen={isAssistantOpenAndVisible}
+        isHidden={isAssistantHidden}
         hasLocalFab={hasLocalFab}
         onToggle={() => setIsAssistantOpen((current) => !current)}
       />

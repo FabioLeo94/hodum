@@ -6,16 +6,40 @@ import type { User } from '../models/user';
 import { generateRecoveryCode, normalizeRecoveryCode } from '../utils/recoveryCode';
 import { hashPassword, mapUserUniqueViolation, toUser, USER_COLUMNS, type UserRow } from './userService';
 
-// Riga così come esce da pg per l'INSERT su companies: snake_case, coerente
-// con migrations/0013_create_companies_table.sql.
+// Riga così come esce da pg per companies: snake_case, coerente con
+// migrations/0013_create_companies_table.sql e
+// 0030_add_dati_anagrafici_a_companies.sql. created_at arriva come Date
+// (driver pg per timestamptz), stesso pattern di UserRow in userService.ts.
 interface CompanyRow {
   id: string;
   name: string;
   owner_id: string;
+  ragione_sociale: string | null;
+  piva: string | null;
+  codice_fiscale: string | null;
+  indirizzo: string | null;
+  pec: string | null;
+  created_at: Date;
 }
 
+// Centralizzato come USER_COLUMNS in userService.ts: ogni query che deve
+// restituire un CompanyRow completo (via toCompany) la riusa, invece di
+// ripetere l'elenco colonne a rischio di disallineamento.
+export const COMPANY_COLUMNS =
+  'id, name, owner_id, ragione_sociale, piva, codice_fiscale, indirizzo, pec, created_at';
+
 function toCompany(row: CompanyRow): Company {
-  return { id: row.id, name: row.name, ownerId: row.owner_id };
+  return {
+    id: row.id,
+    name: row.name,
+    ownerId: row.owner_id,
+    ragioneSociale: row.ragione_sociale,
+    piva: row.piva,
+    codiceFiscale: row.codice_fiscale,
+    indirizzo: row.indirizzo,
+    pec: row.pec,
+    createdAt: row.created_at.toISOString(),
+  };
 }
 
 export interface RegisterCompanyInput {
@@ -76,9 +100,11 @@ export async function registerCompany(input: RegisterCompanyInput): Promise<Regi
     );
 
     // owner_id è NOT NULL su companies (0013): l'utente va creato prima e
-    // referenziato qui, non il contrario.
+    // referenziato qui, non il contrario. I campi anagrafici (0030) restano
+    // tutti null: si compilano dopo dal drawer "Modifica dati aziendali", non
+    // fanno parte del flusso di registrazione.
     const companyResult = await client.query<CompanyRow>(
-      'INSERT INTO companies (name, owner_id) VALUES ($1, $2) RETURNING id, name, owner_id',
+      `INSERT INTO companies (name, owner_id) VALUES ($1, $2) RETURNING ${COMPANY_COLUMNS}`,
       [input.companyName, userId],
     );
     const company = toCompany(companyResult.rows[0]);
@@ -106,8 +132,32 @@ export async function registerCompany(input: RegisterCompanyInput): Promise<Regi
 }
 
 export async function getCompanyById(id: string): Promise<Company | null> {
-  const result = await pool.query<CompanyRow>('SELECT id, name, owner_id FROM companies WHERE id = $1', [id]);
+  const result = await pool.query<CompanyRow>(`SELECT ${COMPANY_COLUMNS} FROM companies WHERE id = $1`, [id]);
   return result.rows[0] ? toCompany(result.rows[0]) : null;
+}
+
+export interface UpdateCompanyInput {
+  name: string;
+  ragioneSociale: string | null;
+  piva: string | null;
+  codiceFiscale: string | null;
+  indirizzo: string | null;
+  pec: string | null;
+}
+
+// Nessun controllo "riga trovata" separato: il chiamante (companyController)
+// ha già verificato che id combaci con la company del richiedente autenticato
+// prima di arrivare qui, stesso principio delle altre funzioni di questo
+// service che ricevono un id già validato (es. createEmployee).
+export async function updateCompany(id: string, input: UpdateCompanyInput): Promise<Company> {
+  const result = await pool.query<CompanyRow>(
+    `UPDATE companies
+     SET name = $2, ragione_sociale = $3, piva = $4, codice_fiscale = $5, indirizzo = $6, pec = $7
+     WHERE id = $1
+     RETURNING ${COMPANY_COLUMNS}`,
+    [id, input.name, input.ragioneSociale, input.piva, input.codiceFiscale, input.indirizzo, input.pec],
+  );
+  return toCompany(result.rows[0]);
 }
 
 // Punto 3 di .tasks/TASK.md: crea un dipendente già agganciato alla company

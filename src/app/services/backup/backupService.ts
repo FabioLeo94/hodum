@@ -11,7 +11,7 @@ export interface BackupSettings {
   lastBackupAt: string | null;
 }
 
-export type BackupTrigger = "manual" | "scheduled";
+export type BackupTrigger = "manual" | "scheduled" | "pre-restore";
 
 export interface BackupRecord {
   id: string;
@@ -88,4 +88,32 @@ export async function listBackups(companyId: string): Promise<BackupRecord[]> {
     throw new Error(message ?? "Impossibile caricare lo storico dei backup.");
   }
   return (await response.json()) as BackupRecord[];
+}
+
+export async function deleteBackup(companyId: string, backupId: string): Promise<void> {
+  const response = await authFetch(`${API_BASE_URL}/companies/${companyId}/backups/${backupId}`, {
+    method: "DELETE",
+    headers: authHeader(),
+  });
+  if (!response.ok) {
+    const message = await readErrorMessage(response);
+    throw new Error(message ?? "Impossibile eliminare il backup.");
+  }
+}
+
+// Sincrona come runBackupNow (attende pg_dump + pg_restore lato backend): la
+// UI mostra uno stato di caricamento sul bottone di conferma per la durata
+// della chiamata, niente polling.
+export async function restoreBackup(companyId: string, backupId: string): Promise<void> {
+  const response = await authFetch(`${API_BASE_URL}/companies/${companyId}/backups/${backupId}/restore`, {
+    method: "POST",
+    headers: authHeader(),
+  });
+  if (!response.ok) {
+    const message = await readErrorMessage(response);
+    if (response.status === 409) {
+      throw new Error(message ?? "Un backup o ripristino per questa azienda è già in corso.");
+    }
+    throw new Error(message ?? "Ripristino del backup non riuscito.");
+  }
 }

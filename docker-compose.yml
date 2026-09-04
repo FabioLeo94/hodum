@@ -1,0 +1,88 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-hodum}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?imposta POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-hodum}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-hodum} -d ${POSTGRES_DB:-hodum}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-hodum}:${POSTGRES_PASSWORD:?imposta POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-hodum}
+      PORT: 3000
+      # Deve combaciare con l'origine da cui il browser carica il frontend
+      # (schema+host+porta pubblicati dal servizio "frontend" sotto), non con
+      # un indirizzo interno alla rete Docker: CORS e la cors option di
+      # Socket.IO (backend/src/realtime/io.ts) confrontano l'header Origin
+      # del browser con questo valore.
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:8080}
+      JWT_SECRET: ${JWT_SECRET:?imposta JWT_SECRET in .env}
+      # Ollama gira tipicamente sull'host (non in questo compose, vedi il
+      # servizio opzionale "ollama" sotto e il README): host.docker.internal
+      # risolve all'host da dentro il container grazie a extra_hosts sotto.
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:14b}
+      NODE_ENV: production
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${BACKEND_PORT:-3000}:3000"
+    volumes:
+      # I dump di pg_dump (backupService.ts) devono sopravvivere a un
+      # ricreazione del container: sono l'unica copia dei dati oltre al
+      # volume "db-data" stesso.
+      - backend-backups:/app/backups
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Baked-in nel bundle a build time (vedi commento nel Dockerfile
+        # frontend): deve puntare alla porta pubblicata da "backend" sopra,
+        # con l'host/IP con cui il browser raggiungerà questa macchina.
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+
+  # Opzionale: Ollama containerizzato, escluso dall'avvio di default (serve
+  # `docker compose --profile ollama up`, vedi README). Su un server con GPU
+  # NVIDIA, per usarla vedi il blocco "deploy" commentato sotto (richiede
+  # anche nvidia-container-toolkit installato sull'host).
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["ollama"]
+    restart: unless-stopped
+    volumes:
+      - ollama-data:/root/.ollama
+    ports:
+      - "11434:11434"
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+volumes:
+  db-data:
+  backend-backups:
+  ollama-data:

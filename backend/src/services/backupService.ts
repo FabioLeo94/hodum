@@ -64,6 +64,13 @@ export class CompanyNotFoundForBackupError extends Error {
   }
 }
 
+export class BackupNotFoundError extends Error {
+  constructor() {
+    super('Backup non trovato');
+    this.name = 'BackupNotFoundError';
+  }
+}
+
 interface BackupSettingsRow {
   company_id: string;
   interval_minutes: number;
@@ -171,6 +178,33 @@ export async function listBackups(companyId: string): Promise<BackupRecord[]> {
   return result.rows.map(toBackupRecord);
 }
 
+async function findBackupRow(companyId: string, backupId: string): Promise<BackupRow | undefined> {
+  const result = await pool.query<BackupRow>(
+    `SELECT id, company_id, filename, size_bytes, triggered_by, created_at
+     FROM company_backups
+     WHERE id = $1 AND company_id = $2`,
+    [backupId, companyId],
+  );
+  return result.rows[0];
+}
+
+// Cancellazione di un singolo backup scelto dall'owner (a differenza di
+// rotateOldBackups, automatica e per eccesso di quantità). Stesso ordine
+// best-effort: la riga di metadata è il dato che conta per la UI, un file
+// rimasto orfano sul disco (unlink fallito) non deve far fallire la richiesta.
+export async function deleteBackup(companyId: string, backupId: string): Promise<void> {
+  const target = await findBackupRow(companyId, backupId);
+  if (!target) {
+    throw new BackupNotFoundError();
+  }
+  await pool.query('DELETE FROM company_backups WHERE id = $1', [target.id]);
+  try {
+    await unlink(join(BACKUPS_DIR, target.filename));
+  } catch (err) {
+    console.error(`Impossibile eliminare il file di backup ${target.filename}:`, err);
+  }
+}
+
 // UPDATE ... RETURNING next_index - 1: unica query atomica (il lock di riga
 // implicito nell'UPDATE serializza due chiamate concorrenti), restituisce il
 // valore PRE-incremento da usare come indice di questo backup mentre la
@@ -232,12 +266,83 @@ async function rotateOldBackups(companyId: string, maxBackups: number): Promise<
   }
 }
 
+interface PerformBackupOptions {
+  // true solo per lo snapshot di sicurezza pre-restore (vedi restoreBackup):
+  // la rotazione va rimandata a dopo il pg_restore, altrimenti potrebbe
+  // cancellare proprio il file più vecchio che si sta per ripristinare, se
+  // questo snapshot aggiuntivo lo spinge fuori dalla soglia max_backups.
+  skipRotation?: boolean;
+}
+
 // Cuore della feature: esegue pg_dump, registra il risultato, applica la
-// rotazione e aggiorna last_backup_at. Usata sia dal trigger manuale
-// dell'owner sia dal tick schedulato (vedi runScheduledBackups sotto):
-// aggiornare last_backup_at qui, in entrambi i casi allo stesso modo, è
-// esattamente ciò che fa "resettare il timer" a un'esecuzione manuale, senza
-// bisogno di uno stato separato per distinguerle.
+// rotazione e aggiorna last_backup_at. Presuppone il lock di backup già
+// acquisito dal chiamante (runBackup per l'uso normale, restoreBackup per lo
+// snapshot pre-restore): estratta da un unico runBackup originario perché
+// pg_try_advisory_lock è legato alla sessione che lo acquisisce, quindi
+// restoreBackup non può ottenere un secondo backup "annidato" aprendo una
+// nuova connessione, altrimenti si bloccherebbe (o fallirebbe) contro il
+// proprio stesso lock.
+async function performBackup(
+  companyId: string,
+  triggeredBy: BackupTrigger,
+  options: PerformBackupOptions = {},
+): Promise<BackupRecord> {
+  const settings = await getOrCreateSettingsRow(companyId);
+  const company = await getCompanyById(companyId);
+  if (!company) {
+    throw new CompanyNotFoundForBackupError();
+  }
+
+  await mkdir(BACKUPS_DIR, { recursive: true });
+
+  const index = await consumeNextIndex(companyId);
+  const filename = renderBackupFilename({
+    format: settings.filename_format,
+    companyName: company.name,
+    index,
+    now: new Date(),
+  });
+  const filePath = join(BACKUPS_DIR, filename);
+
+  // execFile (non exec): argomenti passati come array, mai interpolati in
+  // una stringa di shell, quindi immuni da command injection anche se
+  // company.name o il formato configurato contenessero caratteri speciali
+  // di shell. --format=custom produce un dump compresso, ripristinabile con
+  // pg_restore (vedi restoreBackup). --no-owner/--no-privileges: un
+  // ripristino su un'istanza Postgres diversa (es. dopo un cambio server)
+  // non deve fallire per ruoli DB che lì non esistono.
+  await execFileAsync(pgDumpExecutable(), [
+    '--dbname',
+    requireDatabaseUrl(),
+    '--format=custom',
+    '--no-owner',
+    '--no-privileges',
+    '--file',
+    filePath,
+  ]);
+
+  const { size } = await stat(filePath);
+
+  const inserted = await pool.query<BackupRow>(
+    `INSERT INTO company_backups (company_id, filename, size_bytes, triggered_by)
+     VALUES ($1, $2, $3, $4)
+     RETURNING id, company_id, filename, size_bytes, triggered_by, created_at`,
+    [companyId, filename, size, triggeredBy],
+  );
+  const record = toBackupRecord(inserted.rows[0]);
+
+  await pool.query('UPDATE company_backup_settings SET last_backup_at = now() WHERE company_id = $1', [companyId]);
+  if (!options.skipRotation) {
+    await rotateOldBackups(companyId, settings.max_backups);
+  }
+
+  return record;
+}
+
+// Usata sia dal trigger manuale dell'owner sia dal tick schedulato (vedi
+// runScheduledBackups sotto): aggiornare last_backup_at allo stesso modo in
+// entrambi i casi è esattamente ciò che fa "resettare il timer" a
+// un'esecuzione manuale, senza bisogno di uno stato separato per distinguerle.
 export async function runBackup(companyId: string, triggeredBy: BackupTrigger): Promise<BackupRecord> {
   // Client dedicato tenuto aperto per tutta la durata: pg_try_advisory_lock è
   // legato alla SESSIONE che lo acquisisce, non a una singola query. Le
@@ -252,60 +357,67 @@ export async function runBackup(companyId: string, triggeredBy: BackupTrigger): 
       throw new BackupInProgressError();
     }
 
-    const settings = await getOrCreateSettingsRow(companyId);
-    const company = await getCompanyById(companyId);
-    if (!company) {
-      throw new CompanyNotFoundForBackupError();
-    }
-
-    await mkdir(BACKUPS_DIR, { recursive: true });
-
-    const index = await consumeNextIndex(companyId);
-    const filename = renderBackupFilename({
-      format: settings.filename_format,
-      companyName: company.name,
-      index,
-      now: new Date(),
-    });
-    const filePath = join(BACKUPS_DIR, filename);
-
-    // execFile (non exec): argomenti passati come array, mai interpolati in
-    // una stringa di shell, quindi immuni da command injection anche se
-    // company.name o il formato configurato contenessero caratteri speciali
-    // di shell. --format=custom produce un dump compresso, ripristinabile
-    // con pg_restore (la feature di ripristino è nel backlog, non ancora
-    // implementata qui). --no-owner/--no-privileges: un ripristino su
-    // un'istanza Postgres diversa (es. dopo un cambio server) non deve
-    // fallire per ruoli DB che lì non esistono.
-    await execFileAsync(pgDumpExecutable(), [
-      '--dbname',
-      requireDatabaseUrl(),
-      '--format=custom',
-      '--no-owner',
-      '--no-privileges',
-      '--file',
-      filePath,
-    ]);
-
-    const { size } = await stat(filePath);
-
-    const inserted = await pool.query<BackupRow>(
-      `INSERT INTO company_backups (company_id, filename, size_bytes, triggered_by)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, company_id, filename, size_bytes, triggered_by, created_at`,
-      [companyId, filename, size, triggeredBy],
-    );
-    const record = toBackupRecord(inserted.rows[0]);
-
-    await pool.query('UPDATE company_backup_settings SET last_backup_at = now() WHERE company_id = $1', [companyId]);
-    await rotateOldBackups(companyId, settings.max_backups);
-
-    return record;
+    return await performBackup(companyId, triggeredBy);
   } finally {
     // Rilasciato solo se davvero acquisito: se acquireBackupLock ha
     // restituito false (lock già di un altro processo), non c'è nulla da
     // sbloccare per questa sessione — chiamarlo comunque darebbe solo un
     // warning innocuo lato Postgres, evitato controllando lockAcquired.
+    if (lockAcquired) {
+      try {
+        await releaseBackupLock(lockClient, companyId);
+      } catch (err) {
+        console.error(`Impossibile rilasciare il lock di backup per l'azienda ${companyId}:`, err);
+      }
+    }
+    lockClient.release();
+  }
+}
+
+// 'pg_restore' di default (cercato nel PATH di sistema), stesso principio di
+// pgDumpExecutable sopra: su Windows l'installer di PostgreSQL non aggiunge
+// sempre la cartella bin al PATH.
+function pgRestoreExecutable(): string {
+  return process.env.PG_RESTORE_PATH || 'pg_restore';
+}
+
+// Ripristina il database allo stato di un backup passato. Prima sovrascrive
+// qualunque cosa, crea uno snapshot 'pre-restore' dello stato ATTUALE (stesso
+// lock, stessa sessione: vedi performBackup) così un ripristino richiesto per
+// errore resta comunque reversibile con un secondo "Applica" su quello
+// snapshot. --clean --if-exists: pg_restore droppa prima gli oggetti
+// esistenti (altrimenti fallirebbe su tabelle/vincoli già presenti), --if-exists
+// evita errori se lo schema corrente non combacia esattamente col dump.
+export async function restoreBackup(companyId: string, backupId: string): Promise<void> {
+  const lockClient = await pool.connect();
+  let lockAcquired = false;
+  try {
+    lockAcquired = await acquireBackupLock(lockClient, companyId);
+    if (!lockAcquired) {
+      throw new BackupInProgressError();
+    }
+
+    const target = await findBackupRow(companyId, backupId);
+    if (!target) {
+      throw new BackupNotFoundError();
+    }
+
+    await performBackup(companyId, 'pre-restore', { skipRotation: true });
+
+    const filePath = join(BACKUPS_DIR, target.filename);
+    await execFileAsync(pgRestoreExecutable(), [
+      '--dbname',
+      requireDatabaseUrl(),
+      '--clean',
+      '--if-exists',
+      '--no-owner',
+      '--no-privileges',
+      filePath,
+    ]);
+
+    const settings = await getOrCreateSettingsRow(companyId);
+    await rotateOldBackups(companyId, settings.max_backups);
+  } finally {
     if (lockAcquired) {
       try {
         await releaseBackupLock(lockClient, companyId);

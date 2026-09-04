@@ -1,0 +1,219 @@
+.historyItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--m-md);
+  padding: var(--p-md);
+  border-radius: var(--radious-sm);
+  background-color: var(--bg-field);
+  transition: background-color 150ms ease;
+}
+
+/* Selezione multipla: la card cliccata resta tinteggiata verso il colore
+   primario finché non viene deselezionata o eliminata in blocco. */
+.historyItem[data-selected="true"] {
+  background-color: color-mix(in srgb, var(--bg-primary) 16%, var(--bg-field) 84%);
+}
+
+/* Bottone "invisibile" che copre l'area cliccabile per la selezione (tutta
+   la card tranne il kebab, che resta un fratello di questo bottone così un
+   click sul menu non attiva anche la selezione). */
+.selectToggle {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--m-md);
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background-color: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.selectToggle:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+.checkbox {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--text-muted);
+  border-radius: var(--radious-xs);
+  color: var(--text-on-primary);
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+
+.selectToggle[aria-pressed="true"] .checkbox {
+  border-color: var(--bg-primary);
+  background-color: var(--bg-primary);
+}
+
+.historyMain {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--m-xs);
+  min-width: 0;
+}
+
+.historyFilename {
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.historyMeta {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.historyBadge {
+  flex-shrink: 0;
+  padding: var(--p-xs) var(--p-sm);
+  border-radius: var(--radious-xs);
+  background-color: var(--bg-surface);
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.historyBadge[data-trigger="manual"] {
+  color: var(--color-info);
+}
+
+/* Snapshot creato automaticamente prima di un ripristino (vedi
+   backupService.restoreBackup): colore distinto da "Automatico" perché non
+   nasce dallo scheduler ma da un'azione distruttiva dell'owner, utile da
+   riconoscere a colpo d'occhio nello storico. */
+.historyBadge[data-trigger="pre-restore"] {
+  color: var(--color-warning);
+}
+
+/* Relative (non absolute come .kebabArea in projectComponent): qui la card è
+   una riga flex, non un riquadro ampio da sovrapporre, il bottone sta al suo
+   posto nel flusso e solo il popover sotto si sgancia dal layout. */
+.kebabArea {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.kebabButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    transform 100ms ease;
+}
+
+.kebabButton:hover {
+  background-color: color-mix(in srgb, var(--bg-surface) 80%, white 20%);
+}
+
+.kebabButton:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+.kebabButton:active {
+  transform: scale(0.94);
+}
+
+.kebabButton[aria-expanded="true"] {
+  background-color: var(--bg-primary);
+  color: var(--text-on-primary);
+}
+
+.popoverMenu {
+  position: absolute;
+  top: calc(100% + var(--m-xs));
+  right: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  min-width: 130px;
+  padding: var(--p-sm);
+  border-radius: var(--radious-md);
+  background-color: var(--bg-surface);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  animation: popoverPopIn 140ms ease both;
+}
+
+/* Voci in fondo allo storico: si apre verso l'alto invece che verso il
+   basso per restare dentro la porzione visibile del drawer senza costringere
+   allo scroll (vedi la misurazione in backupHistoryItemComponent.tsx). */
+.popoverMenu[data-placement="up"] {
+  top: auto;
+  bottom: calc(100% + var(--m-xs));
+}
+
+.popoverItem {
+  padding: var(--p-sm) var(--p-md);
+  border-radius: var(--radious-sm);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.popoverItem:hover {
+  background-color: var(--bg-field);
+}
+
+.popoverItem:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: -2px;
+}
+
+.popoverItemDanger {
+  composes: popoverItem;
+  color: var(--color-danger);
+}
+
+@keyframes popoverPopIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kebabButton {
+    transition: none;
+  }
+
+  .kebabButton:active {
+    transform: none;
+  }
+
+  .popoverMenu {
+    animation: none;
+  }
+}
