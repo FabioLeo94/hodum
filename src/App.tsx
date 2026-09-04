@@ -5,6 +5,7 @@ import ChangePassword from "./app/pages/changePassword/changePassword";
 import RecoverPassword from "./app/pages/recoverPassword/recoverPassword";
 import Dashboard from "./app/pages/dashboard/dashboard";
 import Employees from "./app/pages/employees/employees";
+import CompanyManagement from "./app/pages/companyManagement/companyManagement";
 import TaskList from "./app/pages/taskList/taskList";
 import ProtectedRouteComponent from "./app/components/protectedRoute/protectedRouteComponent";
 import ProtectedLayoutComponent from "./app/components/protectedLayout/protectedLayoutComponent";
@@ -40,6 +41,11 @@ function App() {
               solo autenticazione e mustChangePassword): il componente
               reindirizza da sé chi non è owner (vedi employees.tsx). */}
           <Route path="employees" element={<Employees />} />
+          {/* Stessa guardia owner-only di employees, ma qui il project manager
+              NON è ammesso (vedi companyManagement.tsx): backup e le altre
+              voci future toccano l'infrastruttura, non la gestione operativa
+              che il manager già presidia altrove. */}
+          <Route path="company-management" element={<CompanyManagement />} />
         </Route>
         <Route path="*" element={<Navigate to={"/auth"} />} />
       </Routes>

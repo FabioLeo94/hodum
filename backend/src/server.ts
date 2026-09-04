@@ -3,9 +3,11 @@
 // ciò che importa) legga una variabile d'ambiente.
 import 'dotenv/config';
 
+import cron from 'node-cron';
 import { createApp } from './app';
 import { initRealtime } from './realtime/io';
 import { checkDueDateNotifications } from './services/notificationService';
+import { runScheduledBackups } from './services/backupService';
 
 const port = Number(process.env.PORT) || 3000;
 
@@ -35,6 +37,18 @@ async function main(): Promise<void> {
   // riavvio del server aspetterebbero fino a un'ora prima del primo avviso.
   void checkDueDateNotifications().catch((err) => console.error('Controllo scadenze notifiche fallito', err));
 
+  // Tick "ogni minuto, controlla se qualche azienda ha superato il proprio
+  // interval_minutes da last_backup_at" (vedi backupService.runScheduledBackups):
+  // node-cron invece del setInterval usato sopra perché qui la cadenza è
+  // dichiarata dall'owner stesso tramite le impostazioni di backup, un
+  // contesto dove un'espressione cron è il formato naturale, anche se il tick
+  // di controllo resta fisso al minuto (la vera cadenza per azienda è
+  // calcolata dentro runScheduledBackups, non dall'espressione cron qui).
+  const backupTask = cron.schedule('* * * * *', () => {
+    runScheduledBackups().catch((err) => console.error('Controllo backup schedulati fallito', err));
+  });
+  void runScheduledBackups().catch((err) => console.error('Controllo backup schedulati fallito', err));
+
   // Spegnimento ordinato: smettiamo di accettare nuove connessioni e usciamo
   // solo quando quelle in corso sono state chiuse. Se in futuro si aggiungono
   // risorse con connessioni aperte (pool DB, code, client esterni), vanno
@@ -42,6 +56,7 @@ async function main(): Promise<void> {
   function shutdown(signal: NodeJS.Signals): void {
     console.log(`Ricevuto ${signal}, arresto in corso...`);
     clearInterval(dueDateCheckInterval);
+    backupTask.stop();
     server.close((err) => {
       if (err) {
         console.error('Errore durante la chiusura del server:', err);

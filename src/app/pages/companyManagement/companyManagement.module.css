@@ -1,0 +1,35 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-xl);
+  padding: var(--p-xl);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-sm);
+}
+
+.title {
+  color: var(--text-primary);
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+.subtitle {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.cardsGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--m-lg);
+}
+
+@media (max-width: 400px) {
+  .title {
+    font-size: 1.5rem;
+  }
+}

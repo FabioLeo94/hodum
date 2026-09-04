@@ -12,6 +12,7 @@ Task manager full-stack con assistente AI integrato: React 19 + TypeScript + Vit
 
 - Node.js 20+
 - Un'istanza PostgreSQL raggiungibile
+- `pg_dump` disponibile nel PATH del server backend, stessa versione major del PostgreSQL usato (client tools ufficiali, es. pacchetto `postgresql-client`): richiesto dalla feature di backup (Gestione aziendale > Backup, owner-only), che lo invoca come processo esterno
 - Ollama in esecuzione localmente, con il modello configurato già scaricato (`ollama pull <modello>`, default `qwen2.5:14b`)
 
 ## Setup

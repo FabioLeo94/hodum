@@ -12,3 +12,7 @@ build
 
 *.log
 .env
+
+# Dump prodotti da backupService.ts (pg_dump): dati, non codice, e già
+# tracciati come metadata nella tabella company_backups.
+backups

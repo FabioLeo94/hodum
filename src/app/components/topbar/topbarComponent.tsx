@@ -44,6 +44,7 @@ function TopbarComponent({ onLogout }: Prop) {
   const role = authUser?.role;
   const companyId = authUser?.companyId ?? undefined;
   const canSeeEmployees = role === "owner" || role === "manager";
+  const isOwner = role === "owner";
   const { pathname } = useLocation();
 
   // Nessun placeholder mentre carica (a differenza di activeProjectLabel):
@@ -399,6 +400,17 @@ function TopbarComponent({ onLogout }: Prop) {
             {renderNavItem({ to: "/employees", label: "Dipendenti" })}
             {/* Separatore puramente visivo: segnala che "Dipendenti" è
                 amministrativo, non parte della nav primaria a sinistra. */}
+            <span className={styles.separator} aria-hidden="true" />
+          </>
+        )}
+
+        {/* Owner-only (a differenza di "Dipendenti" sopra, visibile anche al
+            project manager): backup e le altre voci future di questa pagina
+            toccano l'infrastruttura dell'azienda, non la gestione operativa
+            che il manager già presidia (vedi companyManagement.tsx). */}
+        {isOwner && (
+          <>
+            {renderNavItem({ to: "/company-management", label: "Gestione aziendale" })}
             <span className={styles.separator} aria-hidden="true" />
           </>
         )}

@@ -1,0 +1,154 @@
+import type { Request as ExRequest } from 'express';
+import { Body, Controller, Get, Path, Post, Put, Request, Response, Route, Security, SuccessResponse } from 'tsoa';
+import { getAuthenticatedUser } from '../middleware/authentication';
+import type { BackupRecord, BackupSettings } from '../models/backup';
+import {
+  BackupInProgressError,
+  CompanyNotFoundForBackupError,
+  getBackupSettings,
+  listBackups,
+  runBackup,
+  updateBackupSettings,
+} from '../services/backupService';
+import { isValidFilenameFormat } from '../utils/backupFilename';
+
+// Nome distinto dall'omonimo "ErrorResponse" degli altri controller: tsoa
+// risolve i modelli per nome dell'interfaccia a livello globale, non per
+// file (stesso motivo di CompanyErrorResponse in companyController.ts).
+interface BackupErrorResponse {
+  message: string;
+}
+
+// Stesso principio di companyNotFoundResponse in companyController.ts: un id
+// fuori dalla propria company resta un 404, mai un 403 che confermerebbe
+// l'esistenza di un'azienda altrui.
+function companyNotFoundResponse(id: string): BackupErrorResponse {
+  return { message: `Company non trovata: ${id}` };
+}
+
+export interface UpdateBackupSettingsRequest {
+  intervalMinutes: number;
+  maxBackups: number;
+  filenameFormat: string;
+}
+
+const MIN_INTERVAL_MINUTES = 1;
+const MAX_INTERVAL_MINUTES = 10_080; // 7 giorni: oltre non ha senso chiamarlo backup "periodico".
+const MIN_MAX_BACKUPS = 1;
+const MAX_MAX_BACKUPS = 500; // Limite di buon senso: oltre, la rotazione perde significato pratico per una PMI.
+
+// Route annidata sotto 'companies/{id}', stesso pattern di 'companies/{id}/employees'
+// in companyController.ts: ogni endpoint verifica che {id} combaci con la
+// company del richiedente prima di agire, invece di dedurla implicitamente
+// dal token (coerenza con il resto del controller aziendale).
+@Route('companies')
+export class BackupController extends Controller {
+  @Get('{id}/backups/settings')
+  @Security('owner')
+  @Response<BackupErrorResponse>(404, 'Company non trovata')
+  public async getSettings(
+    @Path() id: string,
+    @Request() request: ExRequest,
+  ): Promise<BackupSettings | BackupErrorResponse> {
+    const requester = getAuthenticatedUser(request);
+    if (requester.companyId === null || id !== requester.companyId) {
+      this.setStatus(404);
+      return companyNotFoundResponse(id);
+    }
+    return getBackupSettings(id);
+  }
+
+  @Put('{id}/backups/settings')
+  @Security('owner')
+  @Response<BackupErrorResponse>(404, 'Company non trovata')
+  @Response<BackupErrorResponse>(422, 'intervalMinutes, maxBackups o filenameFormat non validi')
+  public async putSettings(
+    @Path() id: string,
+    @Body() body: UpdateBackupSettingsRequest,
+    @Request() request: ExRequest,
+  ): Promise<BackupSettings | BackupErrorResponse> {
+    const requester = getAuthenticatedUser(request);
+    if (requester.companyId === null || id !== requester.companyId) {
+      this.setStatus(404);
+      return companyNotFoundResponse(id);
+    }
+
+    if (
+      !Number.isInteger(body.intervalMinutes) ||
+      body.intervalMinutes < MIN_INTERVAL_MINUTES ||
+      body.intervalMinutes > MAX_INTERVAL_MINUTES
+    ) {
+      this.setStatus(422);
+      return { message: `intervalMinutes deve essere un intero tra ${MIN_INTERVAL_MINUTES} e ${MAX_INTERVAL_MINUTES}` };
+    }
+    if (
+      !Number.isInteger(body.maxBackups) ||
+      body.maxBackups < MIN_MAX_BACKUPS ||
+      body.maxBackups > MAX_MAX_BACKUPS
+    ) {
+      this.setStatus(422);
+      return { message: `maxBackups deve essere un intero tra ${MIN_MAX_BACKUPS} e ${MAX_MAX_BACKUPS}` };
+    }
+    if (!isValidFilenameFormat(body.filenameFormat)) {
+      this.setStatus(422);
+      return {
+        message:
+          'filenameFormat non valido: sono ammessi solo lettere, numeri, spazi, "_", "-", "." e i placeholder {company} {date} {time} {index}',
+      };
+    }
+
+    return updateBackupSettings(id, body);
+  }
+
+  // Sincrono (attende il pg_dump prima di rispondere) invece di 202 +
+  // polling: per il volume di dati di una PMI/freelance un dump impiega
+  // secondi, non minuti, e la UI (drawer) può mostrare uno stato di
+  // caricamento sul bottone per quella durata senza bisogno di un
+  // meccanismo di notifica separato.
+  @Post('{id}/backups/run')
+  @Security('owner')
+  @SuccessResponse(201, 'Backup eseguito')
+  @Response<BackupErrorResponse>(404, 'Company non trovata')
+  @Response<BackupErrorResponse>(409, 'Un backup per questa azienda è già in corso')
+  public async runManualBackup(
+    @Path() id: string,
+    @Request() request: ExRequest,
+  ): Promise<BackupRecord | BackupErrorResponse> {
+    const requester = getAuthenticatedUser(request);
+    if (requester.companyId === null || id !== requester.companyId) {
+      this.setStatus(404);
+      return companyNotFoundResponse(id);
+    }
+
+    try {
+      const record = await runBackup(id, 'manual');
+      this.setStatus(201);
+      return record;
+    } catch (err) {
+      if (err instanceof BackupInProgressError) {
+        this.setStatus(409);
+        return { message: err.message };
+      }
+      if (err instanceof CompanyNotFoundForBackupError) {
+        this.setStatus(404);
+        return companyNotFoundResponse(id);
+      }
+      throw err;
+    }
+  }
+
+  @Get('{id}/backups')
+  @Security('owner')
+  @Response<BackupErrorResponse>(404, 'Company non trovata')
+  public async listCompanyBackups(
+    @Path() id: string,
+    @Request() request: ExRequest,
+  ): Promise<BackupRecord[] | BackupErrorResponse> {
+    const requester = getAuthenticatedUser(request);
+    if (requester.companyId === null || id !== requester.companyId) {
+      this.setStatus(404);
+      return companyNotFoundResponse(id);
+    }
+    return listBackups(id);
+  }
+}
