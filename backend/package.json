@@ -13,7 +13,9 @@
     "start": "node dist/server.js",
     "migrate:up": "tsx src/db/migrate.ts",
     "migrate:create": "tsx src/db/createMigration.ts",
-    "db:check": "tsx src/db/check.ts"
+    "db:check": "tsx src/db/check.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@scalar/express-api-reference": "^0.10.16",
@@ -36,6 +38,7 @@
     "@types/node": "^26.4.0",
     "@types/pg": "^8.23.1",
     "tsx": "^4.23.12",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.11"
   }
 }

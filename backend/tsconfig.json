@@ -26,5 +26,9 @@
     "sourceMap": true
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist"]
+  // *.test.ts esclusi dalla build di produzione (tsc -b): restano compilati e
+  // tipizzati normalmente da vitest, che li legge via esbuild indipendentemente
+  // da questo tsconfig, ma non devono finire in dist/ (l'immagine Docker parte
+  // da lì, vedi backend/Dockerfile).
+  "exclude": ["node_modules", "dist", "src/**/*.test.ts"]
 }
