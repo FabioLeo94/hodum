@@ -64,6 +64,49 @@ docker compose down              # ferma i container, mantiene i volumi (dati)
 docker compose down -v           # ferma e cancella anche i volumi: PERDE i dati del database
 ```
 
+## Modello di rete e accesso remoto
+
+Hodum è pensato per girare **on-prem**, su un server dell'azienda stessa, e
+**mai esposto direttamente su internet**: nessun port forwarding dal router
+verso le porte del frontend/backend, nessun reverse proxy pubblico davanti
+all'app. Il perimetro di sicurezza è la rete locale (LAN) dell'azienda, non
+l'autenticazione applicativa da sola — quest'ultima resta comunque necessaria,
+ma è pensata come seconda barriera contro un uso interno improprio (vedi i
+test sui permessi per ruolo), non come difesa da attacchi via internet.
+
+Chi installa l'app deve conoscere questo presupposto prima ancora di avviarla:
+se il server è raggiungibile da internet senza VPN, il modello di sicurezza
+descritto qui non vale più.
+
+### Accesso da remoto (dipendenti fuori sede)
+
+Un dipendente che lavora fuori ufficio non deve raggiungere l'app tramite un
+indirizzo pubblico: deve prima collegarsi alla rete aziendale via **VPN**
+(es. OpenVPN, WireGuard o equivalente) e poi usare Hodum con lo stesso
+IP/hostname interno usato in LAN, come se fosse fisicamente in ufficio.
+La VPN sorveglia e autentica l'accesso a livello di rete prima ancora che
+la richiesta arrivi all'app.
+
+Nota opzionale su TLS: se si vuole cifratura end-to-end anche dentro il
+tunnel VPN (oltre alla cifratura del tunnel stesso), è possibile mettere un
+reverse proxy con certificato self-signed o interno davanti al frontend —
+non incluso di default in questo repo, da valutare caso per caso.
+
+### Offboarding: revoca dell'accesso VPN
+
+L'unico punto debole di questo modello dipende da un processo umano, non dal
+codice: un certificato o una credenziale VPN non revocati quando un
+dipendente lascia l'azienda restano una porta d'accesso permanente alla rete
+aziendale, Hodum incluso. Alla cessazione di un rapporto di lavoro:
+
+1. **Revoca il certificato/credenziale VPN** del dipendente sul server VPN
+   (es. su OpenVPN, revoca il certificato client e rigenera la CRL).
+2. **Disattiva l'utente** su Hodum stesso, così anche un accesso residuo alla
+   rete (es. da un altro dispositivo già collegato) non porta comunque a dati
+   applicativi.
+3. Verifica che non esistano altre copie della configurazione VPN (file
+   `.ovpn`, chiavi) rimaste su dispositivi aziendali non restituiti.
+
 ## Setup senza Docker (sviluppo)
 
 ```bash
