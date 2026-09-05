@@ -1,12 +1,7 @@
+import { useTranslation } from "react-i18next";
 import type { TaskStatus } from "../../../shared/types/project";
+import { useStatusLabels } from "../../../shared/constants/taskStatus";
 import styles from "./taskStatusSelectComponent.module.css";
-
-const STATUS_LABELS: Record<TaskStatus, string> = {
-  progress: "In corso",
-  review: "In review",
-  completed: "Completato",
-  rejected: "Rifiutato",
-};
 
 const STATUS_STYLES: Record<TaskStatus, string> = {
   progress: styles.statusProgress,
@@ -28,10 +23,13 @@ function TaskStatusSelectComponent({
   taskTitle,
   disabled = false,
 }: Prop) {
+  const { t } = useTranslation();
+  const STATUS_LABELS = useStatusLabels();
+
   return (
     <select
       className={`${styles.statusSelect} ${STATUS_STYLES[status]}`}
-      aria-label={`Stato di ${taskTitle}`}
+      aria-label={t("components.taskStatusSelect.ariaLabel", { taskTitle })}
       value={status}
       disabled={disabled}
       onChange={(event) => onChange(event.target.value as TaskStatus)}

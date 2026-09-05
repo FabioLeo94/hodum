@@ -1,0 +1,666 @@
+{
+  "components": {
+    "languageSwitcher": {
+      "label": "Lingua",
+      "it": "Italiano",
+      "en": "English"
+    },
+    "topbar": {
+      "nav": {
+        "main": "Navigazione principale",
+        "dashboard": "Dashboard",
+        "projects": "Progetti",
+        "projectFallback": "Progetto",
+        "employees": "Dipendenti",
+        "companyManagement": "Gestione aziendale"
+      },
+      "projectsMenu": {
+        "loading": "Caricamento...",
+        "empty": "Nessun progetto",
+        "loadError": "Impossibile caricare i progetti."
+      },
+      "account": {
+        "menuLabel": "Menu account",
+        "editAccount": "Modifica account",
+        "logout": "Disconnetti",
+        "lastLogin": "Ultimo accesso: {{date}}",
+        "updateError": "Impossibile aggiornare l'account."
+      }
+    },
+    "authForm": {
+      "emailLabel": "Email",
+      "emailPlaceholder": "Email",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Password",
+      "emailInvalid": "Inserire una email valida.",
+      "invalidCredentials": "Email o password non corretti.",
+      "rememberMe": "Resta connesso",
+      "forgotPassword": "Password dimenticata?",
+      "rateLimited": "Troppi tentativi di accesso. Riprova tra {{countdown}}.",
+      "submitting": "Accesso in corso...",
+      "submit": "Accedi"
+    },
+    "registerForm": {
+      "companyNameLabel": "Nome azienda",
+      "companyNamePlaceholder": "Nome azienda",
+      "usernameLabel": "Username",
+      "usernamePlaceholder": "Username",
+      "emailLabel": "Email",
+      "emailPlaceholder": "Email",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Password",
+      "confirmPasswordLabel": "Conferma password",
+      "confirmPasswordPlaceholder": "Conferma password",
+      "companyNameRequired": "Inserire il nome dell'azienda.",
+      "usernameRequired": "Inserire uno username.",
+      "emailInvalid": "Inserire una email valida.",
+      "passwordInvalid": "La password deve contenere almeno 8 caratteri, una minuscola, una maiuscola e un numero.",
+      "passwordMismatch": "Le password non coincidono.",
+      "registrationFailed": "Registrazione non riuscita. Riprova più tardi.",
+      "submitting": "Registrazione in corso...",
+      "submit": "Registrati"
+    },
+    "recoverPasswordForm": {
+      "emailLabel": "Email",
+      "emailPlaceholder": "Email",
+      "recoveryCodeLabel": "Codice di recupero",
+      "recoveryCodePlaceholder": "XXXX-XXXX-XXXX-XXXX",
+      "newPasswordLabel": "Nuova password",
+      "newPasswordPlaceholder": "Nuova password",
+      "confirmNewPasswordLabel": "Conferma nuova password",
+      "confirmNewPasswordPlaceholder": "Conferma nuova password",
+      "emailInvalid": "Inserire una email valida.",
+      "recoveryCodeRequired": "Inserire il codice di recupero.",
+      "newPasswordInvalid": "La password deve contenere almeno 8 caratteri, una minuscola, una maiuscola e un numero.",
+      "passwordMismatch": "Le password non coincidono.",
+      "invalidCredentials": "Email o codice di recupero non validi.",
+      "rateLimited": "Troppi tentativi di recupero. Riprova tra {{countdown}}.",
+      "recoveryFailed": "Recupero password non riuscito. Riprova più tardi.",
+      "submitting": "Recupero in corso...",
+      "submit": "Recupera l'accesso",
+      "confirmLabel": "Ho salvato il nuovo codice, vai alla dashboard"
+    },
+    "recoveryCodeDisplay": {
+      "title": "Salva il tuo codice di recupero",
+      "description": "È l'unico modo per recuperare l'accesso se dimentichi la password: Hodum non invia email né usa servizi esterni per il reset. Conservalo in un posto sicuro (un password manager, una copia stampata) — non verrà mostrato di nuovo.",
+      "copy": "Copia",
+      "copied": "Copiato",
+      "acknowledge": "Ho salvato il codice in un posto sicuro",
+      "defaultConfirmLabel": "Ho salvato il codice, continua"
+    },
+    "changePasswordForm": {
+      "newPasswordLabel": "Nuova password",
+      "newPasswordPlaceholder": "Nuova password",
+      "confirmPasswordLabel": "Conferma nuova password",
+      "confirmPasswordPlaceholder": "Conferma nuova password",
+      "passwordInvalid": "La password deve contenere almeno 8 caratteri, una minuscola, una maiuscola e un numero.",
+      "passwordMismatch": "Le password non coincidono.",
+      "invalidSession": "Sessione non valida. Effettua nuovamente l'accesso.",
+      "updateFailed": "Cambio password non riuscito. Riprova più tardi.",
+      "submitting": "Aggiornamento in corso...",
+      "submit": "Aggiorna password"
+    },
+    "modalBase": {
+      "closeButton": "Chiudi"
+    },
+    "createEmployeeModal": {
+      "titleEmployee": "Nuovo dipendente",
+      "titleManager": "Nuovo project manager",
+      "submitting": "Creazione in corso...",
+      "submit": "Crea dipendente",
+      "cancel": "Annulla",
+      "description": "La password iniziale va comunicata al dipendente: al primo accesso gli verrà chiesto di sostituirla con una scelta da lui.",
+      "usernameLabel": "Username",
+      "usernamePlaceholder": "Username",
+      "emailLabel": "Email",
+      "emailPlaceholder": "Email",
+      "roleLabel": "Ruolo",
+      "roleEmployee": "Dipendente",
+      "roleManager": "Project Manager",
+      "passwordLabel": "Password iniziale",
+      "passwordPlaceholder": "Password iniziale",
+      "confirmPasswordLabel": "Conferma password iniziale",
+      "confirmPasswordPlaceholder": "Conferma password iniziale",
+      "usernameRequired": "Inserire uno username.",
+      "emailInvalid": "Inserire una email valida.",
+      "passwordInvalid": "La password deve contenere almeno 8 caratteri, una minuscola, una maiuscola e un numero.",
+      "passwordMismatch": "Le password non coincidono."
+    },
+    "editEmployeeModal": {
+      "titleEmployee": "Modifica dipendente",
+      "titleManager": "Modifica project manager",
+      "submitting": "Salvataggio in corso...",
+      "submit": "Salva",
+      "cancel": "Annulla",
+      "description": "Lascia vuoti i campi password per non cambiarla. Una nuova password andrà comunicata al dipendente: al prossimo accesso gli verrà chiesto di sostituirla con una scelta da lui.",
+      "createdAtLabel": "Creato il",
+      "lastLoginLabel": "Ultimo accesso",
+      "lastLoginNever": "Mai",
+      "usernameLabel": "Username",
+      "usernamePlaceholder": "Username",
+      "roleLabel": "Ruolo",
+      "roleEmployee": "Dipendente",
+      "roleManager": "Project Manager",
+      "passwordLabel": "Nuova password",
+      "passwordPlaceholder": "Nuova password (opzionale)",
+      "confirmPasswordLabel": "Conferma nuova password",
+      "confirmPasswordPlaceholder": "Conferma nuova password",
+      "usernameRequired": "Inserire uno username.",
+      "passwordInvalid": "La password deve contenere almeno 8 caratteri, una minuscola, una maiuscola e un numero.",
+      "passwordMismatch": "Le password non coincidono."
+    },
+    "deleteEmployeeModal": {
+      "title": "Elimina dipendente",
+      "submitting": "Eliminazione in corso...",
+      "submit": "Elimina",
+      "cancel": "Annulla",
+      "description": "Stai per eliminare «{{username}}». L'operazione non è reversibile e rimuove anche le sue assegnazioni ai progetti."
+    },
+    "createProjectModal": {
+      "title": "Nuovo progetto",
+      "submitting": "Creazione in corso...",
+      "submit": "Crea progetto",
+      "cancel": "Annulla",
+      "description": "Dai un nome al progetto: potrai aggiungere i task in un secondo momento, dalla sua pagina dedicata.",
+      "nameLabel": "Nome del progetto",
+      "namePlaceholder": "Es. Redesign sito web",
+      "nameRequired": "Inserisci un nome per il progetto."
+    },
+    "renameProjectModal": {
+      "title": "Rinomina progetto",
+      "submitting": "Salvataggio in corso...",
+      "submit": "Salva",
+      "cancel": "Annulla",
+      "nameLabel": "Nome del progetto",
+      "namePlaceholder": "Es. Redesign sito web",
+      "nameRequired": "Inserisci un nome per il progetto."
+    },
+    "deleteProjectModal": {
+      "title": "Elimina progetto",
+      "submitting": "Eliminazione in corso...",
+      "submit": "Elimina",
+      "cancel": "Annulla",
+      "description": "Stai per eliminare «{{projectName}}». L'operazione non è reversibile."
+    },
+    "downloadProjectModal": {
+      "title": "Scarica progetto",
+      "submit": "Scarica",
+      "cancel": "Annulla",
+      "description": "Scegli il formato in cui esportare i dati del progetto.",
+      "formatGroupLabel": "Formato di esportazione",
+      "formats": {
+        "json": {
+          "label": "JSON",
+          "description": "Struttura dati completa del progetto, con task e assegnatari."
+        },
+        "xml": {
+          "label": "XML",
+          "description": "Stessi dati in formato a marcatori, per sistemi che li richiedono."
+        },
+        "csv": {
+          "label": "CSV",
+          "description": "Elenco dei task in formato tabellare, separato da virgole."
+        },
+        "excel": {
+          "label": "Excel",
+          "description": "Foglio di calcolo .xlsx con l'elenco dei task."
+        }
+      }
+    },
+    "assignProjectsModal": {
+      "title": "Assegna progetti a {{username}}",
+      "submitting": "Salvataggio in corso...",
+      "submit": "Salva",
+      "cancel": "Annulla",
+      "loading": "Caricamento dei progetti...",
+      "loadError": "Impossibile caricare i progetti.",
+      "empty": "Nessun progetto disponibile in azienda."
+    },
+    "editAccountModal": {
+      "title": "Modifica account",
+      "submitting": "Salvataggio in corso...",
+      "submit": "Salva",
+      "cancel": "Annulla",
+      "description": "Lascia vuoti i campi password per non cambiarla.",
+      "createdAtLabel": "Creato il",
+      "usernameLabel": "Username",
+      "usernamePlaceholder": "Username",
+      "emailLabel": "Email",
+      "emailPlaceholder": "Email",
+      "passwordLabel": "Nuova password",
+      "passwordPlaceholder": "Nuova password (opzionale)",
+      "confirmPasswordLabel": "Conferma nuova password",
+      "confirmPasswordPlaceholder": "Conferma nuova password",
+      "usernameRequired": "Inserire uno username.",
+      "emailInvalid": "Inserire una email valida.",
+      "passwordInvalid": "La password deve contenere almeno 8 caratteri, una minuscola, una maiuscola e un numero.",
+      "passwordMismatch": "Le password non coincidono."
+    },
+    "editCompanyDrawer": {
+      "title": "Modifica dati aziendali",
+      "closeLabel": "Chiudi",
+      "loading": "Caricamento...",
+      "createdOn": "Creata il {{date}}.",
+      "nameLabel": "Nome azienda",
+      "ragioneSocialeLabel": "Ragione sociale",
+      "pivaLabel": "Partita IVA",
+      "codiceFiscaleLabel": "Codice fiscale",
+      "indirizzoLabel": "Indirizzo",
+      "pecLabel": "PEC",
+      "submitting": "Salvataggio in corso...",
+      "submit": "Salva",
+      "nameRequired": "Il nome dell'azienda non può essere vuoto.",
+      "pivaInvalid": "La P.IVA deve essere composta da 11 cifre.",
+      "codiceFiscaleInvalid": "Il codice fiscale deve essere di 11 cifre o 16 caratteri alfanumerici.",
+      "pecInvalid": "Inserire una PEC valida.",
+      "loadError": "Impossibile caricare i dati aziendali.",
+      "saveError": "Impossibile salvare i dati aziendali."
+    },
+    "backupHistoryItem": {
+      "triggerLabels": {
+        "manual": "Manuale",
+        "scheduled": "Automatico",
+        "preRestore": "Pre-ripristino"
+      },
+      "selectLabel": "Seleziona il backup {{filename}}",
+      "deselectLabel": "Deseleziona il backup {{filename}}",
+      "otherActionsLabel": "Altre azioni per {{filename}}",
+      "restore": "Applica",
+      "delete": "Elimina"
+    },
+    "backupSettingsDrawer": {
+      "title": "Backup",
+      "closeLabel": "Chiudi",
+      "loadError": "Impossibile caricare le impostazioni di backup.",
+      "historyLoadError": "Impossibile caricare lo storico dei backup.",
+      "loading": "Caricamento...",
+      "runNow": {
+        "sectionTitle": "Esegui ora",
+        "lastBackup": "Ultimo backup: {{date}}.",
+        "never": "Nessun backup eseguito finora.",
+        "hint": "Un'esecuzione manuale riazzera il conto alla rovescia del prossimo backup automatico.",
+        "running": "Backup in corso...",
+        "action": "Esegui backup ora"
+      },
+      "runError": "Esecuzione del backup non riuscita.",
+      "settings": {
+        "sectionTitle": "Impostazioni",
+        "intervalLabel": "Frequenza (minuti)",
+        "maxBackupsLabel": "Backup massimi conservati",
+        "filenameFormatLabel": "Formato nome file",
+        "placeholderHintPrefix": "Placeholder disponibili:",
+        "saving": "Salvataggio in corso...",
+        "save": "Salva impostazioni"
+      },
+      "intervalError": "Inserire un numero intero tra 1 e 10080 minuti (7 giorni).",
+      "maxBackupsError": "Inserire un numero intero tra 1 e 500.",
+      "filenameFormatError": "Il formato del nome file non può essere vuoto.",
+      "saveError": "Impossibile salvare le impostazioni.",
+      "history": {
+        "sectionTitle": "Storico",
+        "selectedCount_one": "{{count}} selezionato",
+        "selectedCount_other": "{{count}} selezionati",
+        "cancel": "Annulla",
+        "delete": "Elimina",
+        "empty": "Nessun backup ancora eseguito."
+      },
+      "deleteError": "Impossibile eliminare il backup.",
+      "bulkDeleteAllFailed": "Impossibile eliminare i backup selezionati.",
+      "bulkDeletePartialFailed": "Impossibile eliminare {{failed}} backup su {{total}}.",
+      "restoreError": "Ripristino del backup non riuscito."
+    },
+    "restoreBackupModal": {
+      "title": "Applica backup",
+      "submitting": "Ripristino in corso...",
+      "confirm": "Applica",
+      "cancel": "Annulla",
+      "overwriteWarning": "Stai per sovrascrivere i dati attuali dell'azienda con «{{filename}}». Tutti i cambiamenti fatti dopo quel backup andranno persi.",
+      "snapshotNotice": "Prima di procedere verrà comunque salvato automaticamente uno snapshot dello stato attuale, che troverai nello storico e potrai applicare per annullare il ripristino."
+    },
+    "deleteBackupModal": {
+      "title": "Elimina backup",
+      "titleBulk": "Elimina backup selezionati",
+      "submitting": "Eliminazione in corso...",
+      "confirm": "Elimina",
+      "confirmBulk": "Elimina {{count}}",
+      "cancel": "Annulla",
+      "singleWarning": "Stai per eliminare «{{filename}}». L'operazione non è reversibile.",
+      "bulkWarning_one": "Stai per eliminare {{count}} backup selezionato. L'operazione non è reversibile.",
+      "bulkWarning_other": "Stai per eliminare {{count}} backup selezionati. L'operazione non è reversibile."
+    },
+    "taskStatusSelect": {
+      "ariaLabel": "Stato di {{taskTitle}}"
+    },
+    "prioritySelect": {
+      "ariaLabel": "Priorità di {{taskTitle}}",
+      "tier": {
+        "high": "Alta",
+        "medium": "Media",
+        "low": "Bassa"
+      }
+    },
+    "taskAssignees": {
+      "triggerLabel": "Assegna dipendenti a {{taskTitle}}",
+      "panelLabel": "Dipendenti assegnabili a {{taskTitle}}",
+      "noEmployees": "Nessun dipendente disponibile"
+    },
+    "taskDetailModal": {
+      "title": "{{projectName}} · Dettaglio task",
+      "goToTask": "Vai al task",
+      "close": "Chiudi",
+      "statusLabel": "Stato",
+      "priorityLabel": "Priorità",
+      "dueDateLabel": "Scadenza",
+      "noDueDate": "Nessuna",
+      "assigneesLabel": "Assegnatari",
+      "noAssignees": "Nessun assegnatario."
+    },
+    "taskFormModal": {
+      "create": {
+        "title": "Nuovo task",
+        "description": "Dai un titolo al task: la descrizione è facoltativa e potrai aggiornare lo stato in un secondo momento.",
+        "confirmLabel": "Crea task",
+        "confirmPendingLabel": "Creazione in corso..."
+      },
+      "edit": {
+        "title": "Modifica task",
+        "description": "Aggiorna titolo, descrizione e assegnatari del task.",
+        "confirmLabel": "Salva modifiche",
+        "confirmPendingLabel": "Salvataggio in corso..."
+      },
+      "titleRequired": "Inserisci un titolo per il task.",
+      "titleLabel": "Titolo del task",
+      "titlePlaceholder": "Es. Sistemare il bug di login",
+      "descriptionLabel": "Descrizione del task",
+      "descriptionPlaceholder": "Es. Il form non valida l'email",
+      "dueDateLabel": "Data di scadenza",
+      "assigneesLabel": "Assegnatari",
+      "statusLabel": "Stato",
+      "priorityLabel": "Priorità",
+      "untitledTaskFallback": "nuovo task",
+      "cancel": "Annulla"
+    },
+    "taskKanbanBoard": {
+      "ariaLabel": "Task raggruppati per stato, vista Kanban",
+      "dropHere": "Rilascia qui",
+      "noMatchingTasks": "Nessun task corrisponde ai filtri",
+      "noTasks": "Nessun task"
+    },
+    "taskCalendar": {
+      "weekdays": ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"],
+      "previousMonth": "Mese precedente",
+      "today": "Oggi",
+      "nextMonth": "Mese successivo",
+      "legendDueOrOverdue": "In scadenza o in ritardo",
+      "gridLabel": "Calendario dei task, {{month}}",
+      "weekLabel": "Settimana {{number}}",
+      "dotTitleOverdueSuffix": ", in ritardo",
+      "dotTitleDueSoonSuffix": ", in scadenza",
+      "showFewer": "Mostra meno task",
+      "showMore": "Mostra altri {{count}} task"
+    },
+    "taskCommentsPanel": {
+      "heading": "Commenti",
+      "loading": "Caricamento commenti...",
+      "empty": "Nessun commento ancora, scrivi il primo.",
+      "loadError": "Impossibile caricare i commenti.",
+      "sendError": "Impossibile inviare il commento.",
+      "editError": "Impossibile modificare il commento.",
+      "deleteError": "Impossibile eliminare il commento.",
+      "otherActionsLabel": "Altre azioni per il commento",
+      "edit": "Modifica",
+      "delete": "Elimina",
+      "deleting": "Eliminazione...",
+      "confirmDelete": "Confermi?",
+      "editLabel": "Modifica il commento",
+      "cancel": "Annulla",
+      "saving": "Salvataggio...",
+      "save": "Salva",
+      "editedFlag": "(modificato)",
+      "composerLabel": "Scrivi un commento",
+      "composerPlaceholder": "Scrivi un commento... (Invio per inviare, Maiusc+Invio per andare a capo)",
+      "sending": "Invio in corso",
+      "send": "Invia commento"
+    },
+    "notificationBell": {
+      "bellLabel": "Notifiche",
+      "bellLabelUnread": "Notifiche, {{count}} non lette",
+      "markAllRead": "Segna tutte come lette",
+      "loading": "Caricamento...",
+      "empty": "Nessuna notifica",
+      "loadError": "Impossibile caricare le notifiche.",
+      "openDetail": "Apre il dettaglio",
+      "actorFallback": "Qualcuno",
+      "taskTitleFallback": "un task",
+      "taskTitleFallbackCapitalized": "Un task",
+      "projectNameFallback": "un progetto",
+      "describe": {
+        "taskComment": "{{actor}} ha commentato «{{taskTitle}}»",
+        "taskCreated": "{{actor}} ha creato «{{taskTitle}}»",
+        "taskDueOverdue": "«{{taskTitle}}» è scaduto",
+        "taskDueSoon": "«{{taskTitle}}» è in scadenza",
+        "projectAssigned": "Sei stato assegnato al progetto «{{projectName}}»",
+        "taskAssigned": "{{actor}} ti ha assegnato «{{taskTitle}}»"
+      }
+    },
+    "notify": {
+      "closeLabel": "Chiudi notifica"
+    },
+    "assistantDrawer": {
+      "toggleOpen": "Apri l'assistente",
+      "toggleClose": "Chiudi l'assistente",
+      "panelLabel": "Assistente",
+      "title": "Assistente",
+      "clearHistory": "Ripulisci cronologia",
+      "subtitle": "Chiedi informazioni sui tuoi progetti e sui task.",
+      "contextDashboard": "Dashboard",
+      "contextProjectFallback": "Progetto",
+      "contextTooltipEnabled": "I messaggi includono dove ti trovi ora ({{contextLabel}}): l'assistente lo usa quando non nomini un progetto o un task esplicitamente.",
+      "contextTooltipDisabled": "I messaggi non includono la pagina in cui ti trovi: dovrai nominare esplicitamente progetto e task.",
+      "contextLabelEnabled": "Contesto: {{contextLabel}}",
+      "contextLabelDisabled": "Contesto disattivato",
+      "emptyState": "Fai una domanda per iniziare, ad esempio \"Quali progetti sono attivi?\".",
+      "typingLabel": "Sto scrivendo",
+      "scrollToBottomLabel": "Torna al messaggio più recente",
+      "composerPlaceholder": "Scrivi un messaggio...",
+      "composerAriaLabel": "Messaggio per l'assistente",
+      "send": "Invia",
+      "contactError": "Impossibile contattare l'assistente."
+    },
+    "project": {
+      "cardLabelSimple": "{{name}}, {{count}} task",
+      "cardLabelWithBreakdown": "{{name}}, {{count}} task: {{breakdown}}",
+      "updateError": "Impossibile aggiornare il progetto.",
+      "deleteError": "Impossibile eliminare il progetto.",
+      "noTasks": "Nessun task",
+      "totalTasks": "task totali",
+      "otherActionsLabel": "Altre azioni per {{name}}",
+      "rename": "Rinomina",
+      "delete": "Elimina",
+      "download": "Scarica..."
+    }
+  },
+  "shared": {
+    "taskStatus": {
+      "group": {
+        "progress": "In corso",
+        "review": "In review",
+        "completed": "Completati",
+        "rejected": "Rifiutati"
+      },
+      "label": {
+        "progress": "In corso",
+        "review": "In review",
+        "completed": "Completato",
+        "rejected": "Rifiutato"
+      }
+    },
+    "dueUrgency": {
+      "overdue_one": "In ritardo di {{count}} giorno",
+      "overdue_other": "In ritardo di {{count}} giorni",
+      "dueToday": "Scade oggi",
+      "dueSoon_one": "Scadenza tra {{count}} giorno",
+      "dueSoon_other": "Scadenza tra {{count}} giorni"
+    }
+  },
+  "pages": {
+    "auth": {
+      "eyebrow": "Hodum",
+      "title": {
+        "login": "Bentornato",
+        "register": "Crea il tuo account"
+      },
+      "subtitle": {
+        "login": "Accedi per continuare a gestire i tuoi progetti e le tue attività.",
+        "register": "Registrati per iniziare a gestire i tuoi progetti e le tue attività."
+      },
+      "toggle": {
+        "toRegister": "Non hai un account? Registrati",
+        "toLogin": "Hai già un account? Accedi"
+      },
+      "meta": {
+        "title": {
+          "login": "Accedi",
+          "register": "Registrati"
+        },
+        "description": {
+          "login": "Accedi a Hodum per gestire i tuoi progetti e le tue attività.",
+          "register": "Crea un account Hodum per iniziare a gestire progetti e attività in modo semplice."
+        }
+      }
+    },
+    "recoverPassword": {
+      "eyebrow": "Hodum",
+      "title": "Recupera l'accesso",
+      "subtitle": "Inserisci l'email dell'account e il codice di recupero ricevuto alla registrazione per impostare una nuova password.",
+      "backToLogin": "Torna al login",
+      "meta": {
+        "title": "Recupera l'accesso"
+      }
+    },
+    "changePassword": {
+      "eyebrow": "Hodum",
+      "title": "Aggiorna la tua password",
+      "subtitle": "Per motivi di sicurezza devi impostare una nuova password prima di continuare.",
+      "meta": {
+        "title": "Cambio password obbligatorio"
+      }
+    },
+    "dashboard": {
+      "title": "I tuoi progetti",
+      "loadErrorTitle": "Errore di caricamento",
+      "loadError": "Impossibile caricare i progetti.",
+      "emptyTitle": "Nessun progetto ancora",
+      "emptyText": "I progetti che crei compariranno qui, pronti da aprire.",
+      "calendarLoading": "Caricamento del calendario...",
+      "calendarLoadError": "Impossibile caricare il calendario dei task.",
+      "calendarUpdateError": "Impossibile aggiornare la scadenza del task.",
+      "createError": "Impossibile creare il progetto.",
+      "createButtonLabel": "Crea nuovo progetto",
+      "meta": {
+        "title": "Dashboard"
+      }
+    },
+    "employees": {
+      "title": "Dipendenti",
+      "subtitleLoading": "Caricamento dei dipendenti...",
+      "subtitleEmpty": "Nessun dipendente registrato al momento.",
+      "subtitleCount_one": "{{count}} dipendente registrato.",
+      "subtitleCount_other": "{{count}} dipendenti registrati.",
+      "loadErrorTitle": "Errore di caricamento",
+      "loadError": "Impossibile caricare i dipendenti.",
+      "emptyTitle": "Nessun dipendente ancora",
+      "emptyText": "Crea le credenziali di un dipendente per farlo accedere alla tua azienda.",
+      "roleBadge": {
+        "manager": "Project Manager",
+        "employee": "Dipendente"
+      },
+      "status": {
+        "pending": "In attesa del primo accesso",
+        "active": "Attivo"
+      },
+      "actions": {
+        "edit": "Modifica dipendente {{username}}",
+        "assign": "Assegna progetti a {{username}}",
+        "delete": "Elimina dipendente {{username}}"
+      },
+      "createButtonLabel": "Crea nuovo dipendente",
+      "invalidSession": "Sessione non valida. Effettua nuovamente l'accesso.",
+      "createError": "Impossibile creare il dipendente.",
+      "editError": "Impossibile aggiornare il dipendente.",
+      "deleteError": "Impossibile eliminare il dipendente.",
+      "assignError": "Impossibile aggiornare i progetti assegnati.",
+      "meta": {
+        "title": "Dipendenti"
+      }
+    },
+    "companyManagement": {
+      "title": "Gestione aziendale",
+      "subtitle": "Strumenti riservati al titolare dell'azienda.",
+      "cards": {
+        "editCompany": {
+          "title": "Modifica dati aziendali",
+          "description": "Nome, ragione sociale, P.IVA, codice fiscale, indirizzo e PEC della tua azienda."
+        },
+        "backup": {
+          "title": "Backup",
+          "description": "Gestisci i backup del database della tua azienda: frequenza, quanti conservarne e come nominarli."
+        }
+      },
+      "meta": {
+        "title": "Gestione aziendale"
+      }
+    },
+    "taskList": {
+      "meta": {
+        "projectFallbackTitle": "Progetto",
+        "notFoundTitle": "Progetto non trovato"
+      },
+      "loading": "Caricamento in corso...",
+      "loadErrorTitle": "Errore di caricamento",
+      "loadError": "Impossibile caricare il progetto.",
+      "notFoundTitle": "Progetto non trovato.",
+      "notFoundText": "Il progetto richiesto non esiste o è stato rimosso.",
+      "saveTaskError": "Impossibile salvare il task.",
+      "statusUpdateError": "Impossibile aggiornare lo stato del task.",
+      "priorityUpdateError": "Impossibile aggiornare la priorità del task.",
+      "assigneesUpdateError": "Impossibile aggiornare gli assegnatari del task.",
+      "dueDateUpdateError": "Impossibile aggiornare la scadenza del task.",
+      "viewSwitchLabel": "Modalità di visualizzazione",
+      "viewList": "Lista",
+      "viewKanban": "Kanban",
+      "viewCalendar": "Calendario",
+      "searchAndFilterLabel": "Cerca e filtra i task",
+      "searchPlaceholder": "Cerca per titolo o descrizione",
+      "searchAriaLabel": "Cerca task per titolo o descrizione",
+      "clearSearch": "Cancella la ricerca",
+      "statusFilterLabel": "Stato",
+      "allStatuses": "Tutti gli stati",
+      "priorityFilterLabel": "Priorità",
+      "priorityFilter": {
+        "all": "Tutte le priorità",
+        "high": "Alta (1-3)",
+        "medium": "Media (4-6)",
+        "low": "Bassa (7-10)"
+      },
+      "assigneeFilterLabel": "Assegnatario",
+      "allAssignees": "Tutti gli assegnatari",
+      "sortByPriorityLabel": "Ordina per priorità",
+      "sortNone": "Nessun ordinamento",
+      "sortUrgentFirst": "Più urgenti prima",
+      "sortUrgentLast": "Meno urgenti prima",
+      "clearFilters": "Cancella filtri",
+      "tableCaption": "Task del progetto {{projectName}}, raggruppati per stato",
+      "columnTitle": "Titolo",
+      "columnDescription": "Descrizione",
+      "columnStatus": "Stato",
+      "columnPriority": "Priorità",
+      "columnAssignees": "Assegnatari",
+      "dropHereToMove": "Rilascia qui per spostare il task",
+      "noMatchingTasks": "Nessun task corrispondente ai filtri",
+      "dragHandleTitle": "Trascina per cambiare stato",
+      "urgencyAriaLabel": "{{title}} — {{urgency}}",
+      "createTaskLabel": "Crea nuovo task"
+    }
+  }
+}

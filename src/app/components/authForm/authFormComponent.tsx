@@ -5,6 +5,7 @@ import ButtonComponent from "../button/buttonComponent";
 import { login, persistSession, RateLimitError } from "../../services/auth/authService";
 import { validateEmail } from "../../services/validation/validationService";
 import { Link, useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 
 // mm:ss invece del solo numero di secondi: più leggibile quando il rate
 // limit di /auth/login (15 minuti, vedi backend/src/app.ts) è quasi intero.
@@ -16,6 +17,7 @@ function formatCountdown(totalSeconds: number): string {
 
 function AuthFormComponent() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -26,7 +28,7 @@ function AuthFormComponent() {
 
   const emailError =
     (submitAttempted || email !== "") && !validateEmail(email)
-      ? "Inserire una email valida."
+      ? t("components.authForm.emailInvalid")
       : "";
   const isRateLimited = retrySecondsLeft > 0;
 
@@ -56,7 +58,7 @@ function AuthFormComponent() {
     try {
       const result = await login(email, password);
       if (!result) {
-        setPasswordError("Email o password non corretti.");
+        setPasswordError(t("components.authForm.invalidCredentials"));
         return;
       }
 
@@ -77,8 +79,8 @@ function AuthFormComponent() {
       <InputComponent
         type="email"
         name="email"
-        label="Email"
-        placeholder="Email"
+        label={t("components.authForm.emailLabel")}
+        placeholder={t("components.authForm.emailPlaceholder")}
         value={email}
         onChange={(event) => setEmail(event.target.value)}
         autoComplete="email"
@@ -88,8 +90,8 @@ function AuthFormComponent() {
       <InputComponent
         type="password"
         name="password"
-        label="Password"
-        placeholder="Password"
+        label={t("components.authForm.passwordLabel")}
+        placeholder={t("components.authForm.passwordPlaceholder")}
         value={password}
         onChange={(event) => {
           setPassword(event.target.value);
@@ -106,18 +108,20 @@ function AuthFormComponent() {
           checked={rememberMe}
           onChange={(event) => setRememberMe(event.target.checked)}
         />
-        Resta connesso
+        {t("components.authForm.rememberMe")}
       </label>
       <Link to="/recover-password" className={styles.authFormForgotPassword}>
-        Password dimenticata?
+        {t("components.authForm.forgotPassword")}
       </Link>
       {isRateLimited && (
         <p role="alert" className={styles.authFormError}>
-          Troppi tentativi di accesso. Riprova tra {formatCountdown(retrySecondsLeft)}.
+          {t("components.authForm.rateLimited", {
+            countdown: formatCountdown(retrySecondsLeft),
+          })}
         </p>
       )}
       <ButtonComponent onClick={() => {}} disabled={isSubmitting || isRateLimited}>
-        {isSubmitting ? "Accesso in corso..." : "Accedi"}
+        {isSubmitting ? t("components.authForm.submitting") : t("components.authForm.submit")}
       </ButtonComponent>
     </form>
   );

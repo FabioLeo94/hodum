@@ -3,10 +3,12 @@ import ChangePasswordFormComponent from "../../components/changePasswordForm/cha
 import { useEffect } from "react";
 import { getUser, isAuthenticated } from "../../services/auth/authService";
 import { useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 import { usePageMeta } from "../../../shared/hooks/usePageMeta";
 
 function ChangePassword() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   useEffect(() => {
     if (!isAuthenticated()) {
       navigate("/auth", { replace: true });
@@ -21,19 +23,16 @@ function ChangePassword() {
   }, [navigate]);
 
   usePageMeta({
-    title: "Cambio password obbligatorio",
+    title: t("pages.changePassword.meta.title"),
     robots: "noindex, nofollow",
   });
 
   return (
     <div className={styles.changePasswordContainer}>
       <div className={styles.changePasswordHero}>
-        <span className={styles.changePasswordEyebrow}>Hodum</span>
-        <h1 className={styles.changePasswordTitle}>Aggiorna la tua password</h1>
-        <p className={styles.changePasswordSubtitle}>
-          Per motivi di sicurezza devi impostare una nuova password prima di
-          continuare.
-        </p>
+        <span className={styles.changePasswordEyebrow}>{t("pages.changePassword.eyebrow")}</span>
+        <h1 className={styles.changePasswordTitle}>{t("pages.changePassword.title")}</h1>
+        <p className={styles.changePasswordSubtitle}>{t("pages.changePassword.subtitle")}</p>
       </div>
       <div className={styles.changePasswordFormWrapper}>
         <ChangePasswordFormComponent />

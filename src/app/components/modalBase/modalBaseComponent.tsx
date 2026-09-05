@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef } from "react";
 import type { ReactNode } from "react";
 import { X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import styles from "./modalBaseComponent.module.css";
 
 interface Prop {
@@ -30,6 +31,7 @@ function ModalBaseComponent({
   onSubmit,
   children,
 }: Prop) {
+  const { t } = useTranslation();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
 
@@ -78,7 +80,7 @@ function ModalBaseComponent({
           <button
             type="button"
             className={styles.closeButton}
-            aria-label="Chiudi"
+            aria-label={t("components.modalBase.closeButton")}
             onClick={onClose}
           >
             <X size={18} aria-hidden="true" />

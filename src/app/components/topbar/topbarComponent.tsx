@@ -2,6 +2,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router";
 import { ChevronDown } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { updateStoredUser, useAuthUser } from "../../services/auth/authService";
 import { getCompanyName } from "../../services/company/companyService";
 import { getProjectName, listProjectsSummary } from "../../services/project/projectService";
@@ -10,6 +11,7 @@ import { updateEmployee } from "../../services/user/userService";
 import AvatarComponent from "../avatar/avatarComponent";
 import EditAccountModalComponent from "../editAccountModal/editAccountModalComponent";
 import NotificationBellComponent from "../notificationBell/notificationBellComponent";
+import LanguageSwitcherComponent from "../languageSwitcher/languageSwitcherComponent";
 import type { EditAccountFormValues } from "../editAccountModal/editAccountModalComponent";
 import { formatDateTime } from "../../../shared/utils/formatDate";
 import styles from "./topbarComponent.module.css";
@@ -22,8 +24,6 @@ interface NavItem {
   to: string;
   label: string;
 }
-
-const NAV_ITEMS: NavItem[] = [{ to: "/dashboard", label: "Dashboard" }];
 
 // Stesso pattern di derivePageContext in assistantDrawerComponent: è l'unica
 // rotta che rappresenta un progetto aperto, e serve qui per evidenziare
@@ -40,6 +40,8 @@ function TopbarComponent({ onLogout }: Prop) {
   // (invece di getUser diretto) fa ri-renderizzare questo componente quando
   // arriva 'user:updated' (es. l'owner promuove questo utente a manager
   // mentre è già sulla pagina), senza dover disconnettere e riconnettere.
+  const { t } = useTranslation();
+  const NAV_ITEMS: NavItem[] = [{ to: "/dashboard", label: t("components.topbar.nav.dashboard") }];
   const authUser = useAuthUser();
   const role = authUser?.role;
   const companyId = authUser?.companyId ?? undefined;
@@ -101,7 +103,9 @@ function TopbarComponent({ onLogout }: Prop) {
   const activeProjectId = pathname.match(TASK_LIST_PATH_PATTERN)?.[1];
   const activeProjectName =
     resolvedProject && resolvedProject.id === activeProjectId ? resolvedProject.name : undefined;
-  const activeProjectLabel = activeProjectId ? activeProjectName ?? "Progetto" : undefined;
+  const activeProjectLabel = activeProjectId
+    ? activeProjectName ?? t("components.topbar.nav.projectFallback")
+    : undefined;
 
   useEffect(() => {
     if (!activeProjectId) return;
@@ -131,14 +135,14 @@ function TopbarComponent({ onLogout }: Prop) {
       .catch((error: unknown) => {
         if (!cancelled) {
           setProjectsError(
-            error instanceof Error ? error.message : "Impossibile caricare i progetti.",
+            error instanceof Error ? error.message : t("components.topbar.projectsMenu.loadError"),
           );
         }
       });
     return () => {
       cancelled = true;
     };
-  }, [isProjectsMenuOpen, projects]);
+  }, [isProjectsMenuOpen, projects, t]);
 
   useEffect(() => {
     if (!isMenuOpen) return;
@@ -277,7 +281,7 @@ function TopbarComponent({ onLogout }: Prop) {
       closeEditAccountModal();
     } catch (error) {
       setEditAccountError(
-        error instanceof Error ? error.message : "Impossibile aggiornare l'account.",
+        error instanceof Error ? error.message : t("components.topbar.account.updateError"),
       );
     }
   }
@@ -309,7 +313,7 @@ function TopbarComponent({ onLogout }: Prop) {
           <span className={styles.logoMark}>H</span>odum
         </span>
 
-        <nav className={styles.nav} aria-label="Navigazione principale">
+        <nav className={styles.nav} aria-label={t("components.topbar.nav.main")}>
           {NAV_ITEMS.map(renderNavItem)}
 
           <div className={styles.projectsMenuArea} ref={projectsContainerRef}>
@@ -323,7 +327,7 @@ function TopbarComponent({ onLogout }: Prop) {
               aria-controls={projectsMenuId}
               onClick={() => setIsProjectsMenuOpen((current) => !current)}
             >
-              Progetti
+              {t("components.topbar.nav.projects")}
               {/* Nome del progetto aperto integrato nel bottone (al posto del
                   tag ambra indipendente di prima): un solo elemento
                   interattivo invece di due, il peso tipografico maggiore
@@ -349,17 +353,21 @@ function TopbarComponent({ onLogout }: Prop) {
                   ref={projectsPanelRef}
                   id={projectsMenuId}
                   role="menu"
-                  aria-label="Progetti"
+                  aria-label={t("components.topbar.nav.projects")}
                   className={styles.projectsMenu}
                 >
                   {isLoadingProjects ? (
-                    <p className={styles.projectsMenuStatus}>Caricamento...</p>
+                    <p className={styles.projectsMenuStatus}>
+                      {t("components.topbar.projectsMenu.loading")}
+                    </p>
                   ) : projectsError ? (
                     <p className={styles.projectsMenuStatus} role="alert">
                       {projectsError}
                     </p>
                   ) : projects && projects.length === 0 ? (
-                    <p className={styles.projectsMenuStatus}>Nessun progetto</p>
+                    <p className={styles.projectsMenuStatus}>
+                      {t("components.topbar.projectsMenu.empty")}
+                    </p>
                   ) : (
                     projects?.map((project, index) => (
                       <Link
@@ -397,7 +405,7 @@ function TopbarComponent({ onLogout }: Prop) {
       <div className={styles.rightGroup}>
         {canSeeEmployees && (
           <>
-            {renderNavItem({ to: "/employees", label: "Dipendenti" })}
+            {renderNavItem({ to: "/employees", label: t("components.topbar.nav.employees") })}
             {/* Separatore puramente visivo: segnala che "Dipendenti" è
                 amministrativo, non parte della nav primaria a sinistra. */}
             <span className={styles.separator} aria-hidden="true" />
@@ -410,13 +418,17 @@ function TopbarComponent({ onLogout }: Prop) {
             che il manager già presidia (vedi companyManagement.tsx). */}
         {isOwner && (
           <>
-            {renderNavItem({ to: "/company-management", label: "Gestione aziendale" })}
+            {renderNavItem({
+              to: "/company-management",
+              label: t("components.topbar.nav.companyManagement"),
+            })}
             <span className={styles.separator} aria-hidden="true" />
           </>
         )}
 
         {/* Visibile a tutti i ruoli (a differenza di "Dipendenti" sopra),
             quindi fuori dal blocco canSeeEmployees. */}
+        <LanguageSwitcherComponent />
         <NotificationBellComponent />
 
         <div className={styles.accountArea} ref={containerRef}>
@@ -424,7 +436,7 @@ function TopbarComponent({ onLogout }: Prop) {
             ref={accountButtonRef}
             type="button"
             className={styles.accountButton}
-            aria-label="Menu account"
+            aria-label={t("components.topbar.account.menuLabel")}
             aria-haspopup="menu"
             aria-expanded={isMenuOpen}
             aria-controls={menuId}
@@ -458,7 +470,7 @@ function TopbarComponent({ onLogout }: Prop) {
                 className={styles.menuItem}
                 onClick={handleEditAccountClick}
               >
-                Modifica account
+                {t("components.topbar.account.editAccount")}
               </button>
               <button
                 ref={logoutItemRef}
@@ -467,7 +479,7 @@ function TopbarComponent({ onLogout }: Prop) {
                 className={styles.menuItem}
                 onClick={handleLogoutClick}
               >
-                Disconnetti
+                {t("components.topbar.account.logout")}
               </button>
               {/* Non più legato al ruolo (a differenza della vecchia posizione
                   nella topbar, riservata all'employee per mancanza di spazio
@@ -479,7 +491,9 @@ function TopbarComponent({ onLogout }: Prop) {
                 <>
                   <div className={styles.menuSeparator} role="separator" />
                   <p className={styles.menuLastLogin}>
-                    Ultimo accesso: {formatDateTime(authUser.lastLoginAt)}
+                    {t("components.topbar.account.lastLogin", {
+                      date: formatDateTime(authUser.lastLoginAt),
+                    })}
                   </p>
                 </>
               )}

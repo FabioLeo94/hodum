@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import InputComponent from "../input/inputComponent";
 import ButtonComponent from "../button/buttonComponent";
 import BackupHistoryItemComponent from "../backupHistoryItem/backupHistoryItemComponent";
@@ -38,6 +39,7 @@ type BackupActionModal =
 // di rete, non da uno stato già disponibile al chiamante, quindi il
 // pattern "key sul mount" non basta da solo, serve un caricamento interno.
 function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
+  const { t } = useTranslation();
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -73,7 +75,9 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
         setHistoryError("");
       })
       .catch((error: unknown) => {
-        setHistoryError(error instanceof Error ? error.message : "Impossibile caricare lo storico dei backup.");
+        setHistoryError(
+          error instanceof Error ? error.message : t("components.backupSettingsDrawer.historyLoadError"),
+        );
       });
   }
 
@@ -99,7 +103,9 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
       })
       .catch((error: unknown) => {
         if (cancelled) return;
-        setLoadError(error instanceof Error ? error.message : "Impossibile caricare le impostazioni di backup.");
+        setLoadError(
+          error instanceof Error ? error.message : t("components.backupSettingsDrawer.loadError"),
+        );
       });
 
     // Stesso fetch di loadHistory (usata a parte da handleRunNow) ma inline:
@@ -113,13 +119,15 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
       })
       .catch((error: unknown) => {
         if (cancelled) return;
-        setHistoryError(error instanceof Error ? error.message : "Impossibile caricare lo storico dei backup.");
+        setHistoryError(
+          error instanceof Error ? error.message : t("components.backupSettingsDrawer.historyLoadError"),
+        );
       });
 
     return () => {
       cancelled = true;
     };
-  }, [isOpen, companyId]);
+  }, [isOpen, companyId, t]);
 
   // Se una modale di conferma (elimina/applica backup) è aperta SOPRA il
   // drawer, il suo <dialog> nativo gestisce Escape per conto proprio
@@ -141,17 +149,19 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
   const parsedInterval = Number(intervalMinutes);
   const intervalError =
     submitAttempted && (!Number.isInteger(parsedInterval) || parsedInterval < 1 || parsedInterval > 10_080)
-      ? "Inserire un numero intero tra 1 e 10080 minuti (7 giorni)."
+      ? t("components.backupSettingsDrawer.intervalError")
       : "";
 
   const parsedMax = Number(maxBackups);
   const maxBackupsError =
     submitAttempted && (!Number.isInteger(parsedMax) || parsedMax < 1 || parsedMax > 500)
-      ? "Inserire un numero intero tra 1 e 500."
+      ? t("components.backupSettingsDrawer.maxBackupsError")
       : "";
 
   const filenameFormatError =
-    submitAttempted && filenameFormat.trim() === "" ? "Il formato del nome file non può essere vuoto." : "";
+    submitAttempted && filenameFormat.trim() === ""
+      ? t("components.backupSettingsDrawer.filenameFormatError")
+      : "";
 
   async function handleSave() {
     setSubmitAttempted(true);
@@ -178,7 +188,9 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
         });
         applySettings(updated);
       } catch (error) {
-        setSaveError(error instanceof Error ? error.message : "Impossibile salvare le impostazioni.");
+        setSaveError(
+          error instanceof Error ? error.message : t("components.backupSettingsDrawer.saveError"),
+        );
         throw error;
       }
     });
@@ -198,7 +210,9 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
         applySettings(freshSettings);
         loadHistory();
       } catch (error) {
-        setRunError(error instanceof Error ? error.message : "Esecuzione del backup non riuscita.");
+        setRunError(
+          error instanceof Error ? error.message : t("components.backupSettingsDrawer.runError"),
+        );
         throw error;
       }
     });
@@ -254,7 +268,9 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
       });
       loadHistory();
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : "Impossibile eliminare il backup.");
+      setActionError(
+        error instanceof Error ? error.message : t("components.backupSettingsDrawer.deleteError"),
+      );
     }
   }
 
@@ -277,8 +293,11 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
       setActionModal({ type: "bulk-delete", count: failedIds.length });
       setActionError(
         failedIds.length === ids.length
-          ? "Impossibile eliminare i backup selezionati."
-          : `Impossibile eliminare ${failedIds.length} backup su ${ids.length}.`,
+          ? t("components.backupSettingsDrawer.bulkDeleteAllFailed")
+          : t("components.backupSettingsDrawer.bulkDeletePartialFailed", {
+              failed: failedIds.length,
+              total: ids.length,
+            }),
       );
       return;
     }
@@ -302,7 +321,9 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
       const freshSettings = await getBackupSettings(companyId);
       applySettings(freshSettings);
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : "Ripristino del backup non riuscito.");
+      setActionError(
+        error instanceof Error ? error.message : t("components.backupSettingsDrawer.restoreError"),
+      );
     }
   }
 
@@ -319,9 +340,14 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
       >
         <div className={styles.header}>
           <h2 id={titleId} className={styles.title}>
-            Backup
+            {t("components.backupSettingsDrawer.title")}
           </h2>
-          <button type="button" className={styles.closeButton} aria-label="Chiudi" onClick={onClose}>
+          <button
+            type="button"
+            className={styles.closeButton}
+            aria-label={t("components.backupSettingsDrawer.closeLabel")}
+            onClick={onClose}
+          >
             <X size={18} aria-hidden="true" />
           </button>
         </div>
@@ -334,16 +360,22 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
           <>
             <section className={styles.section}>
               <div className={styles.sectionHeaderRow}>
-                <h3 className={styles.sectionTitle}>Esegui ora</h3>
+                <h3 className={styles.sectionTitle}>
+                  {t("components.backupSettingsDrawer.runNow.sectionTitle")}
+                </h3>
               </div>
               <p className={styles.hint}>
                 {settings.lastBackupAt
-                  ? `Ultimo backup: ${formatDateTime(settings.lastBackupAt)}.`
-                  : "Nessun backup eseguito finora."}{" "}
-                Un'esecuzione manuale riazzera il conto alla rovescia del prossimo backup automatico.
+                  ? t("components.backupSettingsDrawer.runNow.lastBackup", {
+                      date: formatDateTime(settings.lastBackupAt),
+                    })
+                  : t("components.backupSettingsDrawer.runNow.never")}{" "}
+                {t("components.backupSettingsDrawer.runNow.hint")}
               </p>
               <ButtonComponent onClick={handleRunNow} disabled={isRunning}>
-                {isRunning ? "Backup in corso..." : "Esegui backup ora"}
+                {isRunning
+                  ? t("components.backupSettingsDrawer.runNow.running")
+                  : t("components.backupSettingsDrawer.runNow.action")}
               </ButtonComponent>
               {runError && (
                 <p role="alert" className={styles.errorBanner}>
@@ -353,12 +385,14 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
             </section>
 
             <section className={styles.section}>
-              <h3 className={styles.sectionTitle}>Impostazioni</h3>
+              <h3 className={styles.sectionTitle}>
+                {t("components.backupSettingsDrawer.settings.sectionTitle")}
+              </h3>
               <div className={styles.fields}>
                 <InputComponent
                   type="number"
                   name="intervalMinutes"
-                  label="Frequenza (minuti)"
+                  label={t("components.backupSettingsDrawer.settings.intervalLabel")}
                   value={intervalMinutes}
                   onChange={(event) => setIntervalMinutes(event.target.value)}
                   error={intervalError}
@@ -368,7 +402,7 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
                 <InputComponent
                   type="number"
                   name="maxBackups"
-                  label="Backup massimi conservati"
+                  label={t("components.backupSettingsDrawer.settings.maxBackupsLabel")}
                   value={maxBackups}
                   onChange={(event) => setMaxBackups(event.target.value)}
                   error={maxBackupsError}
@@ -378,7 +412,7 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
                 <InputComponent
                   type="text"
                   name="filenameFormat"
-                  label="Formato nome file"
+                  label={t("components.backupSettingsDrawer.settings.filenameFormatLabel")}
                   value={filenameFormat}
                   onChange={(event) => setFilenameFormat(event.target.value)}
                   error={filenameFormatError}
@@ -386,12 +420,15 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
                   required
                 />
                 <p className={styles.hint}>
-                  Placeholder disponibili: <code>{"{company}"}</code>, <code>{"{date}"}</code>, <code>{"{time}"}</code>,{" "}
+                  {t("components.backupSettingsDrawer.settings.placeholderHintPrefix")}{" "}
+                  <code>{"{company}"}</code>, <code>{"{date}"}</code>, <code>{"{time}"}</code>,{" "}
                   <code>{"{index}"}</code>.
                 </p>
               </div>
               <ButtonComponent onClick={handleSave} disabled={isSaving}>
-                {isSaving ? "Salvataggio in corso..." : "Salva impostazioni"}
+                {isSaving
+                  ? t("components.backupSettingsDrawer.settings.saving")
+                  : t("components.backupSettingsDrawer.settings.save")}
               </ButtonComponent>
               {saveError && (
                 <p role="alert" className={styles.errorBanner}>
@@ -402,19 +439,25 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
 
             <section className={styles.section}>
               <div className={styles.sectionHeaderRow}>
-                <h3 className={styles.sectionTitle}>Storico</h3>
+                <h3 className={styles.sectionTitle}>
+                  {t("components.backupSettingsDrawer.history.sectionTitle")}
+                </h3>
                 {selectedIds.size > 0 && (
                   <div className={styles.selectionToolbar}>
-                    <span className={styles.selectionCount}>{selectedIds.size} selezionati</span>
+                    <span className={styles.selectionCount}>
+                      {t("components.backupSettingsDrawer.history.selectedCount", {
+                        count: selectedIds.size,
+                      })}
+                    </span>
                     <button
                       type="button"
                       className={styles.cancelButton}
                       onClick={() => setSelectedIds(new Set())}
                     >
-                      Annulla
+                      {t("components.backupSettingsDrawer.history.cancel")}
                     </button>
                     <ButtonComponent onClick={openBulkDeleteModal} variant="danger">
-                      Elimina
+                      {t("components.backupSettingsDrawer.history.delete")}
                     </ButtonComponent>
                   </div>
                 )}
@@ -424,7 +467,7 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
                   {historyError}
                 </p>
               ) : history.length === 0 ? (
-                <p className={styles.hint}>Nessun backup ancora eseguito.</p>
+                <p className={styles.hint}>{t("components.backupSettingsDrawer.history.empty")}</p>
               ) : (
                 <ul className={styles.historyList}>
                   {history.map((backup) => (
@@ -443,7 +486,7 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
           </>
         ) : (
           <p className={styles.hint} role="status">
-            Caricamento...
+            {t("components.backupSettingsDrawer.loading")}
           </p>
         )}
       </div>

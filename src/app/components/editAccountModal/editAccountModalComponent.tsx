@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import ModalBaseComponent from "../modalBase/modalBaseComponent";
 import InputComponent from "../input/inputComponent";
 import ButtonComponent from "../button/buttonComponent";
@@ -36,6 +37,7 @@ function EditAccountModalComponent({
   onSave,
   submitError,
 }: Prop) {
+  const { t } = useTranslation();
   // Precompilato solo al mount: il chiamante rimonta il componente (via
   // `key`) ogni volta che la modale si riapre, stesso pattern di
   // EditEmployeeModalComponent.
@@ -47,25 +49,27 @@ function EditAccountModalComponent({
   const { isSubmitting, submit } = useAsyncSubmit();
 
   const usernameError =
-    submitAttempted && username.trim() === "" ? "Inserire uno username." : "";
+    submitAttempted && username.trim() === ""
+      ? t("components.editAccountModal.usernameRequired")
+      : "";
 
   const emailError =
     (submitAttempted || email !== "") && !validateEmail(email)
-      ? "Inserire una email valida."
+      ? t("components.editAccountModal.emailInvalid")
       : "";
 
   // La password è opzionale: la validazione scatta solo se si è iniziato a
   // scriverne una nuova, stesso principio di EditEmployeeModalComponent.
   const passwordError =
     password !== "" && !validatePassword(password)
-      ? "La password deve contenere almeno 8 caratteri, una minuscola, una maiuscola e un numero."
+      ? t("components.editAccountModal.passwordInvalid")
       : "";
 
   const confirmPasswordError =
     password !== "" &&
     (submitAttempted || confirmPassword !== "") &&
     password !== confirmPassword
-      ? "Le password non coincidono."
+      ? t("components.editAccountModal.passwordMismatch")
       : "";
 
   function resetForm() {
@@ -106,25 +110,29 @@ function EditAccountModalComponent({
     <ModalBaseComponent
       isOpen={isOpen}
       onClose={handleClose}
-      title="Modifica account"
+      title={t("components.editAccountModal.title")}
       onSubmit={handleSave}
       primaryAction={
         <ButtonComponent onClick={() => {}} disabled={isSubmitting}>
-          {isSubmitting ? "Salvataggio in corso..." : "Salva"}
+          {isSubmitting
+            ? t("components.editAccountModal.submitting")
+            : t("components.editAccountModal.submit")}
         </ButtonComponent>
       }
       secondaryActions={
         <button type="button" className={styles.cancelButton} onClick={handleClose}>
-          Annulla
+          {t("components.editAccountModal.cancel")}
         </button>
       }
     >
       <p className={styles.description}>
-        Lascia vuoti i campi password per non cambiarla.
+        {t("components.editAccountModal.description")}
       </p>
       <div className={styles.metaInfo}>
         <p className={styles.metaRow}>
-          <span className={styles.metaLabel}>Creato il</span>
+          <span className={styles.metaLabel}>
+            {t("components.editAccountModal.createdAtLabel")}
+          </span>
           <span className={styles.metaValue}>{formatDate(currentCreatedAt)}</span>
         </p>
       </div>
@@ -132,8 +140,8 @@ function EditAccountModalComponent({
         <InputComponent
           type="text"
           name="username"
-          label="Username"
-          placeholder="Username"
+          label={t("components.editAccountModal.usernameLabel")}
+          placeholder={t("components.editAccountModal.usernamePlaceholder")}
           value={username}
           onChange={(event) => setUsername(event.target.value)}
           autoComplete="off"
@@ -145,8 +153,8 @@ function EditAccountModalComponent({
         <InputComponent
           type="email"
           name="email"
-          label="Email"
-          placeholder="Email"
+          label={t("components.editAccountModal.emailLabel")}
+          placeholder={t("components.editAccountModal.emailPlaceholder")}
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           autoComplete="off"
@@ -158,8 +166,8 @@ function EditAccountModalComponent({
           <InputComponent
             type="password"
             name="password"
-            label="Nuova password"
-            placeholder="Nuova password (opzionale)"
+            label={t("components.editAccountModal.passwordLabel")}
+            placeholder={t("components.editAccountModal.passwordPlaceholder")}
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             autoComplete="off"
@@ -169,8 +177,8 @@ function EditAccountModalComponent({
           <InputComponent
             type="password"
             name="confirmPassword"
-            label="Conferma nuova password"
-            placeholder="Conferma nuova password"
+            label={t("components.editAccountModal.confirmPasswordLabel")}
+            placeholder={t("components.editAccountModal.confirmPasswordPlaceholder")}
             value={confirmPassword}
             onChange={(event) => setConfirmPassword(event.target.value)}
             autoComplete="off"

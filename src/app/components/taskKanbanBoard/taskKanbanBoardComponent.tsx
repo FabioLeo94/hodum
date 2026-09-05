@@ -1,7 +1,8 @@
 import { useState } from "react";
 import type { DragEvent } from "react";
+import { useTranslation } from "react-i18next";
 import type { Task, TaskStatus } from "../../../shared/types/project";
-import { STATUS_ORDER, STATUS_GROUP_LABELS } from "../../../shared/constants/taskStatus";
+import { STATUS_ORDER, useStatusGroupLabels } from "../../../shared/constants/taskStatus";
 import { getDueUrgency } from "../../../shared/utils/taskDueDate";
 import type { User } from "../../services/auth/authService";
 import TaskStatusSelectComponent from "../taskStatusSelect/taskStatusSelectComponent";
@@ -49,6 +50,8 @@ function TaskKanbanBoardComponent({
   onAssigneesChange,
   hasActiveFilters = false,
 }: TaskKanbanBoardComponentProps) {
+  const { t } = useTranslation();
+  const STATUS_GROUP_LABELS = useStatusGroupLabels();
   const [dragOverStatus, setDragOverStatus] = useState<TaskStatus | null>(null);
   // Stato di partenza del drag, catturato al dragstart invece di essere
   // ricercato in groupedTasks al drop: groupedTasks riflette ora i filtri
@@ -93,7 +96,7 @@ function TaskKanbanBoardComponent({
   }
 
   return (
-    <div className={styles.board} role="group" aria-label="Task raggruppati per stato, vista Kanban">
+    <div className={styles.board} role="group" aria-label={t("components.taskKanbanBoard.ariaLabel")}>
       {STATUS_ORDER.map((status) => {
         const tasks = groupedTasks[status];
         return (
@@ -114,14 +117,14 @@ function TaskKanbanBoardComponent({
               {tasks.length === 0 ? (
                 <p className={styles.emptyColumn} data-drop-target={dragOverStatus === status}>
                   {dragOverStatus === status
-                    ? "Rilascia qui"
+                    ? t("components.taskKanbanBoard.dropHere")
                     : hasActiveFilters
-                      ? "Nessun task corrisponde ai filtri"
-                      : "Nessun task"}
+                      ? t("components.taskKanbanBoard.noMatchingTasks")
+                      : t("components.taskKanbanBoard.noTasks")}
                 </p>
               ) : (
                 tasks.map((task) => {
-                  const urgency = getDueUrgency(task);
+                  const urgency = getDueUrgency(task, t);
                   return (
                   <div
                     key={task.id}

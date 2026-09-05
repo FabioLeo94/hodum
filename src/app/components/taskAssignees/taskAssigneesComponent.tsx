@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import type { User } from "../../services/auth/authService";
 import AvatarComponent from "../avatar/avatarComponent";
 import styles from "./taskAssigneesComponent.module.css";
@@ -35,6 +36,7 @@ function TaskAssigneesComponent({
   onChange,
   disabled = false,
 }: Prop) {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   // Inizializzato da selectedIds solo all'apertura (vedi handleTriggerClick):
   // mentre il dropdown resta aperto per più toggle in shift, non deve essere
@@ -145,7 +147,7 @@ function TaskAssigneesComponent({
         className={styles.trigger}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
-        aria-label={`Assegna dipendenti a ${taskTitle}`}
+        aria-label={t("components.taskAssignees.triggerLabel", { taskTitle })}
         disabled={disabled}
         onClick={handleTriggerClick}
       >
@@ -158,11 +160,11 @@ function TaskAssigneesComponent({
             ref={panelRef}
             role="listbox"
             aria-multiselectable="true"
-            aria-label={`Dipendenti assegnabili a ${taskTitle}`}
+            aria-label={t("components.taskAssignees.panelLabel", { taskTitle })}
             className={styles.panel}
           >
             {employees.length === 0 ? (
-              <p className={styles.status}>Nessun dipendente disponibile</p>
+              <p className={styles.status}>{t("components.taskAssignees.noEmployees")}</p>
             ) : (
               employees.map((employee) => {
                 const isSelected = pendingIds.includes(employee.id);

@@ -10,9 +10,11 @@ import {
   validatePassword,
 } from "../../services/validation/validationService";
 import { useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 
 function RegisterFormComponent() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [companyName, setCompanyName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -28,26 +30,28 @@ function RegisterFormComponent() {
 
   const companyNameError =
     submitAttempted && companyName.trim() === ""
-      ? "Inserire il nome dell'azienda."
+      ? t("components.registerForm.companyNameRequired")
       : "";
 
   const usernameError =
-    submitAttempted && username.trim() === "" ? "Inserire uno username." : "";
+    submitAttempted && username.trim() === ""
+      ? t("components.registerForm.usernameRequired")
+      : "";
 
   const emailError =
     (submitAttempted || email !== "") && !validateEmail(email)
-      ? "Inserire una email valida."
+      ? t("components.registerForm.emailInvalid")
       : "";
 
   const passwordError =
     (submitAttempted || password !== "") && !validatePassword(password)
-      ? "La password deve contenere almeno 8 caratteri, una minuscola, una maiuscola e un numero."
+      ? t("components.registerForm.passwordInvalid")
       : "";
 
   const confirmPasswordError =
     (submitAttempted || confirmPassword !== "") &&
     password !== confirmPassword
-      ? "Le password non coincidono."
+      ? t("components.registerForm.passwordMismatch")
       : "";
 
   async function handleSubmit(event: React.SubmitEvent<HTMLFormElement>) {
@@ -85,7 +89,7 @@ function RegisterFormComponent() {
       setFormError(
         error instanceof Error
           ? error.message
-          : "Registrazione non riuscita. Riprova più tardi.",
+          : t("components.registerForm.registrationFailed"),
       );
     } finally {
       setIsSubmitting(false);
@@ -106,8 +110,8 @@ function RegisterFormComponent() {
       <InputComponent
         type="text"
         name="companyName"
-        label="Nome azienda"
-        placeholder="Nome azienda"
+        label={t("components.registerForm.companyNameLabel")}
+        placeholder={t("components.registerForm.companyNamePlaceholder")}
         value={companyName}
         onChange={(event) => setCompanyName(event.target.value)}
         autoComplete="organization"
@@ -117,8 +121,8 @@ function RegisterFormComponent() {
       <InputComponent
         type="text"
         name="username"
-        label="Username"
-        placeholder="Username"
+        label={t("components.registerForm.usernameLabel")}
+        placeholder={t("components.registerForm.usernamePlaceholder")}
         value={username}
         onChange={(event) => setUsername(event.target.value)}
         autoComplete="username"
@@ -128,8 +132,8 @@ function RegisterFormComponent() {
       <InputComponent
         type="email"
         name="email"
-        label="Email"
-        placeholder="Email"
+        label={t("components.registerForm.emailLabel")}
+        placeholder={t("components.registerForm.emailPlaceholder")}
         value={email}
         onChange={(event) => setEmail(event.target.value)}
         autoComplete="email"
@@ -139,8 +143,8 @@ function RegisterFormComponent() {
       <InputComponent
         type="password"
         name="password"
-        label="Password"
-        placeholder="Password"
+        label={t("components.registerForm.passwordLabel")}
+        placeholder={t("components.registerForm.passwordPlaceholder")}
         value={password}
         onChange={(event) => setPassword(event.target.value)}
         autoComplete="new-password"
@@ -150,8 +154,8 @@ function RegisterFormComponent() {
       <InputComponent
         type="password"
         name="confirmPassword"
-        label="Conferma password"
-        placeholder="Conferma password"
+        label={t("components.registerForm.confirmPasswordLabel")}
+        placeholder={t("components.registerForm.confirmPasswordPlaceholder")}
         value={confirmPassword}
         onChange={(event) => setConfirmPassword(event.target.value)}
         autoComplete="new-password"
@@ -164,7 +168,9 @@ function RegisterFormComponent() {
         </p>
       )}
       <ButtonComponent onClick={() => {}} disabled={isSubmitting}>
-        {isSubmitting ? "Registrazione in corso..." : "Registrati"}
+        {isSubmitting
+          ? t("components.registerForm.submitting")
+          : t("components.registerForm.submit")}
       </ButtonComponent>
     </form>
   );

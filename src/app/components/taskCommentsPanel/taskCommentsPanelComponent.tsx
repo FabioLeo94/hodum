@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import { EllipsisVertical, Pencil, Send, Trash2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { TaskComment } from "../../../shared/types/project";
 import {
   createTaskComment,
@@ -28,6 +29,7 @@ interface Prop {
 }
 
 function TaskCommentsPanelComponent({ projectId, taskId, readOnly = false }: Prop) {
+  const { t } = useTranslation();
   const [comments, setComments] = useState<TaskComment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -78,7 +80,7 @@ function TaskCommentsPanelComponent({ projectId, taskId, readOnly = false }: Pro
           setLoadError(
             error instanceof Error
               ? error.message
-              : "Impossibile caricare i commenti.",
+              : t("components.taskCommentsPanel.loadError"),
           );
         }
       })
@@ -89,7 +91,7 @@ function TaskCommentsPanelComponent({ projectId, taskId, readOnly = false }: Pro
     return () => {
       cancelled = true;
     };
-  }, [projectId, taskId]);
+  }, [projectId, taskId, t]);
 
   // Riflette in tempo reale i commenti creati/modificati/eliminati da
   // qualunque utente (compreso me da un'altra scheda): la room del progetto è
@@ -216,7 +218,7 @@ function TaskCommentsPanelComponent({ projectId, taskId, readOnly = false }: Pro
         setSendError(
           error instanceof Error
             ? error.message
-            : "Impossibile inviare il commento.",
+            : t("components.taskCommentsPanel.sendError"),
         );
       }
     });
@@ -263,7 +265,7 @@ function TaskCommentsPanelComponent({ projectId, taskId, readOnly = false }: Pro
         setEditError(
           error instanceof Error
             ? error.message
-            : "Impossibile modificare il commento.",
+            : t("components.taskCommentsPanel.editError"),
         );
       }
     });
@@ -311,7 +313,7 @@ function TaskCommentsPanelComponent({ projectId, taskId, readOnly = false }: Pro
         setDeleteError({
           commentId,
           message:
-            error instanceof Error ? error.message : "Impossibile eliminare il commento.",
+            error instanceof Error ? error.message : t("components.taskCommentsPanel.deleteError"),
         });
       }
     });
@@ -319,7 +321,7 @@ function TaskCommentsPanelComponent({ projectId, taskId, readOnly = false }: Pro
 
   return (
     <div className={styles.panel}>
-      <h3 className={styles.heading}>Commenti</h3>
+      <h3 className={styles.heading}>{t("components.taskCommentsPanel.heading")}</h3>
       <div
         className={styles.list}
         ref={listRef}
@@ -328,7 +330,7 @@ function TaskCommentsPanelComponent({ projectId, taskId, readOnly = false }: Pro
       >
         {isLoading && (
           <p className={styles.status} role="status">
-            Caricamento commenti...
+            {t("components.taskCommentsPanel.loading")}
           </p>
         )}
         {!isLoading && loadError && (
@@ -337,7 +339,7 @@ function TaskCommentsPanelComponent({ projectId, taskId, readOnly = false }: Pro
           </p>
         )}
         {!isLoading && !loadError && comments.length === 0 && (
-          <p className={styles.empty}>Nessun commento ancora, scrivi il primo.</p>
+          <p className={styles.empty}>{t("components.taskCommentsPanel.empty")}</p>
         )}
         {!isLoading &&
           !loadError &&
@@ -375,7 +377,7 @@ function TaskCommentsPanelComponent({ projectId, taskId, readOnly = false }: Pro
                         }}
                         type="button"
                         className={styles.kebabButton}
-                        aria-label="Altre azioni per il commento"
+                        aria-label={t("components.taskCommentsPanel.otherActionsLabel")}
                         aria-haspopup="menu"
                         aria-expanded={openMenuId === comment.id}
                         aria-controls={`comment-menu-${comment.id}`}
@@ -397,7 +399,7 @@ function TaskCommentsPanelComponent({ projectId, taskId, readOnly = false }: Pro
                             onClick={() => handleStartEdit(comment)}
                           >
                             <Pencil size={14} aria-hidden="true" />
-                            Modifica
+                            {t("components.taskCommentsPanel.edit")}
                           </button>
                           <button
                             type="button"
@@ -418,10 +420,10 @@ function TaskCommentsPanelComponent({ projectId, taskId, readOnly = false }: Pro
                             )}
                             <Trash2 size={14} aria-hidden="true" />
                             {isDeletingThis
-                              ? "Eliminazione..."
+                              ? t("components.taskCommentsPanel.deleting")
                               : isDeleteArmed
-                                ? "Confermi?"
-                                : "Elimina"}
+                                ? t("components.taskCommentsPanel.confirmDelete")
+                                : t("components.taskCommentsPanel.delete")}
                           </button>
                         </div>
                       )}
@@ -431,7 +433,7 @@ function TaskCommentsPanelComponent({ projectId, taskId, readOnly = false }: Pro
                 {isEditingThis ? (
                   <div className={styles.editForm}>
                     <TextareaComponent
-                      label="Modifica il commento"
+                      label={t("components.taskCommentsPanel.editLabel")}
                       value={editDraft}
                       onChange={(event) => setEditDraft(event.target.value)}
                       onKeyDown={(event) => handleEditKeyDown(event, comment.id)}
@@ -445,7 +447,7 @@ function TaskCommentsPanelComponent({ projectId, taskId, readOnly = false }: Pro
                         onClick={handleCancelEdit}
                         disabled={isSavingEdit}
                       >
-                        Annulla
+                        {t("components.taskCommentsPanel.cancel")}
                       </button>
                       <button
                         type="button"
@@ -453,7 +455,9 @@ function TaskCommentsPanelComponent({ projectId, taskId, readOnly = false }: Pro
                         onClick={() => handleSaveEdit(comment.id)}
                         disabled={isSavingEdit || editDraft.trim() === ""}
                       >
-                        {isSavingEdit ? "Salvataggio..." : "Salva"}
+                        {isSavingEdit
+                          ? t("components.taskCommentsPanel.saving")
+                          : t("components.taskCommentsPanel.save")}
                       </button>
                     </div>
                     {editError && (
@@ -470,7 +474,10 @@ function TaskCommentsPanelComponent({ projectId, taskId, readOnly = false }: Pro
                     <span className={styles.timestamp}>
                       {formatDateTime(comment.createdAt)}
                       {comment.edited && (
-                        <span className={styles.editedFlag}> (modificato)</span>
+                        <span className={styles.editedFlag}>
+                          {" "}
+                          {t("components.taskCommentsPanel.editedFlag")}
+                        </span>
                       )}
                     </span>
                   </>
@@ -488,8 +495,8 @@ function TaskCommentsPanelComponent({ projectId, taskId, readOnly = false }: Pro
         <>
           <div className={styles.composer}>
             <TextareaComponent
-              label="Scrivi un commento"
-              placeholder="Scrivi un commento... (Invio per inviare, Maiusc+Invio per andare a capo)"
+              label={t("components.taskCommentsPanel.composerLabel")}
+              placeholder={t("components.taskCommentsPanel.composerPlaceholder")}
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
               onKeyDown={handleKeyDown}
@@ -499,7 +506,11 @@ function TaskCommentsPanelComponent({ projectId, taskId, readOnly = false }: Pro
             <button
               type="button"
               className={styles.sendButton}
-              aria-label={isSubmitting ? "Invio in corso" : "Invia commento"}
+              aria-label={
+                isSubmitting
+                  ? t("components.taskCommentsPanel.sending")
+                  : t("components.taskCommentsPanel.send")
+              }
               onClick={handleSend}
               disabled={isSubmitting || draft.trim() === ""}
             >

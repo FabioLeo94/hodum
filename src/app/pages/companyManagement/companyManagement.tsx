@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 import { Building2, DatabaseBackup } from "lucide-react";
 import TopbarComponent from "../../components/topbar/topbarComponent";
 import ManagementCardComponent from "../../components/managementCard/managementCardComponent";
@@ -18,7 +19,8 @@ import styles from "./companyManagement.module.css";
 // ruolo, quindi il controllo vive qui e reindirizza chi non è owner.
 function CompanyManagement() {
   const navigate = useNavigate();
-  usePageMeta({ title: "Gestione aziendale", robots: "noindex, nofollow" });
+  const { t } = useTranslation();
+  usePageMeta({ title: t("pages.companyManagement.meta.title"), robots: "noindex, nofollow" });
 
   const [isBackupDrawerOpen, setIsBackupDrawerOpen] = useState(false);
   const [isEditCompanyDrawerOpen, setIsEditCompanyDrawerOpen] = useState(false);
@@ -49,22 +51,22 @@ function CompanyManagement() {
       <TopbarComponent onLogout={handleLogout} />
       <div className={styles.container}>
         <header className={styles.header}>
-          <h1 className={styles.title}>Gestione aziendale</h1>
-          <p className={styles.subtitle}>Strumenti riservati al titolare dell'azienda.</p>
+          <h1 className={styles.title}>{t("pages.companyManagement.title")}</h1>
+          <p className={styles.subtitle}>{t("pages.companyManagement.subtitle")}</p>
         </header>
 
         {companyId && (
           <div className={styles.cardsGrid}>
             <ManagementCardComponent
               icon={<Building2 size={26} strokeWidth={2} aria-hidden="true" />}
-              title="Modifica dati aziendali"
-              description="Nome, ragione sociale, P.IVA, codice fiscale, indirizzo e PEC della tua azienda."
+              title={t("pages.companyManagement.cards.editCompany.title")}
+              description={t("pages.companyManagement.cards.editCompany.description")}
               onClick={() => setIsEditCompanyDrawerOpen(true)}
             />
             <ManagementCardComponent
               icon={<DatabaseBackup size={26} strokeWidth={2} aria-hidden="true" />}
-              title="Backup"
-              description="Gestisci i backup del database della tua azienda: frequenza, quanti conservarne e come nominarli."
+              title={t("pages.companyManagement.cards.backup.title")}
+              description={t("pages.companyManagement.cards.backup.description")}
               onClick={() => setIsBackupDrawerOpen(true)}
             />
           </div>

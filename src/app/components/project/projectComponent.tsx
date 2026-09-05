@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useId, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { EllipsisVertical } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { Project } from "../../../shared/types/project";
 import RenameProjectModalComponent from "../renameProjectModal/renameProjectModalComponent";
 import DeleteProjectModalComponent from "../deleteProjectModal/deleteProjectModalComponent";
@@ -9,6 +10,7 @@ import {
   downloadProject,
   type ExportFormat,
 } from "../../../shared/utils/projectExport";
+import { useStatusGroupLabels } from "../../../shared/constants/taskStatus";
 import styles from "./projectComponent.module.css";
 
 interface Prop extends Project {
@@ -36,6 +38,8 @@ function ProjectComponent({
   onDeleteProject,
   canManage,
 }: Prop) {
+  const { t } = useTranslation();
+  const STATUS_GROUP_LABELS = useStatusGroupLabels();
   const navigate = useNavigate();
   const [activeModal, setActiveModal] = useState<ActiveModal>(null);
   const [renameError, setRenameError] = useState("");
@@ -91,7 +95,7 @@ function ProjectComponent({
   const segments = [
     {
       key: "completed",
-      label: "Completati",
+      label: STATUS_GROUP_LABELS.completed,
       count: completedCount,
       percent: completedPercent,
       donutClassName: styles.donutSegmentCompleted,
@@ -99,7 +103,7 @@ function ProjectComponent({
     },
     {
       key: "progress",
-      label: "In corso",
+      label: STATUS_GROUP_LABELS.progress,
       count: progressCount,
       percent: inProgressPercent,
       donutClassName: styles.donutSegmentInProgress,
@@ -107,7 +111,7 @@ function ProjectComponent({
     },
     {
       key: "review",
-      label: "In review",
+      label: STATUS_GROUP_LABELS.review,
       count: reviewCount,
       percent: reviewPercent,
       donutClassName: styles.donutSegmentReview,
@@ -115,7 +119,7 @@ function ProjectComponent({
     },
     {
       key: "rejected",
-      label: "Rifiutati",
+      label: STATUS_GROUP_LABELS.rejected,
       count: rejectedCount,
       percent: rejectedPercent,
       donutClassName: styles.donutSegmentRejected,
@@ -135,10 +139,14 @@ function ProjectComponent({
 
   const cardLabel =
     segments.length === 0
-      ? `${name}, ${totalTasks} task`
-      : `${name}, ${totalTasks} task: ${segments
-          .map((segment) => `${segment.count} ${segment.label.toLowerCase()}`)
-          .join(", ")}`;
+      ? t("components.project.cardLabelSimple", { name, count: totalTasks })
+      : t("components.project.cardLabelWithBreakdown", {
+          name,
+          count: totalTasks,
+          breakdown: segments
+            .map((segment) => `${segment.count} ${segment.label.toLowerCase()}`)
+            .join(", "),
+        });
 
   function openRenameModal() {
     setRenameError("");
@@ -173,7 +181,7 @@ function ProjectComponent({
       setRenameError(
         error instanceof Error
           ? error.message
-          : "Impossibile aggiornare il progetto.",
+          : t("components.project.updateError"),
       );
     }
   }
@@ -186,7 +194,7 @@ function ProjectComponent({
       setDeleteError(
         error instanceof Error
           ? error.message
-          : "Impossibile eliminare il progetto.",
+          : t("components.project.deleteError"),
       );
     }
   }
@@ -242,7 +250,7 @@ function ProjectComponent({
 
         <div className={styles.donutCenter}>
           {totalTasks === 0 ? (
-            <span className={styles.donutCenterEmpty}>Nessun task</span>
+            <span className={styles.donutCenterEmpty}>{t("components.project.noTasks")}</span>
           ) : (
             <>
               <span
@@ -251,7 +259,9 @@ function ProjectComponent({
                 <strong className={styles.donutCenterValue}>
                   {totalTasks}
                 </strong>
-                <span className={styles.donutCenterLabel}>task totali</span>
+                <span className={styles.donutCenterLabel}>
+                  {t("components.project.totalTasks")}
+                </span>
               </span>
               {donutSegments.map((segment) => (
                 <span
@@ -278,7 +288,7 @@ function ProjectComponent({
               ref={kebabButtonRef}
               type="button"
               className={styles.kebabButton}
-              aria-label={`Altre azioni per ${name}`}
+              aria-label={t("components.project.otherActionsLabel", { name })}
               aria-haspopup="menu"
               aria-expanded={isMenuOpen}
               aria-controls={menuId}
@@ -295,7 +305,7 @@ function ProjectComponent({
                   className={styles.popoverItem}
                   onClick={openRenameModal}
                 >
-                  Rinomina
+                  {t("components.project.rename")}
                 </button>
                 <button
                   type="button"
@@ -303,7 +313,7 @@ function ProjectComponent({
                   className={styles.popoverItem}
                   onClick={openDeleteModal}
                 >
-                  Elimina
+                  {t("components.project.delete")}
                 </button>
                 <div className={styles.popoverSeparator} role="separator" />
                 <button
@@ -312,7 +322,7 @@ function ProjectComponent({
                   className={styles.popoverItem}
                   onClick={openDownloadModal}
                 >
-                  Scarica...
+                  {t("components.project.download")}
                 </button>
               </div>
             )}

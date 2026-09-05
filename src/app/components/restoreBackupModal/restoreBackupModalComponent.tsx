@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ModalBaseComponent from "../modalBase/modalBaseComponent";
 import ButtonComponent from "../button/buttonComponent";
 import { useAsyncSubmit } from "../../../shared/hooks/useAsyncSubmit";
@@ -18,6 +19,7 @@ function RestoreBackupModalComponent({
   onConfirm,
   submitError,
 }: Prop) {
+  const { t } = useTranslation();
   const { isSubmitting, submit } = useAsyncSubmit();
 
   async function handleConfirm() {
@@ -30,29 +32,26 @@ function RestoreBackupModalComponent({
     <ModalBaseComponent
       isOpen={isOpen}
       onClose={onClose}
-      title="Applica backup"
+      title={t("components.restoreBackupModal.title")}
       variant="error"
       onSubmit={handleConfirm}
       primaryAction={
         <ButtonComponent onClick={() => {}} disabled={isSubmitting} variant="danger">
-          {isSubmitting ? "Ripristino in corso..." : "Applica"}
+          {isSubmitting
+            ? t("components.restoreBackupModal.submitting")
+            : t("components.restoreBackupModal.confirm")}
         </ButtonComponent>
       }
       secondaryActions={
         <button type="button" className={styles.cancelButton} onClick={onClose}>
-          Annulla
+          {t("components.restoreBackupModal.cancel")}
         </button>
       }
     >
       <p className={styles.description}>
-        Stai per sovrascrivere i dati attuali dell'azienda con «{backupFilename}
-        ». Tutti i cambiamenti fatti dopo quel backup andranno persi.
+        {t("components.restoreBackupModal.overwriteWarning", { filename: backupFilename })}
       </p>
-      <p className={styles.description}>
-        Prima di procedere verrà comunque salvato automaticamente uno snapshot
-        dello stato attuale, che troverai nello storico e potrai applicare per
-        annullare il ripristino.
-      </p>
+      <p className={styles.description}>{t("components.restoreBackupModal.snapshotNotice")}</p>
       {submitError && (
         <p role="alert" className={styles.submitError}>
           {submitError}

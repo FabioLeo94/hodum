@@ -1,0 +1,19 @@
+.languageSwitcher {
+  height: 32px;
+  padding: 0 var(--p-sm);
+  border: 1px solid var(--bg-field);
+  border-radius: var(--radious-sm);
+  background-color: var(--bg-field);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.languageSwitcher:hover {
+  border-color: var(--bg-primary);
+}
+
+.languageSwitcher:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}

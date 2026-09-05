@@ -3,10 +3,12 @@ import RecoverPasswordFormComponent from "../../components/recoverPasswordForm/r
 import { useEffect } from "react";
 import { isAuthenticated } from "../../services/auth/authService";
 import { useNavigate, Link } from "react-router";
+import { useTranslation } from "react-i18next";
 import { usePageMeta } from "../../../shared/hooks/usePageMeta";
 
 function RecoverPassword() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   useEffect(() => {
     if (isAuthenticated()) {
       navigate("/dashboard");
@@ -16,25 +18,26 @@ function RecoverPassword() {
   }, [navigate]);
 
   usePageMeta({
-    title: "Recupera l'accesso",
+    title: t("pages.recoverPassword.meta.title"),
     robots: "noindex, nofollow",
   });
 
   return (
     <div className={styles.recoverPasswordContainer}>
       <div className={styles.recoverPasswordHero}>
-        <span className={styles.recoverPasswordEyebrow}>Hodum</span>
-        <h1 className={styles.recoverPasswordTitle}>Recupera l'accesso</h1>
+        <span className={styles.recoverPasswordEyebrow}>
+          {t("pages.recoverPassword.eyebrow")}
+        </span>
+        <h1 className={styles.recoverPasswordTitle}>{t("pages.recoverPassword.title")}</h1>
         <p className={styles.recoverPasswordSubtitle}>
-          Inserisci l'email dell'account e il codice di recupero ricevuto
-          alla registrazione per impostare una nuova password.
+          {t("pages.recoverPassword.subtitle")}
         </p>
       </div>
       <div className={styles.recoverPasswordFormWrapper}>
         <RecoverPasswordFormComponent />
       </div>
       <Link to="/auth" className={styles.recoverPasswordBack}>
-        Torna al login
+        {t("pages.recoverPassword.backToLogin")}
       </Link>
     </div>
   );

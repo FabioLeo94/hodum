@@ -1,5 +1,12 @@
 .authContainer {
   composes: heroPage from "../../../shared/styles/heroPage.module.css";
+  position: relative;
+}
+
+.authLanguageSwitcher {
+  position: absolute;
+  top: var(--p-lg);
+  right: var(--p-lg);
 }
 
 .authHero {

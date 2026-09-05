@@ -1,21 +1,22 @@
 import { Fragment, useState } from "react";
 import type { DragEvent } from "react";
+import { useTranslation } from "react-i18next";
 import type { Task, TaskStatus } from "../../../shared/types/project";
 import { formatDateOnly, isTaskDueSoon, isTaskOverdue } from "../../../shared/utils/taskDueDate";
+import { resolveDateLocale } from "../../../shared/utils/formatDate";
+import { useStatusLabels } from "../../../shared/constants/taskStatus";
 import styles from "./taskCalendarComponent.module.css";
 
-const WEEKDAY_LABELS = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
-
-const MONTH_YEAR_FORMATTER = new Intl.DateTimeFormat("it-IT", {
-  month: "long",
-  year: "numeric",
-});
-
-// Intl.DateTimeFormat("it-IT") restituisce il mese minuscolo ("settembre
-// 2026"): capitalizzato qui invece che a livello di formatter, che non ha
-// un'opzione per farlo.
+// Il formatter va ricostruito a ogni chiamata (non un const di modulo): deve
+// seguire la lingua i18next corrente, che può cambiare a runtime tramite il
+// selettore lingua. Intl.DateTimeFormat restituisce il mese minuscolo in
+// italiano ("settembre 2026"): capitalizzato qui invece che a livello di
+// formatter, che non ha un'opzione per farlo.
 function formatMonthYear(date: Date): string {
-  const raw = MONTH_YEAR_FORMATTER.format(date);
+  const raw = new Intl.DateTimeFormat(resolveDateLocale(), {
+    month: "long",
+    year: "numeric",
+  }).format(date);
   return raw.charAt(0).toUpperCase() + raw.slice(1);
 }
 
@@ -84,16 +85,6 @@ const STATUS_DOT_STYLES: Record<TaskStatus, string> = {
   rejected: styles.dotRejected,
 };
 
-// Stessa terminologia italiana di TaskStatusSelectComponent: qui alimenta
-// solo la legenda colori e il tooltip del dot (mai l'aria-label, che resta
-// il solo titolo del task per non rompere l'accessible name atteso altrove).
-const STATUS_LABELS: Record<TaskStatus, string> = {
-  progress: "In corso",
-  review: "In review",
-  completed: "Completato",
-  rejected: "Rifiutato",
-};
-
 const LEGEND_STATUSES: TaskStatus[] = ["progress", "review", "completed", "rejected"];
 
 // Oltre questa soglia i pallini di un giorno vengono troncati con un chip
@@ -135,6 +126,9 @@ function TaskCalendarComponent({
   dimmedTaskIds,
   onDueDateChange,
 }: TaskCalendarComponentProps) {
+  const { t } = useTranslation();
+  const STATUS_LABELS = useStatusLabels();
+  const WEEKDAY_LABELS = t("components.taskCalendar.weekdays", { returnObjects: true }) as string[];
   const [viewedMonth, setViewedMonth] = useState(() => startOfMonth(new Date()));
   // Giorni con la lista task espansa oltre DOT_VISIBLE_LIMIT, opt-in per
   // singola cella: non si resetta al cambio mese, ma le dateKey sono
@@ -219,18 +213,18 @@ function TaskCalendarComponent({
             <button
               type="button"
               className={styles.navButton}
-              aria-label="Mese precedente"
+              aria-label={t("components.taskCalendar.previousMonth")}
               onClick={goToPreviousMonth}
             >
               ‹
             </button>
             <button type="button" className={styles.todayButton} onClick={goToToday}>
-              Oggi
+              {t("components.taskCalendar.today")}
             </button>
             <button
               type="button"
               className={styles.navButton}
-              aria-label="Mese successivo"
+              aria-label={t("components.taskCalendar.nextMonth")}
               onClick={goToNextMonth}
             >
               ›
@@ -255,7 +249,7 @@ function TaskCalendarComponent({
             <span className={styles.legendMarker} aria-hidden="true">
               !
             </span>
-            In scadenza o in ritardo
+            {t("components.taskCalendar.legendDueOrOverdue")}
           </span>
         </div>
       </div>
@@ -264,7 +258,7 @@ function TaskCalendarComponent({
         <div
           className={styles.grid}
           role="group"
-          aria-label={`Calendario dei task, ${formatMonthYear(viewedMonth)}`}
+          aria-label={t("components.taskCalendar.gridLabel", { month: formatMonthYear(viewedMonth) })}
         >
           <div className={styles.weekLabelHeaderCell} aria-hidden="true" />
           {WEEKDAY_LABELS.map((label) => (
@@ -275,7 +269,9 @@ function TaskCalendarComponent({
 
           {weeks.map((week, weekIndex) => (
             <Fragment key={weekIndex}>
-              <div className={styles.weekLabelCell}>{`Settimana ${weekIndex + 1}`}</div>
+              <div className={styles.weekLabelCell}>
+                {t("components.taskCalendar.weekLabel", { number: weekIndex + 1 })}
+              </div>
               {week.map((cell) => {
                 const dayTasks = tasksByDueDate.get(cell.dateKey) ?? [];
                 const isToday = cell.dateKey === todayKey;
@@ -302,9 +298,9 @@ function TaskCalendarComponent({
                           const overdue = isTaskOverdue(task);
                           const dueSoon = !overdue && isTaskDueSoon(task);
                           const dueState = overdue
-                            ? ", in ritardo"
+                            ? t("components.taskCalendar.dotTitleOverdueSuffix")
                             : dueSoon
-                              ? ", in scadenza"
+                              ? t("components.taskCalendar.dotTitleDueSoonSuffix")
                               : "";
                           const isDimmed = dimmedTaskIds?.has(task.id) ?? false;
                           return (
@@ -338,8 +334,8 @@ function TaskCalendarComponent({
                             aria-expanded={isExpanded}
                             aria-label={
                               isExpanded
-                                ? "Mostra meno task"
-                                : `Mostra altri ${extraCount} task`
+                                ? t("components.taskCalendar.showFewer")
+                                : t("components.taskCalendar.showMore", { count: extraCount })
                             }
                             onClick={() => toggleExpandedDay(cell.dateKey)}
                           >

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import styles from "./recoveryCodeDisplayComponent.module.css";
 import ButtonComponent from "../button/buttonComponent";
 
@@ -15,11 +16,9 @@ interface Prop {
 // l'unica occasione in cui l'utente può vederlo. Il pulsante di conferma
 // resta disabilitato finché non viene spuntata la checkbox, per non lasciare
 // che si prosegua per disattenzione senza averlo salvato.
-function RecoveryCodeDisplayComponent({
-  recoveryCode,
-  onConfirm,
-  confirmLabel = "Ho salvato il codice, continua",
-}: Prop) {
+function RecoveryCodeDisplayComponent({ recoveryCode, onConfirm, confirmLabel }: Prop) {
+  const { t } = useTranslation();
+  const resolvedConfirmLabel = confirmLabel ?? t("components.recoveryCodeDisplay.defaultConfirmLabel");
   const [copied, setCopied] = useState(false);
   const [acknowledged, setAcknowledged] = useState(false);
 
@@ -39,13 +38,10 @@ function RecoveryCodeDisplayComponent({
   return (
     <div className={styles.recoveryCodeCard} role="alert">
       <h2 className={styles.recoveryCodeTitle}>
-        Salva il tuo codice di recupero
+        {t("components.recoveryCodeDisplay.title")}
       </h2>
       <p className={styles.recoveryCodeDescription}>
-        È l'unico modo per recuperare l'accesso se dimentichi la password:
-        Hodum non invia email né usa servizi esterni per il reset. Conservalo
-        in un posto sicuro (un password manager, una copia stampata) — non
-        verrà mostrato di nuovo.
+        {t("components.recoveryCodeDisplay.description")}
       </p>
       <div className={styles.recoveryCodeBox}>
         <code className={styles.recoveryCodeValue}>{recoveryCode}</code>
@@ -54,7 +50,9 @@ function RecoveryCodeDisplayComponent({
           className={styles.recoveryCodeCopyButton}
           onClick={handleCopy}
         >
-          {copied ? "Copiato" : "Copia"}
+          {copied
+            ? t("components.recoveryCodeDisplay.copied")
+            : t("components.recoveryCodeDisplay.copy")}
         </button>
       </div>
       <label className={styles.recoveryCodeAck}>
@@ -64,10 +62,10 @@ function RecoveryCodeDisplayComponent({
           checked={acknowledged}
           onChange={(event) => setAcknowledged(event.target.checked)}
         />
-        Ho salvato il codice in un posto sicuro
+        {t("components.recoveryCodeDisplay.acknowledge")}
       </label>
       <ButtonComponent onClick={onConfirm} disabled={!acknowledged}>
-        {confirmLabel}
+        {resolvedConfirmLabel}
       </ButtonComponent>
     </div>
   );

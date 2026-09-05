@@ -2,14 +2,17 @@ import styles from "./auth.module.css";
 import AuthFormComponent from "../../components/authForm/authFormComponent";
 import RegisterFormComponent from "../../components/registerForm/registerFormComponent";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { isAuthenticated } from "../../services/auth/authService";
 import { useNavigate } from "react-router";
 import { usePageMeta } from "../../../shared/hooks/usePageMeta";
+import LanguageSwitcherComponent from "../../components/languageSwitcher/languageSwitcherComponent";
 
 type AuthMode = "login" | "register";
 
 function Auth() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [mode, setMode] = useState<AuthMode>("login");
   useEffect(() => {
     if (isAuthenticated()) {
@@ -24,23 +27,24 @@ function Auth() {
   const isLogin = mode === "login";
 
   usePageMeta({
-    title: isLogin ? "Accedi" : "Registrati",
+    title: isLogin ? t("pages.auth.meta.title.login") : t("pages.auth.meta.title.register"),
     description: isLogin
-      ? "Accedi a Hodum per gestire i tuoi progetti e le tue attività."
-      : "Crea un account Hodum per iniziare a gestire progetti e attività in modo semplice.",
+      ? t("pages.auth.meta.description.login")
+      : t("pages.auth.meta.description.register"),
   });
 
   return (
     <div className={styles.authContainer}>
+      <div className={styles.authLanguageSwitcher}>
+        <LanguageSwitcherComponent />
+      </div>
       <div className={styles.authHero}>
-        <span className={styles.authEyebrow}>Hodum</span>
+        <span className={styles.authEyebrow}>{t("pages.auth.eyebrow")}</span>
         <h1 className={styles.authTitle}>
-          {isLogin ? "Bentornato" : "Crea il tuo account"}
+          {isLogin ? t("pages.auth.title.login") : t("pages.auth.title.register")}
         </h1>
         <p className={styles.authSubtitle}>
-          {isLogin
-            ? "Accedi per continuare a gestire i tuoi progetti e le tue attività."
-            : "Registrati per iniziare a gestire i tuoi progetti e le tue attività."}
+          {isLogin ? t("pages.auth.subtitle.login") : t("pages.auth.subtitle.register")}
         </p>
       </div>
       <div className={styles.authFormWrapper} key={mode}>
@@ -51,7 +55,7 @@ function Auth() {
         className={styles.authToggle}
         onClick={() => setMode(isLogin ? "register" : "login")}
       >
-        {isLogin ? "Non hai un account? Registrati" : "Hai già un account? Accedi"}
+        {isLogin ? t("pages.auth.toggle.toRegister") : t("pages.auth.toggle.toLogin")}
       </button>
     </div>
   );

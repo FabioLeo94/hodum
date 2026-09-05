@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AlertTriangle, CheckCircle2, Info, X, XCircle } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import {
   dismissToast,
   subscribeToToasts,
@@ -56,6 +57,7 @@ function NotifyComponent() {
 }
 
 function ToastItem({ toast }: { toast: NotifyToast }) {
+  const { t } = useTranslation();
   const [isLeaving, setIsLeaving] = useState(false);
   const Icon = ICON_BY_TYPE[toast.type];
 
@@ -86,7 +88,7 @@ function ToastItem({ toast }: { toast: NotifyToast }) {
       <button
         type="button"
         className={styles.closeButton}
-        aria-label="Chiudi notifica"
+        aria-label={t("components.notify.closeLabel")}
         onClick={() => setIsLeaving(true)}
       >
         <X size={14} aria-hidden="true" />

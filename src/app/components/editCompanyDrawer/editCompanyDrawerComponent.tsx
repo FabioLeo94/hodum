@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from "react";
 import { X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import InputComponent from "../input/inputComponent";
 import ButtonComponent from "../button/buttonComponent";
 import { getCompany, updateCompany } from "../../services/company/companyService";
@@ -26,6 +27,7 @@ const CODICE_FISCALE_REGEX = /^(\d{11}|[A-Za-z0-9]{16})$/;
 // chiamata di rete fatta ad ogni apertura, non da uno stato già disponibile
 // al chiamante.
 function EditCompanyDrawerComponent({ isOpen, onClose, companyId }: Prop) {
+  const { t } = useTranslation();
   const titleId = useId();
 
   const [company, setCompany] = useState<RegisteredCompany | null>(null);
@@ -70,13 +72,15 @@ function EditCompanyDrawerComponent({ isOpen, onClose, companyId }: Prop) {
       })
       .catch((error: unknown) => {
         if (cancelled) return;
-        setLoadError(error instanceof Error ? error.message : "Impossibile caricare i dati aziendali.");
+        setLoadError(
+          error instanceof Error ? error.message : t("components.editCompanyDrawer.loadError"),
+        );
       });
 
     return () => {
       cancelled = true;
     };
-  }, [isOpen, companyId]);
+  }, [isOpen, companyId, t]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -89,20 +93,23 @@ function EditCompanyDrawerComponent({ isOpen, onClose, companyId }: Prop) {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
-  const nameError = submitAttempted && name.trim() === "" ? "Il nome dell'azienda non può essere vuoto." : "";
+  const nameError =
+    submitAttempted && name.trim() === "" ? t("components.editCompanyDrawer.nameRequired") : "";
 
   const pivaError =
     submitAttempted && piva.trim() !== "" && !PIVA_REGEX.test(piva.trim())
-      ? "La P.IVA deve essere composta da 11 cifre."
+      ? t("components.editCompanyDrawer.pivaInvalid")
       : "";
 
   const codiceFiscaleError =
     submitAttempted && codiceFiscale.trim() !== "" && !CODICE_FISCALE_REGEX.test(codiceFiscale.trim())
-      ? "Il codice fiscale deve essere di 11 cifre o 16 caratteri alfanumerici."
+      ? t("components.editCompanyDrawer.codiceFiscaleInvalid")
       : "";
 
   const pecError =
-    submitAttempted && pec.trim() !== "" && !validateEmail(pec.trim()) ? "Inserire una PEC valida." : "";
+    submitAttempted && pec.trim() !== "" && !validateEmail(pec.trim())
+      ? t("components.editCompanyDrawer.pecInvalid")
+      : "";
 
   async function handleSave() {
     setSubmitAttempted(true);
@@ -133,7 +140,9 @@ function EditCompanyDrawerComponent({ isOpen, onClose, companyId }: Prop) {
         applyCompany(updated);
         setSubmitAttempted(false);
       } catch (error) {
-        setSaveError(error instanceof Error ? error.message : "Impossibile salvare i dati aziendali.");
+        setSaveError(
+          error instanceof Error ? error.message : t("components.editCompanyDrawer.saveError"),
+        );
         throw error;
       }
     });
@@ -151,9 +160,14 @@ function EditCompanyDrawerComponent({ isOpen, onClose, companyId }: Prop) {
       >
         <div className={styles.header}>
           <h2 id={titleId} className={styles.title}>
-            Modifica dati aziendali
+            {t("components.editCompanyDrawer.title")}
           </h2>
-          <button type="button" className={styles.closeButton} aria-label="Chiudi" onClick={onClose}>
+          <button
+            type="button"
+            className={styles.closeButton}
+            aria-label={t("components.editCompanyDrawer.closeLabel")}
+            onClick={onClose}
+          >
             <X size={18} aria-hidden="true" />
           </button>
         </div>
@@ -164,13 +178,15 @@ function EditCompanyDrawerComponent({ isOpen, onClose, companyId }: Prop) {
           </p>
         ) : company ? (
           <section className={styles.section}>
-            <p className={styles.hint}>Creata il {formatDate(company.createdAt)}.</p>
+            <p className={styles.hint}>
+              {t("components.editCompanyDrawer.createdOn", { date: formatDate(company.createdAt) })}
+            </p>
 
             <div className={styles.fields}>
               <InputComponent
                 type="text"
                 name="name"
-                label="Nome azienda"
+                label={t("components.editCompanyDrawer.nameLabel")}
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 error={nameError}
@@ -180,7 +196,7 @@ function EditCompanyDrawerComponent({ isOpen, onClose, companyId }: Prop) {
               <InputComponent
                 type="text"
                 name="ragioneSociale"
-                label="Ragione sociale"
+                label={t("components.editCompanyDrawer.ragioneSocialeLabel")}
                 value={ragioneSociale}
                 onChange={(event) => setRagioneSociale(event.target.value)}
                 showLabel
@@ -188,7 +204,7 @@ function EditCompanyDrawerComponent({ isOpen, onClose, companyId }: Prop) {
               <InputComponent
                 type="text"
                 name="piva"
-                label="Partita IVA"
+                label={t("components.editCompanyDrawer.pivaLabel")}
                 value={piva}
                 onChange={(event) => setPiva(event.target.value)}
                 error={pivaError}
@@ -197,7 +213,7 @@ function EditCompanyDrawerComponent({ isOpen, onClose, companyId }: Prop) {
               <InputComponent
                 type="text"
                 name="codiceFiscale"
-                label="Codice fiscale"
+                label={t("components.editCompanyDrawer.codiceFiscaleLabel")}
                 value={codiceFiscale}
                 onChange={(event) => setCodiceFiscale(event.target.value)}
                 error={codiceFiscaleError}
@@ -206,7 +222,7 @@ function EditCompanyDrawerComponent({ isOpen, onClose, companyId }: Prop) {
               <InputComponent
                 type="text"
                 name="indirizzo"
-                label="Indirizzo"
+                label={t("components.editCompanyDrawer.indirizzoLabel")}
                 value={indirizzo}
                 onChange={(event) => setIndirizzo(event.target.value)}
                 showLabel
@@ -214,7 +230,7 @@ function EditCompanyDrawerComponent({ isOpen, onClose, companyId }: Prop) {
               <InputComponent
                 type="email"
                 name="pec"
-                label="PEC"
+                label={t("components.editCompanyDrawer.pecLabel")}
                 value={pec}
                 onChange={(event) => setPec(event.target.value)}
                 error={pecError}
@@ -223,7 +239,9 @@ function EditCompanyDrawerComponent({ isOpen, onClose, companyId }: Prop) {
             </div>
 
             <ButtonComponent onClick={handleSave} disabled={isSubmitting}>
-              {isSubmitting ? "Salvataggio in corso..." : "Salva"}
+              {isSubmitting
+                ? t("components.editCompanyDrawer.submitting")
+                : t("components.editCompanyDrawer.submit")}
             </ButtonComponent>
             {saveError && (
               <p role="alert" className={styles.errorBanner}>
@@ -233,7 +251,7 @@ function EditCompanyDrawerComponent({ isOpen, onClose, companyId }: Prop) {
           </section>
         ) : (
           <p className={styles.hint} role="status">
-            Caricamento...
+            {t("components.editCompanyDrawer.loading")}
           </p>
         )}
       </div>

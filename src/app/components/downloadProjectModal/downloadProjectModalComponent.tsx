@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import { Check } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import ModalBaseComponent from "../modalBase/modalBaseComponent";
 import ButtonComponent from "../button/buttonComponent";
 import type { ExportFormat } from "../../../shared/utils/projectExport";
@@ -12,29 +13,6 @@ interface FormatOption {
   description: string;
 }
 
-const FORMAT_OPTIONS: FormatOption[] = [
-  {
-    value: "json",
-    label: "JSON",
-    description: "Struttura dati completa del progetto, con task e assegnatari.",
-  },
-  {
-    value: "xml",
-    label: "XML",
-    description: "Stessi dati in formato a marcatori, per sistemi che li richiedono.",
-  },
-  {
-    value: "csv",
-    label: "CSV",
-    description: "Elenco dei task in formato tabellare, separato da virgole.",
-  },
-  {
-    value: "excel",
-    label: "Excel",
-    description: "Foglio di calcolo .xlsx con l'elenco dei task.",
-  },
-];
-
 interface Prop {
   isOpen: boolean;
   onClose: () => void;
@@ -42,12 +20,36 @@ interface Prop {
 }
 
 function DownloadProjectModalComponent({ isOpen, onClose, onDownload }: Prop) {
+  const { t } = useTranslation();
   // Precompilato al mount di questa istanza, stesso pattern delle altre
   // modali del progetto (il chiamante rimonta via `key` quando si riapre).
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat>("json");
   // Un bottone per formato: serve per spostare anche il focus DOM (non solo
   // lo stato) quando le frecce cambiano la selezione, vedi handleGroupKeyDown.
   const optionRefs = useRef<Partial<Record<ExportFormat, HTMLButtonElement | null>>>({});
+
+  const FORMAT_OPTIONS: FormatOption[] = [
+    {
+      value: "json",
+      label: t("components.downloadProjectModal.formats.json.label"),
+      description: t("components.downloadProjectModal.formats.json.description"),
+    },
+    {
+      value: "xml",
+      label: t("components.downloadProjectModal.formats.xml.label"),
+      description: t("components.downloadProjectModal.formats.xml.description"),
+    },
+    {
+      value: "csv",
+      label: t("components.downloadProjectModal.formats.csv.label"),
+      description: t("components.downloadProjectModal.formats.csv.description"),
+    },
+    {
+      value: "excel",
+      label: t("components.downloadProjectModal.formats.excel.label"),
+      description: t("components.downloadProjectModal.formats.excel.description"),
+    },
+  ];
 
   function handleDownload() {
     onDownload(selectedFormat);
@@ -79,22 +81,26 @@ function DownloadProjectModalComponent({ isOpen, onClose, onDownload }: Prop) {
     <ModalBaseComponent
       isOpen={isOpen}
       onClose={onClose}
-      title="Scarica progetto"
+      title={t("components.downloadProjectModal.title")}
       onSubmit={handleDownload}
-      primaryAction={<ButtonComponent onClick={() => {}}>Scarica</ButtonComponent>}
+      primaryAction={
+        <ButtonComponent onClick={() => {}}>
+          {t("components.downloadProjectModal.submit")}
+        </ButtonComponent>
+      }
       secondaryActions={
         <button type="button" className={styles.cancelButton} onClick={onClose}>
-          Annulla
+          {t("components.downloadProjectModal.cancel")}
         </button>
       }
     >
       <p className={styles.description}>
-        Scegli il formato in cui esportare i dati del progetto.
+        {t("components.downloadProjectModal.description")}
       </p>
       <div
         className={styles.formatGrid}
         role="radiogroup"
-        aria-label="Formato di esportazione"
+        aria-label={t("components.downloadProjectModal.formatGroupLabel")}
         onKeyDown={handleGroupKeyDown}
       >
         {FORMAT_OPTIONS.map((option) => {

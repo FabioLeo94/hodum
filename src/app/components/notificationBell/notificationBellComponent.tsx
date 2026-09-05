@@ -2,6 +2,8 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
 import { Bell, ChevronRight } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { formatDateTime } from "../../../shared/utils/formatDate";
 import { formatDateOnly } from "../../../shared/utils/taskDueDate";
 import {
@@ -19,21 +21,32 @@ const MAX_BADGE_COUNT = 99;
 // formatDateOnly(oggi) evita ogni problema di fuso orario, stesso principio
 // di parseDateOnly/isTaskOverdue in taskDueDate.ts, senza doverne dipendere
 // (quella funzione vuole un Task intero, qui basta la stringa).
-function describeNotification(notification: Notification): string {
+function describeNotification(notification: Notification, t: TFunction): string {
+  const actor = notification.actorUsername ?? t("components.notificationBell.actorFallback");
+  const taskTitle = notification.taskTitle ?? t("components.notificationBell.taskTitleFallback");
   switch (notification.type) {
     case "task_comment":
-      return `${notification.actorUsername ?? "Qualcuno"} ha commentato «${notification.taskTitle ?? "un task"}»`;
+      return t("components.notificationBell.describe.taskComment", { actor, taskTitle });
     case "task_created":
-      return `${notification.actorUsername ?? "Qualcuno"} ha creato «${notification.taskTitle ?? "un task"}»`;
+      return t("components.notificationBell.describe.taskCreated", { actor, taskTitle });
     case "task_due": {
       const isOverdue =
         notification.dueDate !== null && notification.dueDate < formatDateOnly(new Date());
-      return `«${notification.taskTitle ?? "Un task"}» è ${isOverdue ? "scaduto" : "in scadenza"}`;
+      const capitalizedTaskTitle =
+        notification.taskTitle ?? t("components.notificationBell.taskTitleFallbackCapitalized");
+      return t(
+        isOverdue
+          ? "components.notificationBell.describe.taskDueOverdue"
+          : "components.notificationBell.describe.taskDueSoon",
+        { taskTitle: capitalizedTaskTitle },
+      );
     }
     case "project_assigned":
-      return `Sei stato assegnato al progetto «${notification.projectName ?? "un progetto"}»`;
+      return t("components.notificationBell.describe.projectAssigned", {
+        projectName: notification.projectName ?? t("components.notificationBell.projectNameFallback"),
+      });
     case "task_assigned":
-      return `${notification.actorUsername ?? "Qualcuno"} ti ha assegnato «${notification.taskTitle ?? "un task"}»`;
+      return t("components.notificationBell.describe.taskAssigned", { actor, taskTitle });
   }
 }
 
@@ -50,6 +63,7 @@ function isNavigableNotification(notification: Notification): boolean {
 // nello stesso file).
 function NotificationBellComponent() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   // undefined = non ancora caricato: distingue "sto caricando" da "0
   // notifiche", stesso motivo di `projects` in topbarComponent. A differenza
@@ -76,12 +90,14 @@ function NotificationBellComponent() {
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        setError(err instanceof Error ? err.message : "Impossibile caricare le notifiche.");
+        setError(
+          err instanceof Error ? err.message : t("components.notificationBell.loadError"),
+        );
       });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   // Nessuna guardia "cancelled" qui: l'handler si limita ad aggiornare state
   // locale (non un side effect esterno), e il cleanup rimuove il listener
@@ -188,7 +204,11 @@ function NotificationBellComponent() {
         ref={bellButtonRef}
         type="button"
         className={styles.bellButton}
-        aria-label={unreadCount > 0 ? `Notifiche, ${unreadCount} non lette` : "Notifiche"}
+        aria-label={
+          unreadCount > 0
+            ? t("components.notificationBell.bellLabelUnread", { count: unreadCount })
+            : t("components.notificationBell.bellLabel")
+        }
         aria-haspopup="menu"
         aria-expanded={isOpen}
         aria-controls={menuId}
@@ -204,7 +224,7 @@ function NotificationBellComponent() {
             ref={panelRef}
             id={menuId}
             role="menu"
-            aria-label="Notifiche"
+            aria-label={t("components.notificationBell.bellLabel")}
             className={styles.panel}
           >
             {showMarkAll && (
@@ -215,7 +235,7 @@ function NotificationBellComponent() {
                 className={styles.markAllButton}
                 onClick={handleMarkAllRead}
               >
-                Segna tutte come lette
+                {t("components.notificationBell.markAllRead")}
               </button>
             )}
 
@@ -224,9 +244,9 @@ function NotificationBellComponent() {
                 {error}
               </p>
             ) : items === undefined ? (
-              <p className={styles.status}>Caricamento...</p>
+              <p className={styles.status}>{t("components.notificationBell.loading")}</p>
             ) : items.length === 0 ? (
-              <p className={styles.status}>Nessuna notifica</p>
+              <p className={styles.status}>{t("components.notificationBell.empty")}</p>
             ) : (
               items.map((notification, index) => {
                 const navigable = isNavigableNotification(notification);
@@ -241,8 +261,11 @@ function NotificationBellComponent() {
                     onClick={() => handleNotificationClick(notification)}
                   >
                     <span className={styles.itemBody}>
-                      <span className={styles.itemText} title={describeNotification(notification)}>
-                        {describeNotification(notification)}
+                      <span
+                        className={styles.itemText}
+                        title={describeNotification(notification, t)}
+                      >
+                        {describeNotification(notification, t)}
                       </span>
                       <span className={styles.itemTime}>
                         {formatDateTime(notification.createdAt)}
@@ -255,7 +278,9 @@ function NotificationBellComponent() {
                           size={16}
                           aria-hidden="true"
                         />
-                        <span className={styles.srOnly}>Apre il dettaglio</span>
+                        <span className={styles.srOnly}>
+                          {t("components.notificationBell.openDetail")}
+                        </span>
                       </>
                     )}
                   </button>

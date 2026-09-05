@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import ModalBaseComponent from "../modalBase/modalBaseComponent";
 import InputComponent from "../input/inputComponent";
 import ButtonComponent from "../button/buttonComponent";
@@ -20,6 +21,7 @@ function RenameProjectModalComponent({
   onRename,
   submitError,
 }: Prop) {
+  const { t } = useTranslation();
   // Precompilato solo al mount di questa istanza: il chiamante rimonta il
   // componente (via `key`) ogni volta che la modale si riapre, così il valore
   // iniziale è sempre il nome corrente senza un effect di risincronizzazione.
@@ -29,7 +31,7 @@ function RenameProjectModalComponent({
 
   const nameError =
     submitAttempted && name.trim() === ""
-      ? "Inserisci un nome per il progetto."
+      ? t("components.renameProjectModal.nameRequired")
       : "";
 
   function handleClose() {
@@ -52,11 +54,13 @@ function RenameProjectModalComponent({
     <ModalBaseComponent
       isOpen={isOpen}
       onClose={handleClose}
-      title="Rinomina progetto"
+      title={t("components.renameProjectModal.title")}
       onSubmit={handleRename}
       primaryAction={
         <ButtonComponent onClick={() => {}} disabled={isSubmitting}>
-          {isSubmitting ? "Salvataggio in corso..." : "Salva"}
+          {isSubmitting
+            ? t("components.renameProjectModal.submitting")
+            : t("components.renameProjectModal.submit")}
         </ButtonComponent>
       }
       secondaryActions={
@@ -65,15 +69,15 @@ function RenameProjectModalComponent({
           className={styles.cancelButton}
           onClick={handleClose}
         >
-          Annulla
+          {t("components.renameProjectModal.cancel")}
         </button>
       }
     >
       <InputComponent
         type="text"
         name="projectName"
-        label="Nome del progetto"
-        placeholder="Es. Redesign sito web"
+        label={t("components.renameProjectModal.nameLabel")}
+        placeholder={t("components.renameProjectModal.namePlaceholder")}
         value={name}
         onChange={(event) => setName(event.target.value)}
         autoComplete="off"

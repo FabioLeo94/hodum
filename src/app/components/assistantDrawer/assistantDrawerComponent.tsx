@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import type { SubmitEvent } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { ArrowDown, MapPin, MessageSquare } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { sendAssistantMessage } from "../../services/assistant/assistantService";
 import type { AssistantMessage, PageContext } from "../../services/assistant/assistantService";
 import { getProjectName } from "../../services/project/projectService";
@@ -67,6 +68,7 @@ const BOTTOM_THRESHOLD_PX = 24;
 // che invece rimonta solo il contenuto dell'Outlet.
 function AssistantDrawerComponent({ isOpen, hasLocalFab, isHidden, onToggle }: Prop) {
   const panelId = useId();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [messages, setMessages] = useState<ChatEntry[]>([]);
@@ -115,9 +117,9 @@ function AssistantDrawerComponent({ isOpen, hasLocalFab, isHidden, onToggle }: P
 
   const contextLabel =
     pageContext?.page === "dashboard"
-      ? "Dashboard"
+      ? t("components.assistantDrawer.contextDashboard")
       : pageContext?.page === "task_list"
-        ? (projectName ?? "Progetto")
+        ? (projectName ?? t("components.assistantDrawer.contextProjectFallback"))
         : null;
 
   const messageListRef = useRef<HTMLDivElement>(null);
@@ -222,7 +224,7 @@ function AssistantDrawerComponent({ isOpen, hasLocalFab, isHidden, onToggle }: P
       }
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Impossibile contattare l'assistente.",
+        err instanceof Error ? err.message : t("components.assistantDrawer.contactError"),
       );
     } finally {
       setIsSending(false);
@@ -238,7 +240,11 @@ function AssistantDrawerComponent({ isOpen, hasLocalFab, isHidden, onToggle }: P
         type="button"
         className={styles.toggleButton}
         data-has-local-fab={hasLocalFab}
-        aria-label={isOpen ? "Chiudi l'assistente" : "Apri l'assistente"}
+        aria-label={
+          isOpen
+            ? t("components.assistantDrawer.toggleClose")
+            : t("components.assistantDrawer.toggleOpen")
+        }
         aria-haspopup="dialog"
         aria-expanded={isOpen}
         aria-controls={panelId}
@@ -255,23 +261,21 @@ function AssistantDrawerComponent({ isOpen, hasLocalFab, isHidden, onToggle }: P
         data-open={isOpen}
         inert={!isOpen}
         role="dialog"
-        aria-label="Assistente"
+        aria-label={t("components.assistantDrawer.panelLabel")}
       >
         <header className={styles.header}>
           <div className={styles.headerRow}>
-            <h2 className={styles.title}>Assistente</h2>
+            <h2 className={styles.title}>{t("components.assistantDrawer.title")}</h2>
             <button
               type="button"
               className={styles.clearButton}
               onClick={handleClearHistory}
               disabled={messages.length === 0 || isSending}
             >
-              Ripulisci cronologia
+              {t("components.assistantDrawer.clearHistory")}
             </button>
           </div>
-          <p className={styles.subtitle}>
-            Chiedi informazioni sui tuoi progetti e sui task.
-          </p>
+          <p className={styles.subtitle}>{t("components.assistantDrawer.subtitle")}</p>
           {pageContext && (
             <button
               type="button"
@@ -280,12 +284,14 @@ function AssistantDrawerComponent({ isOpen, hasLocalFab, isHidden, onToggle }: P
               onClick={() => setIsContextEnabled((current) => !current)}
               title={
                 isContextEnabled
-                  ? `I messaggi includono dove ti trovi ora (${contextLabel}): l'assistente lo usa quando non nomini un progetto o un task esplicitamente.`
-                  : "I messaggi non includono la pagina in cui ti trovi: dovrai nominare esplicitamente progetto e task."
+                  ? t("components.assistantDrawer.contextTooltipEnabled", { contextLabel })
+                  : t("components.assistantDrawer.contextTooltipDisabled")
               }
             >
               <MapPin className={styles.contextIcon} size={14} aria-hidden="true" />
-              {isContextEnabled ? `Contesto: ${contextLabel}` : "Contesto disattivato"}
+              {isContextEnabled
+                ? t("components.assistantDrawer.contextLabelEnabled", { contextLabel })
+                : t("components.assistantDrawer.contextLabelDisabled")}
             </button>
           )}
         </header>
@@ -300,10 +306,7 @@ function AssistantDrawerComponent({ isOpen, hasLocalFab, isHidden, onToggle }: P
             onScroll={handleScroll}
           >
             {messages.length === 0 ? (
-              <p className={styles.emptyState}>
-                Fai una domanda per iniziare, ad esempio "Quali progetti sono
-                attivi?".
-              </p>
+              <p className={styles.emptyState}>{t("components.assistantDrawer.emptyState")}</p>
             ) : (
               messages.map((entry) => (
                 <div
@@ -323,7 +326,9 @@ function AssistantDrawerComponent({ isOpen, hasLocalFab, isHidden, onToggle }: P
                 className={`${styles.messageBubble} ${styles.messageAssistant} ${styles.messageTyping}`}
                 role="status"
               >
-                <span className={styles.typingLabel}>Sto scrivendo</span>
+                <span className={styles.typingLabel}>
+                  {t("components.assistantDrawer.typingLabel")}
+                </span>
                 <span className={styles.typingDots} aria-hidden="true">
                   <span />
                   <span />
@@ -338,7 +343,7 @@ function AssistantDrawerComponent({ isOpen, hasLocalFab, isHidden, onToggle }: P
               type="button"
               className={styles.scrollToBottomButton}
               onClick={handleScrollToBottom}
-              aria-label="Torna al messaggio più recente"
+              aria-label={t("components.assistantDrawer.scrollToBottomLabel")}
             >
               <ArrowDown size={16} strokeWidth={2.5} aria-hidden="true" />
             </button>
@@ -358,8 +363,8 @@ function AssistantDrawerComponent({ isOpen, hasLocalFab, isHidden, onToggle }: P
             type="text"
             value={input}
             onChange={(event) => setInput(event.target.value)}
-            placeholder="Scrivi un messaggio..."
-            aria-label="Messaggio per l'assistente"
+            placeholder={t("components.assistantDrawer.composerPlaceholder")}
+            aria-label={t("components.assistantDrawer.composerAriaLabel")}
             disabled={isSending}
           />
           <button
@@ -367,7 +372,7 @@ function AssistantDrawerComponent({ isOpen, hasLocalFab, isHidden, onToggle }: P
             className={styles.sendButton}
             disabled={isSending || input.trim().length === 0}
           >
-            Invia
+            {t("components.assistantDrawer.send")}
           </button>
         </form>
       </aside>

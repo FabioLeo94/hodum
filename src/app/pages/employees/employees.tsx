@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useState } from "react";
 import { useNavigate, useOutletContext } from "react-router";
+import { useTranslation } from "react-i18next";
 import { Pencil, Plus, SquareCheck, Trash2 } from "lucide-react";
 import TopbarComponent from "../../components/topbar/topbarComponent";
 import CreateEmployeeModalComponent from "../../components/createEmployeeModal/createEmployeeModalComponent";
@@ -24,11 +25,12 @@ import styles from "./employees.module.css";
 
 function Employees() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const outletContext = useOutletContext<AssistantLayoutContext | undefined>();
   const isAssistantOpen = outletContext?.isAssistantOpen ?? false;
   const setHasLocalFab = outletContext?.setHasLocalFab;
 
-  usePageMeta({ title: "Dipendenti", robots: "noindex, nofollow" });
+  usePageMeta({ title: t("pages.employees.meta.title"), robots: "noindex, nofollow" });
 
   const [employees, setEmployees] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -95,9 +97,7 @@ function Employees() {
       .catch((error: unknown) => {
         if (!cancelled) {
           setLoadError(
-            error instanceof Error
-              ? error.message
-              : "Impossibile caricare i dipendenti.",
+            error instanceof Error ? error.message : t("pages.employees.loadError"),
           );
         }
       })
@@ -108,7 +108,7 @@ function Employees() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   function handleLogout() {
     logout();
@@ -128,7 +128,7 @@ function Employees() {
   async function handleCreateEmployee(values: CreateEmployeeFormValues) {
     const owner = getUser();
     if (!owner?.companyId) {
-      setCreateError("Sessione non valida. Effettua nuovamente l'accesso.");
+      setCreateError(t("pages.employees.invalidSession"));
       return;
     }
     try {
@@ -137,9 +137,7 @@ function Employees() {
       closeCreateModal();
     } catch (error) {
       setCreateError(
-        error instanceof Error
-          ? error.message
-          : "Impossibile creare il dipendente.",
+        error instanceof Error ? error.message : t("pages.employees.createError"),
       );
     }
   }
@@ -166,9 +164,7 @@ function Employees() {
       closeEditModal();
     } catch (error) {
       setEditError(
-        error instanceof Error
-          ? error.message
-          : "Impossibile aggiornare il dipendente.",
+        error instanceof Error ? error.message : t("pages.employees.editError"),
       );
     }
   }
@@ -193,9 +189,7 @@ function Employees() {
       closeDeleteModal();
     } catch (error) {
       setDeleteError(
-        error instanceof Error
-          ? error.message
-          : "Impossibile eliminare il dipendente.",
+        error instanceof Error ? error.message : t("pages.employees.deleteError"),
       );
     }
   }
@@ -217,9 +211,7 @@ function Employees() {
       closeAssignModal();
     } catch (error) {
       setAssignError(
-        error instanceof Error
-          ? error.message
-          : "Impossibile aggiornare i progetti assegnati.",
+        error instanceof Error ? error.message : t("pages.employees.assignError"),
       );
     }
   }
@@ -229,28 +221,25 @@ function Employees() {
       <TopbarComponent onLogout={handleLogout} />
       <div className={styles.employeesContainer}>
         <header className={styles.employeesHeader}>
-          <h1 className={styles.employeesTitle}>Dipendenti</h1>
+          <h1 className={styles.employeesTitle}>{t("pages.employees.title")}</h1>
           <p className={styles.employeesSubtitle} role="status">
             {isLoading
-              ? "Caricamento dei dipendenti..."
+              ? t("pages.employees.subtitleLoading")
               : employees.length === 0
-                ? "Nessun dipendente registrato al momento."
-                : `${employees.length} dipendent${employees.length === 1 ? "e" : "i"} registrat${employees.length === 1 ? "o" : "i"}.`}
+                ? t("pages.employees.subtitleEmpty")
+                : t("pages.employees.subtitleCount", { count: employees.length })}
           </p>
         </header>
 
         {loadError ? (
           <div className={styles.emptyState} data-variant="error" role="alert">
-            <p className={styles.emptyStateTitle}>Errore di caricamento</p>
+            <p className={styles.emptyStateTitle}>{t("pages.employees.loadErrorTitle")}</p>
             <p className={styles.emptyStateText}>{loadError}</p>
           </div>
         ) : !isLoading && employees.length === 0 ? (
           <div className={styles.emptyState}>
-            <p className={styles.emptyStateTitle}>Nessun dipendente ancora</p>
-            <p className={styles.emptyStateText}>
-              Crea le credenziali di un dipendente per farlo accedere alla tua
-              azienda.
-            </p>
+            <p className={styles.emptyStateTitle}>{t("pages.employees.emptyTitle")}</p>
+            <p className={styles.emptyStateText}>{t("pages.employees.emptyText")}</p>
           </div>
         ) : !isLoading ? (
           <ul className={styles.employeesList}>
@@ -267,22 +256,24 @@ function Employees() {
                   className={styles.employeeRoleBadge}
                   data-role={employee.role}
                 >
-                  {employee.role === "manager" ? "Project Manager" : "Dipendente"}
+                  {employee.role === "manager"
+                    ? t("pages.employees.roleBadge.manager")
+                    : t("pages.employees.roleBadge.employee")}
                 </span>
                 <span
                   className={styles.employeeStatus}
                   data-pending={employee.mustChangePassword}
                 >
                   {employee.mustChangePassword
-                    ? "In attesa del primo accesso"
-                    : "Attivo"}
+                    ? t("pages.employees.status.pending")
+                    : t("pages.employees.status.active")}
                 </span>
                 <div className={styles.employeeActions}>
                   {canManageEmployees && (
                     <button
                       type="button"
                       className={styles.iconButton}
-                      aria-label={`Modifica dipendente ${employee.username}`}
+                      aria-label={t("pages.employees.actions.edit", { username: employee.username })}
                       onClick={() => openEditModal(employee)}
                     >
                       <Pencil size={16} aria-hidden="true" />
@@ -296,7 +287,7 @@ function Employees() {
                     <button
                       type="button"
                       className={styles.iconButton}
-                      aria-label={`Assegna progetti a ${employee.username}`}
+                      aria-label={t("pages.employees.actions.assign", { username: employee.username })}
                       onClick={() => openAssignModal(employee)}
                     >
                       <SquareCheck size={16} aria-hidden="true" />
@@ -306,7 +297,7 @@ function Employees() {
                     <button
                       type="button"
                       className={`${styles.iconButton} ${styles.iconButtonDanger}`}
-                      aria-label={`Elimina dipendente ${employee.username}`}
+                      aria-label={t("pages.employees.actions.delete", { username: employee.username })}
                       onClick={() => openDeleteModal(employee)}
                     >
                       <Trash2 size={16} aria-hidden="true" />
@@ -324,7 +315,7 @@ function Employees() {
               type="button"
               className={styles.fabButton}
               data-assistant-open={isAssistantOpen}
-              aria-label="Crea nuovo dipendente"
+              aria-label={t("pages.employees.createButtonLabel")}
               onClick={openCreateModal}
             >
               <Plus className={styles.fabIcon} size={24} strokeWidth={2.5} aria-hidden="true" />

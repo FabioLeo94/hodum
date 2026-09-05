@@ -6,9 +6,11 @@ import { changePassword } from "../../services/user/userService";
 import { getUser, updateStoredUser } from "../../services/auth/authService";
 import { validatePassword } from "../../services/validation/validationService";
 import { useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 
 function ChangePasswordFormComponent() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [formError, setFormError] = useState("");
@@ -17,13 +19,13 @@ function ChangePasswordFormComponent() {
 
   const passwordError =
     (submitAttempted || password !== "") && !validatePassword(password)
-      ? "La password deve contenere almeno 8 caratteri, una minuscola, una maiuscola e un numero."
+      ? t("components.changePasswordForm.passwordInvalid")
       : "";
 
   const confirmPasswordError =
     (submitAttempted || confirmPassword !== "") &&
     password !== confirmPassword
-      ? "Le password non coincidono."
+      ? t("components.changePasswordForm.passwordMismatch")
       : "";
 
   async function handleSubmit(event: React.SubmitEvent<HTMLFormElement>) {
@@ -42,7 +44,7 @@ function ChangePasswordFormComponent() {
 
     const user = getUser();
     if (!user) {
-      setFormError("Sessione non valida. Effettua nuovamente l'accesso.");
+      setFormError(t("components.changePasswordForm.invalidSession"));
       return;
     }
 
@@ -55,7 +57,7 @@ function ChangePasswordFormComponent() {
       setFormError(
         error instanceof Error
           ? error.message
-          : "Cambio password non riuscito. Riprova più tardi.",
+          : t("components.changePasswordForm.updateFailed"),
       );
     } finally {
       setIsSubmitting(false);
@@ -71,8 +73,8 @@ function ChangePasswordFormComponent() {
       <InputComponent
         type="password"
         name="password"
-        label="Nuova password"
-        placeholder="Nuova password"
+        label={t("components.changePasswordForm.newPasswordLabel")}
+        placeholder={t("components.changePasswordForm.newPasswordPlaceholder")}
         value={password}
         onChange={(event) => setPassword(event.target.value)}
         autoComplete="new-password"
@@ -82,8 +84,8 @@ function ChangePasswordFormComponent() {
       <InputComponent
         type="password"
         name="confirmPassword"
-        label="Conferma nuova password"
-        placeholder="Conferma nuova password"
+        label={t("components.changePasswordForm.confirmPasswordLabel")}
+        placeholder={t("components.changePasswordForm.confirmPasswordPlaceholder")}
         value={confirmPassword}
         onChange={(event) => setConfirmPassword(event.target.value)}
         autoComplete="new-password"
@@ -96,7 +98,9 @@ function ChangePasswordFormComponent() {
         </p>
       )}
       <ButtonComponent onClick={() => {}} disabled={isSubmitting}>
-        {isSubmitting ? "Aggiornamento in corso..." : "Aggiorna password"}
+        {isSubmitting
+          ? t("components.changePasswordForm.submitting")
+          : t("components.changePasswordForm.submit")}
       </ButtonComponent>
     </form>
   );

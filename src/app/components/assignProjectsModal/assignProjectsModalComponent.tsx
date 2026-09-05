@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ModalBaseComponent from "../modalBase/modalBaseComponent";
 import ButtonComponent from "../button/buttonComponent";
 import {
@@ -26,6 +27,7 @@ function AssignProjectsModalComponent({
   onSave,
   submitError,
 }: Prop) {
+  const { t } = useTranslation();
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -49,7 +51,7 @@ function AssignProjectsModalComponent({
           setLoadError(
             error instanceof Error
               ? error.message
-              : "Impossibile caricare i progetti.",
+              : t("components.assignProjectsModal.loadError"),
           );
         }
       })
@@ -60,7 +62,7 @@ function AssignProjectsModalComponent({
     return () => {
       cancelled = true;
     };
-  }, [employeeId]);
+  }, [employeeId, t]);
 
   function toggleProject(projectId: string) {
     setSelectedIds((current) =>
@@ -84,11 +86,13 @@ function AssignProjectsModalComponent({
     <ModalBaseComponent
       isOpen={isOpen}
       onClose={handleClose}
-      title={`Assegna progetti a ${employeeUsername}`}
+      title={t("components.assignProjectsModal.title", { username: employeeUsername })}
       onSubmit={handleSave}
       primaryAction={
         <ButtonComponent onClick={() => {}} disabled={isSubmitting || isLoading}>
-          {isSubmitting ? "Salvataggio in corso..." : "Salva"}
+          {isSubmitting
+            ? t("components.assignProjectsModal.submitting")
+            : t("components.assignProjectsModal.submit")}
         </ButtonComponent>
       }
       secondaryActions={
@@ -97,13 +101,13 @@ function AssignProjectsModalComponent({
           className={styles.cancelButton}
           onClick={handleClose}
         >
-          Annulla
+          {t("components.assignProjectsModal.cancel")}
         </button>
       }
     >
       {isLoading ? (
         <p className={styles.statusText} role="status">
-          Caricamento dei progetti...
+          {t("components.assignProjectsModal.loading")}
         </p>
       ) : loadError ? (
         <p role="alert" className={styles.submitError}>
@@ -111,7 +115,7 @@ function AssignProjectsModalComponent({
         </p>
       ) : projects.length === 0 ? (
         <p className={styles.statusText}>
-          Nessun progetto disponibile in azienda.
+          {t("components.assignProjectsModal.empty")}
         </p>
       ) : (
         <ul className={styles.projectList}>

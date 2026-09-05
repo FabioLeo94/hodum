@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import ModalBaseComponent from "../modalBase/modalBaseComponent";
 import InputComponent from "../input/inputComponent";
 import ButtonComponent from "../button/buttonComponent";
@@ -18,13 +19,14 @@ function CreateProjectModalComponent({
   onCreate,
   submitError,
 }: Prop) {
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const { isSubmitting, submit } = useAsyncSubmit();
 
   const nameError =
     submitAttempted && name.trim() === ""
-      ? "Inserisci un nome per il progetto."
+      ? t("components.createProjectModal.nameRequired")
       : "";
 
   function handleClose() {
@@ -49,11 +51,13 @@ function CreateProjectModalComponent({
     <ModalBaseComponent
       isOpen={isOpen}
       onClose={handleClose}
-      title="Nuovo progetto"
+      title={t("components.createProjectModal.title")}
       onSubmit={handleCreate}
       primaryAction={
         <ButtonComponent onClick={() => {}} disabled={isSubmitting}>
-          {isSubmitting ? "Creazione in corso..." : "Crea progetto"}
+          {isSubmitting
+            ? t("components.createProjectModal.submitting")
+            : t("components.createProjectModal.submit")}
         </ButtonComponent>
       }
       secondaryActions={
@@ -62,19 +66,18 @@ function CreateProjectModalComponent({
           className={styles.cancelButton}
           onClick={handleClose}
         >
-          Annulla
+          {t("components.createProjectModal.cancel")}
         </button>
       }
     >
       <p className={styles.description}>
-        Dai un nome al progetto: potrai aggiungere i task in un secondo
-        momento, dalla sua pagina dedicata.
+        {t("components.createProjectModal.description")}
       </p>
       <InputComponent
         type="text"
         name="projectName"
-        label="Nome del progetto"
-        placeholder="Es. Redesign sito web"
+        label={t("components.createProjectModal.nameLabel")}
+        placeholder={t("components.createProjectModal.namePlaceholder")}
         value={name}
         onChange={(event) => setName(event.target.value)}
         autoComplete="off"

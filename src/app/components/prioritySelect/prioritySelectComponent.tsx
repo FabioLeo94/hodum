@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import styles from "./prioritySelectComponent.module.css";
 
 // 1 = più urgente, 10 = meno urgente (stesso significato del campo Task.priority,
@@ -13,12 +14,6 @@ function getPriorityTier(priority: number): PriorityTier {
   if (priority <= 6) return "medium";
   return "low";
 }
-
-const TIER_LABELS: Record<PriorityTier, string> = {
-  high: "Alta",
-  medium: "Media",
-  low: "Bassa",
-};
 
 const TIER_STYLES: Record<PriorityTier, string> = {
   high: styles.priorityHigh,
@@ -41,12 +36,18 @@ function PrioritySelectComponent({
   taskTitle,
   disabled = false,
 }: Prop) {
+  const { t } = useTranslation();
   const tier = getPriorityTier(priority);
+  const TIER_LABELS: Record<PriorityTier, string> = {
+    high: t("components.prioritySelect.tier.high"),
+    medium: t("components.prioritySelect.tier.medium"),
+    low: t("components.prioritySelect.tier.low"),
+  };
 
   return (
     <select
       className={`${styles.prioritySelect} ${TIER_STYLES[tier]}`}
-      aria-label={`Priorità di ${taskTitle}`}
+      aria-label={t("components.prioritySelect.ariaLabel", { taskTitle })}
       value={priority}
       disabled={disabled}
       onChange={(event) => onChange(Number(event.target.value))}

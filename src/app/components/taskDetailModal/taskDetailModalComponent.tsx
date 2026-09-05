@@ -1,10 +1,12 @@
+import { useTranslation } from "react-i18next";
 import ModalBaseComponent from "../modalBase/modalBaseComponent";
 import ButtonComponent from "../button/buttonComponent";
 import TaskCommentsPanelComponent from "../taskCommentsPanel/taskCommentsPanelComponent";
 import AvatarComponent from "../avatar/avatarComponent";
 import type { TaskWithProject } from "../../../shared/types/project";
-import { STATUS_GROUP_LABELS } from "../../../shared/constants/taskStatus";
+import { useStatusGroupLabels } from "../../../shared/constants/taskStatus";
 import { parseDateOnly } from "../../../shared/utils/taskDueDate";
+import { resolveDateLocale } from "../../../shared/utils/formatDate";
 import styles from "./taskDetailModalComponent.module.css";
 
 interface Prop {
@@ -20,20 +22,25 @@ interface Prop {
 // un'apertura e l'altra, quindi qui non serve il pattern "remount via key" di
 // TaskFormModalComponent: si smonta semplicemente quando non c'è un task.
 function TaskDetailModalComponent({ isOpen, task, onClose, onGoToTask }: Prop) {
+  const { t } = useTranslation();
+  const STATUS_GROUP_LABELS = useStatusGroupLabels();
+
   if (!isOpen || !task) return null;
 
   return (
     <ModalBaseComponent
       isOpen={isOpen}
       onClose={onClose}
-      title={`${task.projectName} · Dettaglio task`}
+      title={t("components.taskDetailModal.title", { projectName: task.projectName })}
       size="wide"
       primaryAction={
-        <ButtonComponent onClick={() => onGoToTask(task)}>Vai al task</ButtonComponent>
+        <ButtonComponent onClick={() => onGoToTask(task)}>
+          {t("components.taskDetailModal.goToTask")}
+        </ButtonComponent>
       }
       secondaryActions={
         <button type="button" className={styles.closeButton} onClick={onClose}>
-          Chiudi
+          {t("components.taskDetailModal.close")}
         </button>
       }
     >
@@ -43,26 +50,28 @@ function TaskDetailModalComponent({ isOpen, task, onClose, onGoToTask }: Prop) {
           {task.description && <p className={styles.description}>{task.description}</p>}
           <div className={styles.metaInfo}>
             <p className={styles.metaRow}>
-              <span className={styles.metaLabel}>Stato</span>
+              <span className={styles.metaLabel}>{t("components.taskDetailModal.statusLabel")}</span>
               <span className={styles.metaValue}>{STATUS_GROUP_LABELS[task.status]}</span>
             </p>
             <p className={styles.metaRow}>
-              <span className={styles.metaLabel}>Priorità</span>
+              <span className={styles.metaLabel}>{t("components.taskDetailModal.priorityLabel")}</span>
               <span className={styles.metaValue}>{task.priority}</span>
             </p>
             <p className={styles.metaRow}>
-              <span className={styles.metaLabel}>Scadenza</span>
+              <span className={styles.metaLabel}>{t("components.taskDetailModal.dueDateLabel")}</span>
               <span className={styles.metaValue}>
                 {task.dueDate
-                  ? parseDateOnly(task.dueDate).toLocaleDateString("it-IT", { dateStyle: "medium" })
-                  : "Nessuna"}
+                  ? parseDateOnly(task.dueDate).toLocaleDateString(resolveDateLocale(), {
+                      dateStyle: "medium",
+                    })
+                  : t("components.taskDetailModal.noDueDate")}
               </span>
             </p>
           </div>
           <div className={styles.assigneesField}>
-            <span className={styles.selectLabel}>Assegnatari</span>
+            <span className={styles.selectLabel}>{t("components.taskDetailModal.assigneesLabel")}</span>
             {task.assignees.length === 0 ? (
-              <p className={styles.noAssignees}>Nessun assegnatario.</p>
+              <p className={styles.noAssignees}>{t("components.taskDetailModal.noAssignees")}</p>
             ) : (
               <ul className={styles.assigneesList}>
                 {task.assignees.map((assignee) => (

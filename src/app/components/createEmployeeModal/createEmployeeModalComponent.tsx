@@ -1,4 +1,5 @@
 import { useId, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ModalBaseComponent from "../modalBase/modalBaseComponent";
 import InputComponent from "../input/inputComponent";
 import ButtonComponent from "../button/buttonComponent";
@@ -30,6 +31,7 @@ function CreateEmployeeModalComponent({
   onCreate,
   submitError,
 }: Prop) {
+  const { t } = useTranslation();
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -40,22 +42,24 @@ function CreateEmployeeModalComponent({
   const roleFieldId = useId();
 
   const usernameError =
-    submitAttempted && username.trim() === "" ? "Inserire uno username." : "";
+    submitAttempted && username.trim() === ""
+      ? t("components.createEmployeeModal.usernameRequired")
+      : "";
 
   const emailError =
     (submitAttempted || email !== "") && !validateEmail(email)
-      ? "Inserire una email valida."
+      ? t("components.createEmployeeModal.emailInvalid")
       : "";
 
   const passwordError =
     (submitAttempted || password !== "") && !validatePassword(password)
-      ? "La password deve contenere almeno 8 caratteri, una minuscola, una maiuscola e un numero."
+      ? t("components.createEmployeeModal.passwordInvalid")
       : "";
 
   const confirmPasswordError =
     (submitAttempted || confirmPassword !== "") &&
     password !== confirmPassword
-      ? "Le password non coincidono."
+      ? t("components.createEmployeeModal.passwordMismatch")
       : "";
 
   function resetForm() {
@@ -93,11 +97,17 @@ function CreateEmployeeModalComponent({
     <ModalBaseComponent
       isOpen={isOpen}
       onClose={handleClose}
-      title={role === "manager" ? "Nuovo project manager" : "Nuovo dipendente"}
+      title={
+        role === "manager"
+          ? t("components.createEmployeeModal.titleManager")
+          : t("components.createEmployeeModal.titleEmployee")
+      }
       onSubmit={handleCreate}
       primaryAction={
         <ButtonComponent onClick={() => {}} disabled={isSubmitting}>
-          {isSubmitting ? "Creazione in corso..." : "Crea dipendente"}
+          {isSubmitting
+            ? t("components.createEmployeeModal.submitting")
+            : t("components.createEmployeeModal.submit")}
         </ButtonComponent>
       }
       secondaryActions={
@@ -106,20 +116,19 @@ function CreateEmployeeModalComponent({
           className={styles.cancelButton}
           onClick={handleClose}
         >
-          Annulla
+          {t("components.createEmployeeModal.cancel")}
         </button>
       }
     >
       <p className={styles.description}>
-        La password iniziale va comunicata al dipendente: al primo accesso
-        gli verrà chiesto di sostituirla con una scelta da lui.
+        {t("components.createEmployeeModal.description")}
       </p>
       <div className={styles.fields}>
         <InputComponent
           type="text"
           name="username"
-          label="Username"
-          placeholder="Username"
+          label={t("components.createEmployeeModal.usernameLabel")}
+          placeholder={t("components.createEmployeeModal.usernamePlaceholder")}
           value={username}
           onChange={(event) => setUsername(event.target.value)}
           autoComplete="off"
@@ -131,8 +140,8 @@ function CreateEmployeeModalComponent({
         <InputComponent
           type="email"
           name="email"
-          label="Email"
-          placeholder="Email"
+          label={t("components.createEmployeeModal.emailLabel")}
+          placeholder={t("components.createEmployeeModal.emailPlaceholder")}
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           autoComplete="off"
@@ -142,7 +151,7 @@ function CreateEmployeeModalComponent({
         />
         <div className={styles.roleField}>
           <label className={styles.roleLabel} htmlFor={roleFieldId}>
-            Ruolo
+            {t("components.createEmployeeModal.roleLabel")}
           </label>
           <select
             id={roleFieldId}
@@ -150,8 +159,8 @@ function CreateEmployeeModalComponent({
             value={role}
             onChange={(event) => setRole(event.target.value as EmployeeRole)}
           >
-            <option value="employee">Dipendente</option>
-            <option value="manager">Project Manager</option>
+            <option value="employee">{t("components.createEmployeeModal.roleEmployee")}</option>
+            <option value="manager">{t("components.createEmployeeModal.roleManager")}</option>
           </select>
         </div>
         {/* Password iniziale e conferma sono un'unica "risposta" divisa in due
@@ -162,8 +171,8 @@ function CreateEmployeeModalComponent({
           <InputComponent
             type="password"
             name="password"
-            label="Password iniziale"
-            placeholder="Password iniziale"
+            label={t("components.createEmployeeModal.passwordLabel")}
+            placeholder={t("components.createEmployeeModal.passwordPlaceholder")}
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             autoComplete="off"
@@ -174,8 +183,8 @@ function CreateEmployeeModalComponent({
           <InputComponent
             type="password"
             name="confirmPassword"
-            label="Conferma password iniziale"
-            placeholder="Conferma password iniziale"
+            label={t("components.createEmployeeModal.confirmPasswordLabel")}
+            placeholder={t("components.createEmployeeModal.confirmPasswordPlaceholder")}
             value={confirmPassword}
             onChange={(event) => setConfirmPassword(event.target.value)}
             autoComplete="off"

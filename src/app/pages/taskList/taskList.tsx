@@ -2,6 +2,7 @@ import { Fragment, useEffect, useState } from "react";
 import type { DragEvent } from "react";
 import { useNavigate, useOutletContext, useParams, useSearchParams } from "react-router";
 import { ChevronRight, GripVertical, Plus, Search, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { Project, Task, TaskStatus } from "../../../shared/types/project";
 import {
   createTask,
@@ -27,7 +28,7 @@ import type { AssistantLayoutContext } from "../../components/protectedLayout/pr
 import { usePageMeta } from "../../../shared/hooks/usePageMeta";
 import {
   STATUS_ORDER,
-  STATUS_GROUP_LABELS,
+  useStatusGroupLabels,
   groupTasksByStatus,
 } from "../../../shared/constants/taskStatus";
 import styles from "./taskList.module.css";
@@ -46,18 +47,6 @@ function sortTasksByPriority(tasks: Task[], order: PrioritySortOrder): Task[] {
 
 type StatusFilter = "all" | TaskStatus;
 type PriorityTierFilter = "all" | "high" | "medium" | "low";
-
-// Stesse tre fasce e soglie di PrioritySelectComponent (1-3/4-6/7-10), non
-// esportate da lì perché pensate per un singolo task selezionato, non per un
-// filtro con opzione "Tutte". Duplicate qui, non importate, per non accoppiare
-// un componente di editing inline a un concetto di filtro che non gli
-// appartiene.
-const PRIORITY_TIER_FILTER_OPTIONS: { value: PriorityTierFilter; label: string }[] = [
-  { value: "all", label: "Tutte le priorità" },
-  { value: "high", label: "Alta (1-3)" },
-  { value: "medium", label: "Media (4-6)" },
-  { value: "low", label: "Bassa (7-10)" },
-];
 
 function matchesPriorityTier(priority: number, tier: PriorityTierFilter): boolean {
   if (tier === "all") return true;
@@ -154,6 +143,19 @@ type TaskModalState = { mode: "create" } | { mode: "edit"; task: Task } | null;
 // rimonta l'albero invece di richiedere un reset manuale di isLoading/loadError
 // nell'effect (pattern richiesto da react-hooks/set-state-in-effect).
 function TaskListContent({ progettoId }: TaskListContentProps) {
+  const { t } = useTranslation();
+  const STATUS_GROUP_LABELS = useStatusGroupLabels();
+  // Stesse tre fasce e soglie di PrioritySelectComponent (1-3/4-6/7-10), non
+  // esportate da lì perché pensate per un singolo task selezionato, non per un
+  // filtro con opzione "Tutte". Duplicate qui, non importate, per non accoppiare
+  // un componente di editing inline a un concetto di filtro che non gli
+  // appartiene.
+  const PRIORITY_TIER_FILTER_OPTIONS: { value: PriorityTierFilter; label: string }[] = [
+    { value: "all", label: t("pages.taskList.priorityFilter.all") },
+    { value: "high", label: t("pages.taskList.priorityFilter.high") },
+    { value: "medium", label: t("pages.taskList.priorityFilter.medium") },
+    { value: "low", label: t("pages.taskList.priorityFilter.low") },
+  ];
   const handleLogout = useLogoutHandler();
   // Assente (undefined) quando il componente è renderizzato fuori dal layout
   // protetto (es. nei test): in quel caso il FAB resta nella posizione base.
@@ -191,7 +193,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
   const [searchParams, setSearchParams] = useSearchParams();
 
   usePageMeta({
-    title: project ? project.name : "Progetto",
+    title: project ? project.name : t("pages.taskList.meta.projectFallbackTitle"),
     robots: "noindex, nofollow",
   });
 
@@ -232,7 +234,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
           setLoadError(
             error instanceof Error
               ? error.message
-              : "Impossibile caricare il progetto.",
+              : t("pages.taskList.loadError"),
           );
         }
       })
@@ -243,7 +245,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
     return () => {
       cancelled = true;
     };
-  }, [progettoId]);
+  }, [progettoId, t]);
 
   // Riflette in tempo reale le modifiche fatte altrove (assistente, un'altra
   // tab/utente): il server notifica solo i client iscritti alla room di
@@ -358,7 +360,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
       closeTaskModal();
     } catch (error) {
       setTaskModalError(
-        error instanceof Error ? error.message : "Impossibile salvare il task.",
+        error instanceof Error ? error.message : t("pages.taskList.saveTaskError"),
       );
     }
   }
@@ -374,7 +376,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
       setInlineUpdateError(
         error instanceof Error
           ? error.message
-          : "Impossibile aggiornare lo stato del task.",
+          : t("pages.taskList.statusUpdateError"),
       );
     }
   }
@@ -390,7 +392,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
       setInlineUpdateError(
         error instanceof Error
           ? error.message
-          : "Impossibile aggiornare la priorità del task.",
+          : t("pages.taskList.priorityUpdateError"),
       );
     }
   }
@@ -406,7 +408,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
       setInlineUpdateError(
         error instanceof Error
           ? error.message
-          : "Impossibile aggiornare gli assegnatari del task.",
+          : t("pages.taskList.assigneesUpdateError"),
       );
     }
   }
@@ -427,7 +429,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
       setInlineUpdateError(
         error instanceof Error
           ? error.message
-          : "Impossibile aggiornare la scadenza del task.",
+          : t("pages.taskList.dueDateUpdateError"),
       );
     }
   }
@@ -451,7 +453,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
         <TopbarComponent onLogout={handleLogout} />
         <div className={styles.taskListContainer}>
           <p className={styles.notFoundText} role="status">
-            Caricamento in corso...
+            {t("pages.taskList.loading")}
           </p>
         </div>
       </Fragment>
@@ -464,7 +466,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
         <TopbarComponent onLogout={handleLogout} />
         <div className={styles.taskListContainer}>
           <div className={styles.notFoundState} data-variant="error" role="alert">
-            <p className={styles.errorMessage}>Errore di caricamento.</p>
+            <p className={styles.errorMessage}>{t("pages.taskList.loadErrorTitle")}</p>
             <p className={styles.notFoundText}>{loadError}</p>
           </div>
         </div>
@@ -478,10 +480,8 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
         <TopbarComponent onLogout={handleLogout} />
         <div className={styles.taskListContainer}>
           <div className={styles.notFoundState} role="alert">
-            <p className={styles.errorMessage}>Progetto non trovato.</p>
-            <p className={styles.notFoundText}>
-              Il progetto richiesto non esiste o è stato rimosso.
-            </p>
+            <p className={styles.errorMessage}>{t("pages.taskList.notFoundTitle")}</p>
+            <p className={styles.notFoundText}>{t("pages.taskList.notFoundText")}</p>
           </div>
         </div>
       </Fragment>
@@ -548,14 +548,18 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
       <div className={styles.taskListContainer}>
         <header className={styles.taskListHeader}>
           <h1 className={styles.taskListTitle}>{project.name}</h1>
-          <div className={styles.viewSwitch} role="group" aria-label="Modalità di visualizzazione">
+          <div
+            className={styles.viewSwitch}
+            role="group"
+            aria-label={t("pages.taskList.viewSwitchLabel")}
+          >
             <button
               type="button"
               className={styles.viewSwitchButton}
               aria-pressed={viewMode === "list"}
               onClick={() => setViewMode("list")}
             >
-              Lista
+              {t("pages.taskList.viewList")}
             </button>
             <button
               type="button"
@@ -563,7 +567,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
               aria-pressed={viewMode === "kanban"}
               onClick={() => setViewMode("kanban")}
             >
-              Kanban
+              {t("pages.taskList.viewKanban")}
             </button>
             <button
               type="button"
@@ -571,7 +575,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
               aria-pressed={viewMode === "calendar"}
               onClick={() => setViewMode("calendar")}
             >
-              Calendario
+              {t("pages.taskList.viewCalendar")}
             </button>
           </div>
         </header>
@@ -581,14 +585,18 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
             resta nell'header). Il colore non è l'unico segnale di "filtro
             attivo": .clearFiltersButton compare solo quando c'è qualcosa da
             azzerare, ed è testuale (non richiede di percepire una tinta). */}
-        <div className={styles.filterToolbar} role="search" aria-label="Cerca e filtra i task">
+        <div
+          className={styles.filterToolbar}
+          role="search"
+          aria-label={t("pages.taskList.searchAndFilterLabel")}
+        >
           <div className={styles.searchField}>
             <Search className={styles.searchIcon} size={14} strokeWidth={2.5} aria-hidden="true" />
             <input
               type="search"
               className={styles.searchInput}
-              placeholder="Cerca per titolo o descrizione"
-              aria-label="Cerca task per titolo o descrizione"
+              placeholder={t("pages.taskList.searchPlaceholder")}
+              aria-label={t("pages.taskList.searchAriaLabel")}
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
             />
@@ -596,7 +604,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
               <button
                 type="button"
                 className={styles.searchClear}
-                aria-label="Cancella la ricerca"
+                aria-label={t("pages.taskList.clearSearch")}
                 onClick={() => setSearchQuery("")}
               >
                 <X size={14} aria-hidden="true" />
@@ -605,13 +613,13 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
           </div>
 
           <label className={styles.toolbarField}>
-            <span className={styles.toolbarFieldLabel}>Stato</span>
+            <span className={styles.toolbarFieldLabel}>{t("pages.taskList.statusFilterLabel")}</span>
             <select
               className={styles.toolbarSelect}
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
             >
-              <option value="all">Tutti gli stati</option>
+              <option value="all">{t("pages.taskList.allStatuses")}</option>
               {STATUS_ORDER.map((status) => (
                 <option key={status} value={status}>
                   {STATUS_GROUP_LABELS[status]}
@@ -621,7 +629,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
           </label>
 
           <label className={styles.toolbarField}>
-            <span className={styles.toolbarFieldLabel}>Priorità</span>
+            <span className={styles.toolbarFieldLabel}>{t("pages.taskList.priorityFilterLabel")}</span>
             <select
               className={styles.toolbarSelect}
               value={priorityTierFilter}
@@ -638,13 +646,13 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
           </label>
 
           <label className={styles.toolbarField}>
-            <span className={styles.toolbarFieldLabel}>Assegnatario</span>
+            <span className={styles.toolbarFieldLabel}>{t("pages.taskList.assigneeFilterLabel")}</span>
             <select
               className={styles.toolbarSelect}
               value={assigneeFilter}
               onChange={(event) => setAssigneeFilter(event.target.value)}
             >
-              <option value="all">Tutti gli assegnatari</option>
+              <option value="all">{t("pages.taskList.allAssignees")}</option>
               {employees.map((employee) => (
                 <option key={employee.id} value={employee.id}>
                   {employee.username}
@@ -655,7 +663,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
 
           {viewMode === "list" && (
             <label className={styles.toolbarField}>
-              <span className={styles.toolbarFieldLabel}>Ordina per priorità</span>
+              <span className={styles.toolbarFieldLabel}>{t("pages.taskList.sortByPriorityLabel")}</span>
               <select
                 className={styles.toolbarSelect}
                 value={prioritySort}
@@ -663,16 +671,16 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
                   setPrioritySort(event.target.value as PrioritySortOrder)
                 }
               >
-                <option value="none">Nessun ordinamento</option>
-                <option value="urgent-first">Più urgenti prima</option>
-                <option value="urgent-last">Meno urgenti prima</option>
+                <option value="none">{t("pages.taskList.sortNone")}</option>
+                <option value="urgent-first">{t("pages.taskList.sortUrgentFirst")}</option>
+                <option value="urgent-last">{t("pages.taskList.sortUrgentLast")}</option>
               </select>
             </label>
           )}
 
           {hasActiveFilters && (
             <button type="button" className={styles.clearFiltersButton} onClick={resetFilters}>
-              Cancella filtri
+              {t("pages.taskList.clearFilters")}
             </button>
           )}
         </div>
@@ -698,24 +706,24 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
           <div className={styles.taskTableCard}>
             <table className={styles.taskTable}>
               <caption className={styles.srOnly}>
-                Task del progetto {project.name}, raggruppati per stato
+                {t("pages.taskList.tableCaption", { projectName: project.name })}
               </caption>
               <thead>
                 <tr>
                   <th className={styles.colTitle} scope="col">
-                    Titolo
+                    {t("pages.taskList.columnTitle")}
                   </th>
                   <th className={styles.colDescription} scope="col">
-                    Descrizione
+                    {t("pages.taskList.columnDescription")}
                   </th>
                   <th className={styles.colStatus} scope="col">
-                    Stato
+                    {t("pages.taskList.columnStatus")}
                   </th>
                   <th className={styles.colPriority} scope="col">
-                    Priorità
+                    {t("pages.taskList.columnPriority")}
                   </th>
                   <th className={styles.colAssignees} scope="col">
-                    Assegnatari
+                    {t("pages.taskList.columnAssignees")}
                   </th>
                 </tr>
               </thead>
@@ -786,13 +794,13 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
                                       colSpan={5}
                                     >
                                       {dragOverStatus === status
-                                        ? "Rilascia qui per spostare il task"
-                                        : "Nessun task corrispondente ai filtri"}
+                                        ? t("pages.taskList.dropHereToMove")
+                                        : t("pages.taskList.noMatchingTasks")}
                                     </td>
                                   </tr>
                                 )
                               : tasks.map((task) => {
-                                  const urgency = getDueUrgency(task);
+                                  const urgency = getDueUrgency(task, t);
                                   return (
                                   <tr
                                     key={task.id}
@@ -806,7 +814,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
                                         <span
                                           className={styles.dragHandle}
                                           aria-hidden="true"
-                                          title="Trascina per cambiare stato"
+                                          title={t("pages.taskList.dragHandleTitle")}
                                         >
                                           <GripVertical size={16} aria-hidden="true" />
                                         </span>
@@ -818,7 +826,10 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
                                                 : styles.urgencyBadgeDueSoon
                                             }`}
                                             title={urgency.label}
-                                            aria-label={`${task.title} — ${urgency.label}`}
+                                            aria-label={t("pages.taskList.urgencyAriaLabel", {
+                                              title: task.title,
+                                              urgency: urgency.label,
+                                            })}
                                           >
                                             !
                                           </span>
@@ -885,7 +896,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
           type="button"
           className={styles.fabButton}
           data-assistant-open={isAssistantOpen}
-          aria-label="Crea nuovo task"
+          aria-label={t("pages.taskList.createTaskLabel")}
           onClick={openCreateModal}
         >
           <Plus className={styles.fabIcon} size={24} strokeWidth={2.5} aria-hidden="true" />
@@ -919,19 +930,18 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
 // impostato solo quando questo ramo è effettivamente montato, non ad ogni render
 // di TaskList (che altrimenti sovrascriverebbe il title impostato da TaskListContent).
 function TaskListMissingProject() {
+  const { t } = useTranslation();
   const handleLogout = useLogoutHandler();
 
-  usePageMeta({ title: "Progetto non trovato", robots: "noindex, nofollow" });
+  usePageMeta({ title: t("pages.taskList.meta.notFoundTitle"), robots: "noindex, nofollow" });
 
   return (
     <Fragment>
       <TopbarComponent onLogout={handleLogout} />
       <div className={styles.taskListContainer}>
         <div className={styles.notFoundState} role="alert">
-          <p className={styles.errorMessage}>Progetto non trovato.</p>
-          <p className={styles.notFoundText}>
-            Il progetto richiesto non esiste o è stato rimosso.
-          </p>
+          <p className={styles.errorMessage}>{t("pages.taskList.notFoundTitle")}</p>
+          <p className={styles.notFoundText}>{t("pages.taskList.notFoundText")}</p>
         </div>
       </div>
     </Fragment>

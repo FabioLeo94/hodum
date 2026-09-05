@@ -13,6 +13,7 @@ import {
   validatePassword,
 } from "../../services/validation/validationService";
 import { useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 
 // mm:ss, stesso formato/motivo di authFormComponent.tsx.
 function formatCountdown(totalSeconds: number): string {
@@ -23,6 +24,7 @@ function formatCountdown(totalSeconds: number): string {
 
 function RecoverPasswordFormComponent() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [recoveryCode, setRecoveryCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -38,23 +40,23 @@ function RecoverPasswordFormComponent() {
 
   const emailError =
     (submitAttempted || email !== "") && !validateEmail(email)
-      ? "Inserire una email valida."
+      ? t("components.recoverPasswordForm.emailInvalid")
       : "";
 
   const recoveryCodeError =
     submitAttempted && recoveryCode.trim() === ""
-      ? "Inserire il codice di recupero."
+      ? t("components.recoverPasswordForm.recoveryCodeRequired")
       : "";
 
   const newPasswordError =
     (submitAttempted || newPassword !== "") && !validatePassword(newPassword)
-      ? "La password deve contenere almeno 8 caratteri, una minuscola, una maiuscola e un numero."
+      ? t("components.recoverPasswordForm.newPasswordInvalid")
       : "";
 
   const confirmNewPasswordError =
     (submitAttempted || confirmNewPassword !== "") &&
     newPassword !== confirmNewPassword
-      ? "Le password non coincidono."
+      ? t("components.recoverPasswordForm.passwordMismatch")
       : "";
 
   const isRateLimited = retrySecondsLeft > 0;
@@ -93,7 +95,7 @@ function RecoverPasswordFormComponent() {
     try {
       const result = await recoverPassword(email, recoveryCode, newPassword);
       if (!result) {
-        setFormError("Email o codice di recupero non validi.");
+        setFormError(t("components.recoverPasswordForm.invalidCredentials"));
         return;
       }
 
@@ -107,7 +109,7 @@ function RecoverPasswordFormComponent() {
       setFormError(
         error instanceof Error
           ? error.message
-          : "Recupero password non riuscito. Riprova più tardi.",
+          : t("components.recoverPasswordForm.recoveryFailed"),
       );
     } finally {
       setIsSubmitting(false);
@@ -118,7 +120,7 @@ function RecoverPasswordFormComponent() {
     return (
       <RecoveryCodeDisplayComponent
         recoveryCode={newRecoveryCode}
-        confirmLabel="Ho salvato il nuovo codice, vai alla dashboard"
+        confirmLabel={t("components.recoverPasswordForm.confirmLabel")}
         onConfirm={() => navigate("/dashboard")}
       />
     );
@@ -133,8 +135,8 @@ function RecoverPasswordFormComponent() {
       <InputComponent
         type="email"
         name="email"
-        label="Email"
-        placeholder="Email"
+        label={t("components.recoverPasswordForm.emailLabel")}
+        placeholder={t("components.recoverPasswordForm.emailPlaceholder")}
         value={email}
         onChange={(event) => setEmail(event.target.value)}
         autoComplete="email"
@@ -144,8 +146,8 @@ function RecoverPasswordFormComponent() {
       <InputComponent
         type="text"
         name="recoveryCode"
-        label="Codice di recupero"
-        placeholder="XXXX-XXXX-XXXX-XXXX"
+        label={t("components.recoverPasswordForm.recoveryCodeLabel")}
+        placeholder={t("components.recoverPasswordForm.recoveryCodePlaceholder")}
         value={recoveryCode}
         onChange={(event) => setRecoveryCode(event.target.value)}
         autoComplete="off"
@@ -155,8 +157,8 @@ function RecoverPasswordFormComponent() {
       <InputComponent
         type="password"
         name="newPassword"
-        label="Nuova password"
-        placeholder="Nuova password"
+        label={t("components.recoverPasswordForm.newPasswordLabel")}
+        placeholder={t("components.recoverPasswordForm.newPasswordPlaceholder")}
         value={newPassword}
         onChange={(event) => setNewPassword(event.target.value)}
         autoComplete="new-password"
@@ -166,8 +168,8 @@ function RecoverPasswordFormComponent() {
       <InputComponent
         type="password"
         name="confirmNewPassword"
-        label="Conferma nuova password"
-        placeholder="Conferma nuova password"
+        label={t("components.recoverPasswordForm.confirmNewPasswordLabel")}
+        placeholder={t("components.recoverPasswordForm.confirmNewPasswordPlaceholder")}
         value={confirmNewPassword}
         onChange={(event) => setConfirmNewPassword(event.target.value)}
         autoComplete="new-password"
@@ -176,8 +178,9 @@ function RecoverPasswordFormComponent() {
       />
       {isRateLimited && (
         <p role="alert" className={styles.recoverPasswordFormError}>
-          Troppi tentativi di recupero. Riprova tra{" "}
-          {formatCountdown(retrySecondsLeft)}.
+          {t("components.recoverPasswordForm.rateLimited", {
+            countdown: formatCountdown(retrySecondsLeft),
+          })}
         </p>
       )}
       {formError && (
@@ -186,7 +189,9 @@ function RecoverPasswordFormComponent() {
         </p>
       )}
       <ButtonComponent onClick={() => {}} disabled={isSubmitting || isRateLimited}>
-        {isSubmitting ? "Recupero in corso..." : "Recupera l'accesso"}
+        {isSubmitting
+          ? t("components.recoverPasswordForm.submitting")
+          : t("components.recoverPasswordForm.submit")}
       </ButtonComponent>
     </form>
   );

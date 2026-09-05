@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ModalBaseComponent from "../modalBase/modalBaseComponent";
 import ButtonComponent from "../button/buttonComponent";
 import { useAsyncSubmit } from "../../../shared/hooks/useAsyncSubmit";
@@ -23,6 +24,7 @@ function DeleteBackupModalComponent({
   onConfirm,
   submitError,
 }: Prop) {
+  const { t } = useTranslation();
   const { isSubmitting, submit } = useAsyncSubmit();
   const isBulk = (count ?? 0) > 1;
 
@@ -36,24 +38,32 @@ function DeleteBackupModalComponent({
     <ModalBaseComponent
       isOpen={isOpen}
       onClose={onClose}
-      title={isBulk ? "Elimina backup selezionati" : "Elimina backup"}
+      title={
+        isBulk
+          ? t("components.deleteBackupModal.titleBulk")
+          : t("components.deleteBackupModal.title")
+      }
       variant="error"
       onSubmit={handleConfirm}
       primaryAction={
         <ButtonComponent onClick={() => {}} disabled={isSubmitting} variant="danger">
-          {isSubmitting ? "Eliminazione in corso..." : isBulk ? `Elimina ${count}` : "Elimina"}
+          {isSubmitting
+            ? t("components.deleteBackupModal.submitting")
+            : isBulk
+              ? t("components.deleteBackupModal.confirmBulk", { count })
+              : t("components.deleteBackupModal.confirm")}
         </ButtonComponent>
       }
       secondaryActions={
         <button type="button" className={styles.cancelButton} onClick={onClose}>
-          Annulla
+          {t("components.deleteBackupModal.cancel")}
         </button>
       }
     >
       <p className={styles.description}>
         {isBulk
-          ? `Stai per eliminare ${count} backup selezionati. L'operazione non è reversibile.`
-          : `Stai per eliminare «${backupFilename}». L'operazione non è reversibile.`}
+          ? t("components.deleteBackupModal.bulkWarning", { count })
+          : t("components.deleteBackupModal.singleWarning", { filename: backupFilename })}
       </p>
       {submitError && (
         <p role="alert" className={styles.submitError}>

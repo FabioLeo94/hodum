@@ -1,5 +1,6 @@
 import { useId, useLayoutEffect, useRef, useState } from "react";
 import { Check, EllipsisVertical } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { BackupRecord } from "../../services/backup/backupService";
 import { formatDateTime } from "../../../shared/utils/formatDate";
 import styles from "./backupHistoryItemComponent.module.css";
@@ -22,18 +23,18 @@ function formatFileSize(bytes: number): string {
   return `${(kb / 1024).toFixed(1)} MB`;
 }
 
-const TRIGGER_LABELS: Record<BackupRecord["triggeredBy"], string> = {
-  manual: "Manuale",
-  scheduled: "Automatico",
-  "pre-restore": "Pre-ripristino",
-};
-
 // Stesso pattern kebab + popover di ProjectComponent (menu, focus management,
 // chiusura su click esterno/Escape): estratto in un componente a sé perché
 // ogni voce dello storico ha bisogno del proprio stato "menu aperto",
 // impossibile da tenere con degli hook dentro una .map() nel componente
 // padre.
 function BackupHistoryItemComponent({ backup, selected, onToggleSelect, onRequestRestore, onRequestDelete }: Prop) {
+  const { t } = useTranslation();
+  const TRIGGER_LABELS: Record<BackupRecord["triggeredBy"], string> = {
+    manual: t("components.backupHistoryItem.triggerLabels.manual"),
+    scheduled: t("components.backupHistoryItem.triggerLabels.scheduled"),
+    "pre-restore": t("components.backupHistoryItem.triggerLabels.preRestore"),
+  };
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [openUpward, setOpenUpward] = useState(false);
   const menuId = useId();
@@ -99,7 +100,11 @@ function BackupHistoryItemComponent({ backup, selected, onToggleSelect, onReques
         type="button"
         className={styles.selectToggle}
         aria-pressed={selected}
-        aria-label={`${selected ? "Deseleziona" : "Seleziona"} il backup ${backup.filename}`}
+        aria-label={
+          selected
+            ? t("components.backupHistoryItem.deselectLabel", { filename: backup.filename })
+            : t("components.backupHistoryItem.selectLabel", { filename: backup.filename })
+        }
         onClick={() => onToggleSelect(backup)}
       >
         <span className={styles.checkbox} aria-hidden="true">
@@ -122,7 +127,9 @@ function BackupHistoryItemComponent({ backup, selected, onToggleSelect, onReques
           ref={kebabButtonRef}
           type="button"
           className={styles.kebabButton}
-          aria-label={`Altre azioni per ${backup.filename}`}
+          aria-label={t("components.backupHistoryItem.otherActionsLabel", {
+            filename: backup.filename,
+          })}
           aria-haspopup="menu"
           aria-expanded={isMenuOpen}
           aria-controls={menuId}
@@ -145,7 +152,7 @@ function BackupHistoryItemComponent({ backup, selected, onToggleSelect, onReques
               className={styles.popoverItem}
               onClick={handleRestoreClick}
             >
-              Applica
+              {t("components.backupHistoryItem.restore")}
             </button>
             <button
               type="button"
@@ -153,7 +160,7 @@ function BackupHistoryItemComponent({ backup, selected, onToggleSelect, onReques
               className={styles.popoverItemDanger}
               onClick={handleDeleteClick}
             >
-              Elimina
+              {t("components.backupHistoryItem.delete")}
             </button>
           </div>
         )}

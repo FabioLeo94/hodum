@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ModalBaseComponent from "../modalBase/modalBaseComponent";
 import ButtonComponent from "../button/buttonComponent";
 import { useAsyncSubmit } from "../../../shared/hooks/useAsyncSubmit";
@@ -18,6 +19,7 @@ function DeleteProjectModalComponent({
   onConfirm,
   submitError,
 }: Prop) {
+  const { t } = useTranslation();
   const { isSubmitting, submit } = useAsyncSubmit();
 
   async function handleConfirm() {
@@ -30,7 +32,7 @@ function DeleteProjectModalComponent({
     <ModalBaseComponent
       isOpen={isOpen}
       onClose={onClose}
-      title="Elimina progetto"
+      title={t("components.deleteProjectModal.title")}
       variant="error"
       onSubmit={handleConfirm}
       primaryAction={
@@ -39,7 +41,9 @@ function DeleteProjectModalComponent({
           disabled={isSubmitting}
           variant="danger"
         >
-          {isSubmitting ? "Eliminazione in corso..." : "Elimina"}
+          {isSubmitting
+            ? t("components.deleteProjectModal.submitting")
+            : t("components.deleteProjectModal.submit")}
         </ButtonComponent>
       }
       secondaryActions={
@@ -48,12 +52,12 @@ function DeleteProjectModalComponent({
           className={styles.cancelButton}
           onClick={onClose}
         >
-          Annulla
+          {t("components.deleteProjectModal.cancel")}
         </button>
       }
     >
       <p className={styles.description}>
-        Stai per eliminare «{projectName}». L'operazione non è reversibile.
+        {t("components.deleteProjectModal.description", { projectName })}
       </p>
       {submitError && (
         <p role="alert" className={styles.submitError}>

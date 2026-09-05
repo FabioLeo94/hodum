@@ -1,4 +1,5 @@
 import { useId, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ModalBaseComponent from "../modalBase/modalBaseComponent";
 import InputComponent from "../input/inputComponent";
 import ButtonComponent from "../button/buttonComponent";
@@ -42,6 +43,7 @@ function EditEmployeeModalComponent({
   onSave,
   submitError,
 }: Prop) {
+  const { t } = useTranslation();
   // Precompilato solo al mount: il chiamante rimonta il componente (via
   // `key`) ogni volta che la modale si riapre, stesso pattern di
   // RenameProjectModalComponent.
@@ -54,7 +56,9 @@ function EditEmployeeModalComponent({
   const roleFieldId = useId();
 
   const usernameError =
-    submitAttempted && username.trim() === "" ? "Inserire uno username." : "";
+    submitAttempted && username.trim() === ""
+      ? t("components.editEmployeeModal.usernameRequired")
+      : "";
 
   // La password è opzionale: la validazione scatta solo se l'owner ha
   // iniziato a scriverne una, stesso principio già usato in
@@ -62,14 +66,14 @@ function EditEmployeeModalComponent({
   // dal primo carattere", non solo al submit).
   const passwordError =
     password !== "" && !validatePassword(password)
-      ? "La password deve contenere almeno 8 caratteri, una minuscola, una maiuscola e un numero."
+      ? t("components.editEmployeeModal.passwordInvalid")
       : "";
 
   const confirmPasswordError =
     password !== "" &&
     (submitAttempted || confirmPassword !== "") &&
     password !== confirmPassword
-      ? "Le password non coincidono."
+      ? t("components.editEmployeeModal.passwordMismatch")
       : "";
 
   function resetForm() {
@@ -109,11 +113,17 @@ function EditEmployeeModalComponent({
     <ModalBaseComponent
       isOpen={isOpen}
       onClose={handleClose}
-      title={currentRole === "manager" ? "Modifica project manager" : "Modifica dipendente"}
+      title={
+        currentRole === "manager"
+          ? t("components.editEmployeeModal.titleManager")
+          : t("components.editEmployeeModal.titleEmployee")
+      }
       onSubmit={handleSave}
       primaryAction={
         <ButtonComponent onClick={() => {}} disabled={isSubmitting}>
-          {isSubmitting ? "Salvataggio in corso..." : "Salva"}
+          {isSubmitting
+            ? t("components.editEmployeeModal.submitting")
+            : t("components.editEmployeeModal.submit")}
         </ButtonComponent>
       }
       secondaryActions={
@@ -122,24 +132,28 @@ function EditEmployeeModalComponent({
           className={styles.cancelButton}
           onClick={handleClose}
         >
-          Annulla
+          {t("components.editEmployeeModal.cancel")}
         </button>
       }
     >
       <p className={styles.description}>
-        Lascia vuoti i campi password per non cambiarla. Una nuova password
-        andrà comunicata al dipendente: al prossimo accesso gli verrà chiesto
-        di sostituirla con una scelta da lui.
+        {t("components.editEmployeeModal.description")}
       </p>
       <div className={styles.metaInfo}>
         <p className={styles.metaRow}>
-          <span className={styles.metaLabel}>Creato il</span>
+          <span className={styles.metaLabel}>
+            {t("components.editEmployeeModal.createdAtLabel")}
+          </span>
           <span className={styles.metaValue}>{formatDate(currentCreatedAt)}</span>
         </p>
         <p className={styles.metaRow}>
-          <span className={styles.metaLabel}>Ultimo accesso</span>
+          <span className={styles.metaLabel}>
+            {t("components.editEmployeeModal.lastLoginLabel")}
+          </span>
           <span className={styles.metaValue}>
-            {currentLastLoginAt ? formatDateTime(currentLastLoginAt) : "Mai"}
+            {currentLastLoginAt
+              ? formatDateTime(currentLastLoginAt)
+              : t("components.editEmployeeModal.lastLoginNever")}
           </span>
         </p>
       </div>
@@ -147,8 +161,8 @@ function EditEmployeeModalComponent({
         <InputComponent
           type="text"
           name="username"
-          label="Username"
-          placeholder="Username"
+          label={t("components.editEmployeeModal.usernameLabel")}
+          placeholder={t("components.editEmployeeModal.usernamePlaceholder")}
           value={username}
           onChange={(event) => setUsername(event.target.value)}
           autoComplete="off"
@@ -159,7 +173,7 @@ function EditEmployeeModalComponent({
         />
         <div className={styles.roleField}>
           <label className={styles.roleLabel} htmlFor={roleFieldId}>
-            Ruolo
+            {t("components.editEmployeeModal.roleLabel")}
           </label>
           <select
             id={roleFieldId}
@@ -167,16 +181,16 @@ function EditEmployeeModalComponent({
             value={role}
             onChange={(event) => setRole(event.target.value as EmployeeRole)}
           >
-            <option value="employee">Dipendente</option>
-            <option value="manager">Project Manager</option>
+            <option value="employee">{t("components.editEmployeeModal.roleEmployee")}</option>
+            <option value="manager">{t("components.editEmployeeModal.roleManager")}</option>
           </select>
         </div>
         <div className={styles.passwordGroup}>
           <InputComponent
             type="password"
             name="password"
-            label="Nuova password"
-            placeholder="Nuova password (opzionale)"
+            label={t("components.editEmployeeModal.passwordLabel")}
+            placeholder={t("components.editEmployeeModal.passwordPlaceholder")}
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             autoComplete="off"
@@ -186,8 +200,8 @@ function EditEmployeeModalComponent({
           <InputComponent
             type="password"
             name="confirmPassword"
-            label="Conferma nuova password"
-            placeholder="Conferma nuova password"
+            label={t("components.editEmployeeModal.confirmPasswordLabel")}
+            placeholder={t("components.editEmployeeModal.confirmPasswordPlaceholder")}
             value={confirmPassword}
             onChange={(event) => setConfirmPassword(event.target.value)}
             autoComplete="off"

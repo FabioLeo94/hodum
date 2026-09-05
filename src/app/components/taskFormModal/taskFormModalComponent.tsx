@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import ModalBaseComponent from "../modalBase/modalBaseComponent";
 import InputComponent from "../input/inputComponent";
 import TextareaComponent from "../textarea/textareaComponent";
@@ -39,22 +40,6 @@ interface Prop {
   employees: User[];
 }
 
-const MODE_COPY = {
-  create: {
-    title: "Nuovo task",
-    description:
-      "Dai un titolo al task: la descrizione è facoltativa e potrai aggiornare lo stato in un secondo momento.",
-    confirmLabel: "Crea task",
-    confirmPendingLabel: "Creazione in corso...",
-  },
-  edit: {
-    title: "Modifica task",
-    description: "Aggiorna titolo, descrizione e assegnatari del task.",
-    confirmLabel: "Salva modifiche",
-    confirmPendingLabel: "Salvataggio in corso...",
-  },
-} as const;
-
 function TaskFormModalComponent({
   isOpen,
   projectId,
@@ -69,6 +54,21 @@ function TaskFormModalComponent({
   initialAssigneeIds,
   employees,
 }: Prop) {
+  const { t } = useTranslation();
+  const MODE_COPY = {
+    create: {
+      title: t("components.taskFormModal.create.title"),
+      description: t("components.taskFormModal.create.description"),
+      confirmLabel: t("components.taskFormModal.create.confirmLabel"),
+      confirmPendingLabel: t("components.taskFormModal.create.confirmPendingLabel"),
+    },
+    edit: {
+      title: t("components.taskFormModal.edit.title"),
+      description: t("components.taskFormModal.edit.description"),
+      confirmLabel: t("components.taskFormModal.edit.confirmLabel"),
+      confirmPendingLabel: t("components.taskFormModal.edit.confirmPendingLabel"),
+    },
+  } as const;
   // Inizializzati solo al mount di questa istanza: il chiamante è responsabile
   // di rimontare il componente (via `key`) ogni volta che la modale si riapre,
   // così i valori iniziali di edit sono sempre quelli correnti senza bisogno di
@@ -89,7 +89,7 @@ function TaskFormModalComponent({
 
   const titleError =
     submitAttempted && title.trim() === ""
-      ? "Inserisci un titolo per il task."
+      ? t("components.taskFormModal.titleRequired")
       : "";
 
   function handleClose() {
@@ -133,8 +133,8 @@ function TaskFormModalComponent({
       <InputComponent
         type="text"
         name="taskTitle"
-        label="Titolo del task"
-        placeholder="Es. Sistemare il bug di login"
+        label={t("components.taskFormModal.titleLabel")}
+        placeholder={t("components.taskFormModal.titlePlaceholder")}
         value={title}
         onChange={(event) => setTitle(event.target.value)}
         autoComplete="off"
@@ -150,8 +150,8 @@ function TaskFormModalComponent({
       <div className={mode === "edit" ? styles.fieldSpacingFill : styles.fieldSpacing}>
         <TextareaComponent
           name="taskDescription"
-          label="Descrizione del task"
-          placeholder="Es. Il form non valida l'email"
+          label={t("components.taskFormModal.descriptionLabel")}
+          placeholder={t("components.taskFormModal.descriptionPlaceholder")}
           value={description}
           onChange={(event) => setDescription(event.target.value)}
           autoComplete="off"
@@ -164,37 +164,37 @@ function TaskFormModalComponent({
         <InputComponent
           type="date"
           name="taskDueDate"
-          label="Data di scadenza"
+          label={t("components.taskFormModal.dueDateLabel")}
           value={dueDate}
           onChange={(event) => setDueDate(event.target.value)}
           showLabel
         />
       </div>
       <div className={`${styles.fieldSpacing} ${styles.assigneesField}`}>
-        <span className={styles.selectLabel}>Assegnatari</span>
+        <span className={styles.selectLabel}>{t("components.taskFormModal.assigneesLabel")}</span>
         <TaskAssigneesComponent
           employees={employees}
           selectedIds={assigneeIds}
-          taskTitle={title.trim() || "nuovo task"}
+          taskTitle={title.trim() || t("components.taskFormModal.untitledTaskFallback")}
           onChange={setAssigneeIds}
         />
       </div>
       {mode === "create" && (
         <div className={styles.fieldSpacing}>
           <label className={styles.selectField}>
-            <span className={styles.selectLabel}>Stato</span>
+            <span className={styles.selectLabel}>{t("components.taskFormModal.statusLabel")}</span>
             <TaskStatusSelectComponent
               status={status}
               onChange={setStatus}
-              taskTitle={title.trim() || "nuovo task"}
+              taskTitle={title.trim() || t("components.taskFormModal.untitledTaskFallback")}
             />
           </label>
           <label className={`${styles.selectField} ${styles.fieldSpacing}`}>
-            <span className={styles.selectLabel}>Priorità</span>
+            <span className={styles.selectLabel}>{t("components.taskFormModal.priorityLabel")}</span>
             <PrioritySelectComponent
               priority={priority}
               onChange={setPriority}
-              taskTitle={title.trim() || "nuovo task"}
+              taskTitle={title.trim() || t("components.taskFormModal.untitledTaskFallback")}
             />
           </label>
         </div>
@@ -225,7 +225,7 @@ function TaskFormModalComponent({
           className={styles.cancelButton}
           onClick={handleClose}
         >
-          Annulla
+          {t("components.taskFormModal.cancel")}
         </button>
       }
     >

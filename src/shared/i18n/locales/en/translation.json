@@ -1,0 +1,666 @@
+{
+  "components": {
+    "languageSwitcher": {
+      "label": "Language",
+      "it": "Italiano",
+      "en": "English"
+    },
+    "topbar": {
+      "nav": {
+        "main": "Main navigation",
+        "dashboard": "Dashboard",
+        "projects": "Projects",
+        "projectFallback": "Project",
+        "employees": "Employees",
+        "companyManagement": "Company management"
+      },
+      "projectsMenu": {
+        "loading": "Loading...",
+        "empty": "No projects",
+        "loadError": "Unable to load projects."
+      },
+      "account": {
+        "menuLabel": "Account menu",
+        "editAccount": "Edit account",
+        "logout": "Sign out",
+        "lastLogin": "Last login: {{date}}",
+        "updateError": "Unable to update the account."
+      }
+    },
+    "authForm": {
+      "emailLabel": "Email",
+      "emailPlaceholder": "Email",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Password",
+      "emailInvalid": "Enter a valid email address.",
+      "invalidCredentials": "Incorrect email or password.",
+      "rememberMe": "Stay signed in",
+      "forgotPassword": "Forgot your password?",
+      "rateLimited": "Too many login attempts. Try again in {{countdown}}.",
+      "submitting": "Signing in...",
+      "submit": "Sign in"
+    },
+    "registerForm": {
+      "companyNameLabel": "Company name",
+      "companyNamePlaceholder": "Company name",
+      "usernameLabel": "Username",
+      "usernamePlaceholder": "Username",
+      "emailLabel": "Email",
+      "emailPlaceholder": "Email",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Password",
+      "confirmPasswordLabel": "Confirm password",
+      "confirmPasswordPlaceholder": "Confirm password",
+      "companyNameRequired": "Enter the company name.",
+      "usernameRequired": "Enter a username.",
+      "emailInvalid": "Enter a valid email address.",
+      "passwordInvalid": "The password must be at least 8 characters long and include a lowercase letter, an uppercase letter, and a number.",
+      "passwordMismatch": "Passwords don't match.",
+      "registrationFailed": "Registration failed. Please try again later.",
+      "submitting": "Registering...",
+      "submit": "Sign up"
+    },
+    "recoverPasswordForm": {
+      "emailLabel": "Email",
+      "emailPlaceholder": "Email",
+      "recoveryCodeLabel": "Recovery code",
+      "recoveryCodePlaceholder": "XXXX-XXXX-XXXX-XXXX",
+      "newPasswordLabel": "New password",
+      "newPasswordPlaceholder": "New password",
+      "confirmNewPasswordLabel": "Confirm new password",
+      "confirmNewPasswordPlaceholder": "Confirm new password",
+      "emailInvalid": "Enter a valid email address.",
+      "recoveryCodeRequired": "Enter the recovery code.",
+      "newPasswordInvalid": "The password must be at least 8 characters long and include a lowercase letter, an uppercase letter, and a number.",
+      "passwordMismatch": "Passwords don't match.",
+      "invalidCredentials": "Invalid email or recovery code.",
+      "rateLimited": "Too many recovery attempts. Try again in {{countdown}}.",
+      "recoveryFailed": "Password recovery failed. Please try again later.",
+      "submitting": "Recovering access...",
+      "submit": "Recover access",
+      "confirmLabel": "I've saved the new code, go to the dashboard"
+    },
+    "recoveryCodeDisplay": {
+      "title": "Save your recovery code",
+      "description": "It's the only way to recover access if you forget your password: Hodum doesn't send emails or use external services for password resets. Keep it somewhere safe (a password manager, a printed copy) — it won't be shown again.",
+      "copy": "Copy",
+      "copied": "Copied",
+      "acknowledge": "I've saved the code somewhere safe",
+      "defaultConfirmLabel": "I've saved the code, continue"
+    },
+    "changePasswordForm": {
+      "newPasswordLabel": "New password",
+      "newPasswordPlaceholder": "New password",
+      "confirmPasswordLabel": "Confirm new password",
+      "confirmPasswordPlaceholder": "Confirm new password",
+      "passwordInvalid": "The password must be at least 8 characters long and include a lowercase letter, an uppercase letter, and a number.",
+      "passwordMismatch": "Passwords don't match.",
+      "invalidSession": "Invalid session. Please sign in again.",
+      "updateFailed": "Password change failed. Please try again later.",
+      "submitting": "Updating...",
+      "submit": "Update password"
+    },
+    "modalBase": {
+      "closeButton": "Close"
+    },
+    "createEmployeeModal": {
+      "titleEmployee": "New employee",
+      "titleManager": "New project manager",
+      "submitting": "Creating...",
+      "submit": "Create employee",
+      "cancel": "Cancel",
+      "description": "The initial password must be shared with the employee: at their first sign-in they'll be asked to replace it with one of their own choosing.",
+      "usernameLabel": "Username",
+      "usernamePlaceholder": "Username",
+      "emailLabel": "Email",
+      "emailPlaceholder": "Email",
+      "roleLabel": "Role",
+      "roleEmployee": "Employee",
+      "roleManager": "Project Manager",
+      "passwordLabel": "Initial password",
+      "passwordPlaceholder": "Initial password",
+      "confirmPasswordLabel": "Confirm initial password",
+      "confirmPasswordPlaceholder": "Confirm initial password",
+      "usernameRequired": "Enter a username.",
+      "emailInvalid": "Enter a valid email address.",
+      "passwordInvalid": "The password must be at least 8 characters long and include a lowercase letter, an uppercase letter, and a number.",
+      "passwordMismatch": "Passwords don't match."
+    },
+    "editEmployeeModal": {
+      "titleEmployee": "Edit employee",
+      "titleManager": "Edit project manager",
+      "submitting": "Saving...",
+      "submit": "Save",
+      "cancel": "Cancel",
+      "description": "Leave the password fields empty to keep it unchanged. A new password must be shared with the employee: at their next sign-in they'll be asked to replace it with one of their own choosing.",
+      "createdAtLabel": "Created on",
+      "lastLoginLabel": "Last login",
+      "lastLoginNever": "Never",
+      "usernameLabel": "Username",
+      "usernamePlaceholder": "Username",
+      "roleLabel": "Role",
+      "roleEmployee": "Employee",
+      "roleManager": "Project Manager",
+      "passwordLabel": "New password",
+      "passwordPlaceholder": "New password (optional)",
+      "confirmPasswordLabel": "Confirm new password",
+      "confirmPasswordPlaceholder": "Confirm new password",
+      "usernameRequired": "Enter a username.",
+      "passwordInvalid": "The password must be at least 8 characters long and include a lowercase letter, an uppercase letter, and a number.",
+      "passwordMismatch": "Passwords don't match."
+    },
+    "deleteEmployeeModal": {
+      "title": "Delete employee",
+      "submitting": "Deleting...",
+      "submit": "Delete",
+      "cancel": "Cancel",
+      "description": "You are about to delete “{{username}}”. This action cannot be undone and will also remove their project assignments."
+    },
+    "createProjectModal": {
+      "title": "New project",
+      "submitting": "Creating...",
+      "submit": "Create project",
+      "cancel": "Cancel",
+      "description": "Give the project a name: you can add tasks later from its own page.",
+      "nameLabel": "Project name",
+      "namePlaceholder": "E.g. Website redesign",
+      "nameRequired": "Enter a name for the project."
+    },
+    "renameProjectModal": {
+      "title": "Rename project",
+      "submitting": "Saving...",
+      "submit": "Save",
+      "cancel": "Cancel",
+      "nameLabel": "Project name",
+      "namePlaceholder": "E.g. Website redesign",
+      "nameRequired": "Enter a name for the project."
+    },
+    "deleteProjectModal": {
+      "title": "Delete project",
+      "submitting": "Deleting...",
+      "submit": "Delete",
+      "cancel": "Cancel",
+      "description": "You are about to delete “{{projectName}}”. This action cannot be undone."
+    },
+    "downloadProjectModal": {
+      "title": "Download project",
+      "submit": "Download",
+      "cancel": "Cancel",
+      "description": "Choose the format to export the project data in.",
+      "formatGroupLabel": "Export format",
+      "formats": {
+        "json": {
+          "label": "JSON",
+          "description": "Complete project data structure, including tasks and assignees."
+        },
+        "xml": {
+          "label": "XML",
+          "description": "The same data in markup format, for systems that require it."
+        },
+        "csv": {
+          "label": "CSV",
+          "description": "List of tasks in tabular, comma-separated format."
+        },
+        "excel": {
+          "label": "Excel",
+          "description": "An .xlsx spreadsheet with the list of tasks."
+        }
+      }
+    },
+    "assignProjectsModal": {
+      "title": "Assign projects to {{username}}",
+      "submitting": "Saving...",
+      "submit": "Save",
+      "cancel": "Cancel",
+      "loading": "Loading projects...",
+      "loadError": "Unable to load projects.",
+      "empty": "No projects available in the company."
+    },
+    "editAccountModal": {
+      "title": "Edit account",
+      "submitting": "Saving...",
+      "submit": "Save",
+      "cancel": "Cancel",
+      "description": "Leave the password fields empty to keep it unchanged.",
+      "createdAtLabel": "Created on",
+      "usernameLabel": "Username",
+      "usernamePlaceholder": "Username",
+      "emailLabel": "Email",
+      "emailPlaceholder": "Email",
+      "passwordLabel": "New password",
+      "passwordPlaceholder": "New password (optional)",
+      "confirmPasswordLabel": "Confirm new password",
+      "confirmPasswordPlaceholder": "Confirm new password",
+      "usernameRequired": "Enter a username.",
+      "emailInvalid": "Enter a valid email address.",
+      "passwordInvalid": "The password must be at least 8 characters long and include a lowercase letter, an uppercase letter, and a number.",
+      "passwordMismatch": "Passwords don't match."
+    },
+    "editCompanyDrawer": {
+      "title": "Edit company details",
+      "closeLabel": "Close",
+      "loading": "Loading...",
+      "createdOn": "Created on {{date}}.",
+      "nameLabel": "Company name",
+      "ragioneSocialeLabel": "Legal name",
+      "pivaLabel": "VAT number",
+      "codiceFiscaleLabel": "Tax code",
+      "indirizzoLabel": "Address",
+      "pecLabel": "Certified email (PEC)",
+      "submitting": "Saving...",
+      "submit": "Save",
+      "nameRequired": "The company name cannot be empty.",
+      "pivaInvalid": "The VAT number must consist of 11 digits.",
+      "codiceFiscaleInvalid": "The tax code must be 11 digits or 16 alphanumeric characters.",
+      "pecInvalid": "Enter a valid certified email address (PEC).",
+      "loadError": "Unable to load company data.",
+      "saveError": "Unable to save company data."
+    },
+    "backupHistoryItem": {
+      "triggerLabels": {
+        "manual": "Manual",
+        "scheduled": "Automatic",
+        "preRestore": "Pre-restore"
+      },
+      "selectLabel": "Select backup {{filename}}",
+      "deselectLabel": "Deselect backup {{filename}}",
+      "otherActionsLabel": "More actions for {{filename}}",
+      "restore": "Restore",
+      "delete": "Delete"
+    },
+    "backupSettingsDrawer": {
+      "title": "Backup",
+      "closeLabel": "Close",
+      "loadError": "Unable to load backup settings.",
+      "historyLoadError": "Unable to load the backup history.",
+      "loading": "Loading...",
+      "runNow": {
+        "sectionTitle": "Run now",
+        "lastBackup": "Last backup: {{date}}.",
+        "never": "No backup has been run yet.",
+        "hint": "A manual run resets the countdown to the next automatic backup.",
+        "running": "Backup in progress...",
+        "action": "Run backup now"
+      },
+      "runError": "Backup run failed.",
+      "settings": {
+        "sectionTitle": "Settings",
+        "intervalLabel": "Frequency (minutes)",
+        "maxBackupsLabel": "Maximum backups kept",
+        "filenameFormatLabel": "Filename format",
+        "placeholderHintPrefix": "Available placeholders:",
+        "saving": "Saving...",
+        "save": "Save settings"
+      },
+      "intervalError": "Enter an integer between 1 and 10080 minutes (7 days).",
+      "maxBackupsError": "Enter an integer between 1 and 500.",
+      "filenameFormatError": "The filename format cannot be empty.",
+      "saveError": "Unable to save settings.",
+      "history": {
+        "sectionTitle": "History",
+        "selectedCount_one": "{{count}} selected",
+        "selectedCount_other": "{{count}} selected",
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "empty": "No backup has been run yet."
+      },
+      "deleteError": "Unable to delete the backup.",
+      "bulkDeleteAllFailed": "Unable to delete the selected backups.",
+      "bulkDeletePartialFailed": "Unable to delete {{failed}} of {{total}} backups.",
+      "restoreError": "Backup restore failed."
+    },
+    "restoreBackupModal": {
+      "title": "Restore backup",
+      "submitting": "Restoring...",
+      "confirm": "Restore",
+      "cancel": "Cancel",
+      "overwriteWarning": "You're about to overwrite the company's current data with \"{{filename}}\". Any changes made after that backup will be lost.",
+      "snapshotNotice": "Before proceeding, a snapshot of the current state will be saved automatically — you'll find it in the history and can restore it to undo this."
+    },
+    "deleteBackupModal": {
+      "title": "Delete backup",
+      "titleBulk": "Delete selected backups",
+      "submitting": "Deleting...",
+      "confirm": "Delete",
+      "confirmBulk": "Delete {{count}}",
+      "cancel": "Cancel",
+      "singleWarning": "You're about to delete \"{{filename}}\". This action cannot be undone.",
+      "bulkWarning_one": "You're about to delete {{count}} selected backup. This action cannot be undone.",
+      "bulkWarning_other": "You're about to delete {{count}} selected backups. This action cannot be undone."
+    },
+    "taskStatusSelect": {
+      "ariaLabel": "Status of {{taskTitle}}"
+    },
+    "prioritySelect": {
+      "ariaLabel": "Priority of {{taskTitle}}",
+      "tier": {
+        "high": "High",
+        "medium": "Medium",
+        "low": "Low"
+      }
+    },
+    "taskAssignees": {
+      "triggerLabel": "Assign employees to {{taskTitle}}",
+      "panelLabel": "Employees assignable to {{taskTitle}}",
+      "noEmployees": "No employees available"
+    },
+    "taskDetailModal": {
+      "title": "{{projectName}} · Task detail",
+      "goToTask": "Go to task",
+      "close": "Close",
+      "statusLabel": "Status",
+      "priorityLabel": "Priority",
+      "dueDateLabel": "Due date",
+      "noDueDate": "None",
+      "assigneesLabel": "Assignees",
+      "noAssignees": "No assignees."
+    },
+    "taskFormModal": {
+      "create": {
+        "title": "New task",
+        "description": "Give the task a title: the description is optional, and you can update the status later.",
+        "confirmLabel": "Create task",
+        "confirmPendingLabel": "Creating..."
+      },
+      "edit": {
+        "title": "Edit task",
+        "description": "Update the task's title, description and assignees.",
+        "confirmLabel": "Save changes",
+        "confirmPendingLabel": "Saving..."
+      },
+      "titleRequired": "Enter a title for the task.",
+      "titleLabel": "Task title",
+      "titlePlaceholder": "E.g. Fix the login bug",
+      "descriptionLabel": "Task description",
+      "descriptionPlaceholder": "E.g. The form doesn't validate the email",
+      "dueDateLabel": "Due date",
+      "assigneesLabel": "Assignees",
+      "statusLabel": "Status",
+      "priorityLabel": "Priority",
+      "untitledTaskFallback": "new task",
+      "cancel": "Cancel"
+    },
+    "taskKanbanBoard": {
+      "ariaLabel": "Tasks grouped by status, Kanban view",
+      "dropHere": "Drop here",
+      "noMatchingTasks": "No task matches the filters",
+      "noTasks": "No tasks"
+    },
+    "taskCalendar": {
+      "weekdays": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+      "previousMonth": "Previous month",
+      "today": "Today",
+      "nextMonth": "Next month",
+      "legendDueOrOverdue": "Due soon or overdue",
+      "gridLabel": "Task calendar, {{month}}",
+      "weekLabel": "Week {{number}}",
+      "dotTitleOverdueSuffix": ", overdue",
+      "dotTitleDueSoonSuffix": ", due soon",
+      "showFewer": "Show fewer tasks",
+      "showMore": "Show {{count}} more tasks"
+    },
+    "taskCommentsPanel": {
+      "heading": "Comments",
+      "loading": "Loading comments...",
+      "empty": "No comments yet, write the first one.",
+      "loadError": "Unable to load comments.",
+      "sendError": "Unable to send the comment.",
+      "editError": "Unable to edit the comment.",
+      "deleteError": "Unable to delete the comment.",
+      "otherActionsLabel": "More actions for the comment",
+      "edit": "Edit",
+      "delete": "Delete",
+      "deleting": "Deleting...",
+      "confirmDelete": "Confirm?",
+      "editLabel": "Edit the comment",
+      "cancel": "Cancel",
+      "saving": "Saving...",
+      "save": "Save",
+      "editedFlag": "(edited)",
+      "composerLabel": "Write a comment",
+      "composerPlaceholder": "Write a comment... (Enter to send, Shift+Enter for a new line)",
+      "sending": "Sending",
+      "send": "Send comment"
+    },
+    "notificationBell": {
+      "bellLabel": "Notifications",
+      "bellLabelUnread": "Notifications, {{count}} unread",
+      "markAllRead": "Mark all as read",
+      "loading": "Loading...",
+      "empty": "No notifications",
+      "loadError": "Unable to load notifications.",
+      "openDetail": "Opens the detail",
+      "actorFallback": "Someone",
+      "taskTitleFallback": "a task",
+      "taskTitleFallbackCapitalized": "A task",
+      "projectNameFallback": "a project",
+      "describe": {
+        "taskComment": "{{actor}} commented on “{{taskTitle}}”",
+        "taskCreated": "{{actor}} created “{{taskTitle}}”",
+        "taskDueOverdue": "“{{taskTitle}}” is overdue",
+        "taskDueSoon": "“{{taskTitle}}” is due soon",
+        "projectAssigned": "You've been assigned to the project “{{projectName}}”",
+        "taskAssigned": "{{actor}} assigned you “{{taskTitle}}”"
+      }
+    },
+    "notify": {
+      "closeLabel": "Close notification"
+    },
+    "assistantDrawer": {
+      "toggleOpen": "Open the assistant",
+      "toggleClose": "Close the assistant",
+      "panelLabel": "Assistant",
+      "title": "Assistant",
+      "clearHistory": "Clear history",
+      "subtitle": "Ask about your projects and tasks.",
+      "contextDashboard": "Dashboard",
+      "contextProjectFallback": "Project",
+      "contextTooltipEnabled": "Messages include where you currently are ({{contextLabel}}): the assistant uses it when you don't explicitly name a project or task.",
+      "contextTooltipDisabled": "Messages don't include the page you're on: you'll need to explicitly name the project and task.",
+      "contextLabelEnabled": "Context: {{contextLabel}}",
+      "contextLabelDisabled": "Context disabled",
+      "emptyState": "Ask a question to get started, for example \"Which projects are active?\".",
+      "typingLabel": "Typing",
+      "scrollToBottomLabel": "Go to the latest message",
+      "composerPlaceholder": "Write a message...",
+      "composerAriaLabel": "Message for the assistant",
+      "send": "Send",
+      "contactError": "Unable to reach the assistant."
+    },
+    "project": {
+      "cardLabelSimple": "{{name}}, {{count}} tasks",
+      "cardLabelWithBreakdown": "{{name}}, {{count}} tasks: {{breakdown}}",
+      "updateError": "Unable to update the project.",
+      "deleteError": "Unable to delete the project.",
+      "noTasks": "No tasks",
+      "totalTasks": "total tasks",
+      "otherActionsLabel": "More actions for {{name}}",
+      "rename": "Rename",
+      "delete": "Delete",
+      "download": "Download..."
+    }
+  },
+  "shared": {
+    "taskStatus": {
+      "group": {
+        "progress": "In progress",
+        "review": "In review",
+        "completed": "Completed",
+        "rejected": "Rejected"
+      },
+      "label": {
+        "progress": "In progress",
+        "review": "In review",
+        "completed": "Completed",
+        "rejected": "Rejected"
+      }
+    },
+    "dueUrgency": {
+      "overdue_one": "{{count}} day overdue",
+      "overdue_other": "{{count}} days overdue",
+      "dueToday": "Due today",
+      "dueSoon_one": "Due in {{count}} day",
+      "dueSoon_other": "Due in {{count}} days"
+    }
+  },
+  "pages": {
+    "auth": {
+      "eyebrow": "Hodum",
+      "title": {
+        "login": "Welcome back",
+        "register": "Create your account"
+      },
+      "subtitle": {
+        "login": "Sign in to keep managing your projects and tasks.",
+        "register": "Sign up to start managing projects and tasks with ease."
+      },
+      "toggle": {
+        "toRegister": "Don't have an account? Sign up",
+        "toLogin": "Already have an account? Sign in"
+      },
+      "meta": {
+        "title": {
+          "login": "Sign in",
+          "register": "Sign up"
+        },
+        "description": {
+          "login": "Sign in to Hodum to manage your projects and tasks.",
+          "register": "Create a Hodum account to start managing projects and tasks with ease."
+        }
+      }
+    },
+    "recoverPassword": {
+      "eyebrow": "Hodum",
+      "title": "Recover access",
+      "subtitle": "Enter your account email and the recovery code you received at registration to set a new password.",
+      "backToLogin": "Back to sign in",
+      "meta": {
+        "title": "Recover access"
+      }
+    },
+    "changePassword": {
+      "eyebrow": "Hodum",
+      "title": "Update your password",
+      "subtitle": "For security reasons you need to set a new password before continuing.",
+      "meta": {
+        "title": "Mandatory password change"
+      }
+    },
+    "dashboard": {
+      "title": "Your projects",
+      "loadErrorTitle": "Loading error",
+      "loadError": "Unable to load projects.",
+      "emptyTitle": "No projects yet",
+      "emptyText": "The projects you create will show up here, ready to open.",
+      "calendarLoading": "Loading calendar...",
+      "calendarLoadError": "Unable to load the task calendar.",
+      "calendarUpdateError": "Unable to update the task's due date.",
+      "createError": "Unable to create the project.",
+      "createButtonLabel": "Create new project",
+      "meta": {
+        "title": "Dashboard"
+      }
+    },
+    "employees": {
+      "title": "Employees",
+      "subtitleLoading": "Loading employees...",
+      "subtitleEmpty": "No employees registered yet.",
+      "subtitleCount_one": "{{count}} employee registered.",
+      "subtitleCount_other": "{{count}} employees registered.",
+      "loadErrorTitle": "Loading error",
+      "loadError": "Unable to load employees.",
+      "emptyTitle": "No employees yet",
+      "emptyText": "Create an employee's credentials to give them access to your company.",
+      "roleBadge": {
+        "manager": "Project Manager",
+        "employee": "Employee"
+      },
+      "status": {
+        "pending": "Awaiting first sign-in",
+        "active": "Active"
+      },
+      "actions": {
+        "edit": "Edit employee {{username}}",
+        "assign": "Assign projects to {{username}}",
+        "delete": "Delete employee {{username}}"
+      },
+      "createButtonLabel": "Create new employee",
+      "invalidSession": "Invalid session. Please sign in again.",
+      "createError": "Unable to create the employee.",
+      "editError": "Unable to update the employee.",
+      "deleteError": "Unable to delete the employee.",
+      "assignError": "Unable to update assigned projects.",
+      "meta": {
+        "title": "Employees"
+      }
+    },
+    "companyManagement": {
+      "title": "Company management",
+      "subtitle": "Tools reserved for the company owner.",
+      "cards": {
+        "editCompany": {
+          "title": "Edit company details",
+          "description": "Your company's name, legal name, VAT number, tax code, address and certified email (PEC)."
+        },
+        "backup": {
+          "title": "Backup",
+          "description": "Manage your company's database backups: frequency, how many to keep and how to name them."
+        }
+      },
+      "meta": {
+        "title": "Company management"
+      }
+    },
+    "taskList": {
+      "meta": {
+        "projectFallbackTitle": "Project",
+        "notFoundTitle": "Project not found"
+      },
+      "loading": "Loading...",
+      "loadErrorTitle": "Loading error",
+      "loadError": "Unable to load the project.",
+      "notFoundTitle": "Project not found.",
+      "notFoundText": "The requested project doesn't exist or has been removed.",
+      "saveTaskError": "Unable to save the task.",
+      "statusUpdateError": "Unable to update the task's status.",
+      "priorityUpdateError": "Unable to update the task's priority.",
+      "assigneesUpdateError": "Unable to update the task's assignees.",
+      "dueDateUpdateError": "Unable to update the task's due date.",
+      "viewSwitchLabel": "Display mode",
+      "viewList": "List",
+      "viewKanban": "Kanban",
+      "viewCalendar": "Calendar",
+      "searchAndFilterLabel": "Search and filter tasks",
+      "searchPlaceholder": "Search by title or description",
+      "searchAriaLabel": "Search tasks by title or description",
+      "clearSearch": "Clear search",
+      "statusFilterLabel": "Status",
+      "allStatuses": "All statuses",
+      "priorityFilterLabel": "Priority",
+      "priorityFilter": {
+        "all": "All priorities",
+        "high": "High (1-3)",
+        "medium": "Medium (4-6)",
+        "low": "Low (7-10)"
+      },
+      "assigneeFilterLabel": "Assignee",
+      "allAssignees": "All assignees",
+      "sortByPriorityLabel": "Sort by priority",
+      "sortNone": "No sorting",
+      "sortUrgentFirst": "Most urgent first",
+      "sortUrgentLast": "Least urgent first",
+      "clearFilters": "Clear filters",
+      "tableCaption": "Tasks for project {{projectName}}, grouped by status",
+      "columnTitle": "Title",
+      "columnDescription": "Description",
+      "columnStatus": "Status",
+      "columnPriority": "Priority",
+      "columnAssignees": "Assignees",
+      "dropHereToMove": "Drop here to move the task",
+      "noMatchingTasks": "No task matches the filters",
+      "dragHandleTitle": "Drag to change status",
+      "urgencyAriaLabel": "{{title}} — {{urgency}}",
+      "createTaskLabel": "Create new task"
+    }
+  }
+}

@@ -1,3 +1,4 @@
+import type { TFunction } from "i18next";
 import type { Task } from "../types/project";
 
 // Soglia unica per "in scadenza": mai ricopiata altrove (es. nel componente
@@ -69,17 +70,21 @@ export interface DueUrgency {
 // (il Calendario non ne ha bisogno: la cella del giorno è già la scadenza,
 // vedi isTaskOverdue/isTaskDueSoon sopra). Un solo attraversamento invece di
 // richiamare isTaskOverdue + isTaskDueSoon dal chiamante: qui il calcolo del
-// diff è unico e la label deriva direttamente dallo stesso valore.
-export function getDueUrgency(task: Task, today: Date = new Date()): DueUrgency | null {
+// diff è unico e la label deriva direttamente dallo stesso valore. `t` è
+// passato dal chiamante (non un useTranslation qui dentro): è una funzione
+// pura, non un componente/hook, quindi non può leggere il contesto i18n da sé.
+export function getDueUrgency(task: Task, t: TFunction, today: Date = new Date()): DueUrgency | null {
   if (!isOpenTaskWithDueDate(task)) return null;
   const diff = diffInDays(today, parseDateOnly(task.dueDate));
   if (diff < 0) {
-    const days = -diff;
-    return { level: "overdue", label: `In ritardo di ${days} ${days === 1 ? "giorno" : "giorni"}` };
+    return {
+      level: "overdue",
+      label: t("shared.dueUrgency.overdue", { count: -diff }),
+    };
   }
   if (diff > DUE_SOON_THRESHOLD_DAYS) return null;
   return {
     level: "dueSoon",
-    label: diff === 0 ? "Scade oggi" : `Scadenza tra ${diff} ${diff === 1 ? "giorno" : "giorni"}`,
+    label: diff === 0 ? t("shared.dueUrgency.dueToday") : t("shared.dueUrgency.dueSoon", { count: diff }),
   };
 }

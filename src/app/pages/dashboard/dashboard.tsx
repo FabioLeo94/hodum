@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useNavigate, useOutletContext } from "react-router";
+import { useTranslation } from "react-i18next";
 import { Plus } from "lucide-react";
 import ProjectComponent from "../../components/project/projectComponent";
 import CreateProjectModalComponent from "../../components/createProjectModal/createProjectModalComponent";
@@ -27,12 +28,13 @@ import styles from "./dashboard.module.css";
 
 function Dashboard() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   // Assente (undefined) quando il componente è renderizzato fuori dal layout
   // protetto (es. nei test): in quel caso il FAB resta nella posizione base.
   const outletContext = useOutletContext<AssistantLayoutContext | undefined>();
   const isAssistantOpen = outletContext?.isAssistantOpen ?? false;
   const setHasLocalFab = outletContext?.setHasLocalFab;
-  usePageMeta({ title: "Dashboard", robots: "noindex, nofollow" });
+  usePageMeta({ title: t("pages.dashboard.meta.title"), robots: "noindex, nofollow" });
   // Task "Gestione del dipendente" + "Ruolo project manager": un dipendente
   // vede solo i progetti a lui assegnati (già filtrati dal backend, vedi
   // getAllProjects) e non può creare progetti né gestirli (rinomina/elimina),
@@ -80,9 +82,7 @@ function Dashboard() {
       .catch((error: unknown) => {
         if (!cancelled) {
           setLoadError(
-            error instanceof Error
-              ? error.message
-              : "Impossibile caricare i progetti.",
+            error instanceof Error ? error.message : t("pages.dashboard.loadError"),
           );
         }
       })
@@ -93,7 +93,7 @@ function Dashboard() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -105,9 +105,7 @@ function Dashboard() {
       .catch((error: unknown) => {
         if (!cancelled) {
           setCalendarLoadError(
-            error instanceof Error
-              ? error.message
-              : "Impossibile caricare il calendario dei task.",
+            error instanceof Error ? error.message : t("pages.dashboard.calendarLoadError"),
           );
         }
       })
@@ -118,7 +116,7 @@ function Dashboard() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   // Riflette in tempo reale progetti creati/rinominati/eliminati altrove
   // (un'altra tab/utente): i progetti sono pochi e le mutazioni infrequenti,
@@ -181,9 +179,7 @@ function Dashboard() {
       closeCreateModal();
     } catch (error) {
       setCreateError(
-        error instanceof Error
-          ? error.message
-          : "Impossibile creare il progetto.",
+        error instanceof Error ? error.message : t("pages.dashboard.createError"),
       );
     }
   }
@@ -246,9 +242,7 @@ function Dashboard() {
       setCalendarUpdateError("");
     } catch (error) {
       setCalendarUpdateError(
-        error instanceof Error
-          ? error.message
-          : "Impossibile aggiornare la scadenza del task.",
+        error instanceof Error ? error.message : t("pages.dashboard.calendarUpdateError"),
       );
     }
   }
@@ -258,20 +252,18 @@ function Dashboard() {
       <TopbarComponent onLogout={handleLogout} />
       <div className={styles.dashboardContainer}>
         <header className={styles.dashboardHeader}>
-          <h1 className={styles.dashboardTitle}>I tuoi progetti</h1>
+          <h1 className={styles.dashboardTitle}>{t("pages.dashboard.title")}</h1>
         </header>
 
         {loadError ? (
           <div className={styles.emptyState} data-variant="error" role="alert">
-            <p className={styles.emptyStateTitle}>Errore di caricamento</p>
+            <p className={styles.emptyStateTitle}>{t("pages.dashboard.loadErrorTitle")}</p>
             <p className={styles.emptyStateText}>{loadError}</p>
           </div>
         ) : !isLoading && projects.length === 0 ? (
           <div className={styles.emptyState}>
-            <p className={styles.emptyStateTitle}>Nessun progetto ancora</p>
-            <p className={styles.emptyStateText}>
-              I progetti che crei compariranno qui, pronti da aprire.
-            </p>
+            <p className={styles.emptyStateTitle}>{t("pages.dashboard.emptyTitle")}</p>
+            <p className={styles.emptyStateText}>{t("pages.dashboard.emptyText")}</p>
           </div>
         ) : !isLoading ? (
           <div className={styles.projectsGrid}>
@@ -294,7 +286,7 @@ function Dashboard() {
             </p>
           ) : isCalendarLoading ? (
             <p className={styles.calendarStatus} role="status">
-              Caricamento del calendario...
+              {t("pages.dashboard.calendarLoading")}
             </p>
           ) : (
             <TaskCalendarComponent
@@ -323,7 +315,7 @@ function Dashboard() {
               type="button"
               className={styles.fabButton}
               data-assistant-open={isAssistantOpen}
-              aria-label="Crea nuovo progetto"
+              aria-label={t("pages.dashboard.createButtonLabel")}
               onClick={openCreateModal}
             >
               <Plus className={styles.fabIcon} size={24} strokeWidth={2.5} aria-hidden="true" />
