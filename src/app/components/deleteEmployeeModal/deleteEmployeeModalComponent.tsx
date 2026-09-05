@@ -10,6 +10,11 @@ interface Prop {
   employeeUsername: string;
   onConfirm: () => void | Promise<void>;
   submitError?: string;
+  // "employee" (default) = l'owner/manager elimina un dipendente altrui,
+  // copy invariata. "self" = cancellazione account self-service (punto 10 del
+  // piano export/import/cancellazione): stesso componente, titolo e
+  // descrizione cambiano registro invece di duplicare l'intero componente.
+  variant?: "employee" | "self";
 }
 
 function DeleteEmployeeModalComponent({
@@ -18,6 +23,7 @@ function DeleteEmployeeModalComponent({
   employeeUsername,
   onConfirm,
   submitError,
+  variant = "employee",
 }: Prop) {
   const { t } = useTranslation();
   const { isSubmitting, submit } = useAsyncSubmit();
@@ -32,7 +38,7 @@ function DeleteEmployeeModalComponent({
     <ModalBaseComponent
       isOpen={isOpen}
       onClose={onClose}
-      title={t("components.deleteEmployeeModal.title")}
+      title={t(`components.deleteEmployeeModal.title.${variant}`)}
       variant="error"
       onSubmit={handleConfirm}
       primaryAction={
@@ -57,7 +63,7 @@ function DeleteEmployeeModalComponent({
       }
     >
       <p className={styles.description}>
-        {t("components.deleteEmployeeModal.description", { username: employeeUsername })}
+        {t(`components.deleteEmployeeModal.description.${variant}`, { username: employeeUsername })}
       </p>
       {submitError && (
         <p role="alert" className={styles.submitError}>

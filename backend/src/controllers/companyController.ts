@@ -1,11 +1,21 @@
 import type { Request as ExRequest } from 'express';
-import { Body, Controller, Get, Path, Post, Put, Request, Response, Route, Security, SuccessResponse } from 'tsoa';
+import { Body, Controller, Delete, Get, Path, Post, Put, Request, Response, Route, Security, SuccessResponse } from 'tsoa';
 import { getAuthenticatedUser } from '../middleware/authentication';
 import type { Company } from '../models/company';
 import type { User } from '../models/user';
-import { createEmployee, getCompanyById, registerCompany, updateCompany } from '../services/companyService';
+import {
+  createEmployee,
+  deleteCompany as deleteCompanyService,
+  getCompanyById,
+  importCompanyData,
+  registerCompany,
+  updateCompany,
+  type TemporaryPasswordEntry,
+} from '../services/companyService';
+import { type CompanyExportData, exportCompanyData } from '../services/exportService';
 import { signSessionToken } from '../services/tokenService';
 import { UserConflictError } from '../services/userService';
+import { isValidDueDate, isValidPriority, isValidTaskStatus } from '../services/taskService';
 import { isValidEmail, isValidPassword, PASSWORD_POLICY_MESSAGE } from '../utils/validation';
 
 // Campi opzionali, ma quando presenti (stringa non vuota) devono avere un
@@ -44,6 +54,27 @@ export interface RegisterCompanyResponse {
   recoveryCode: string;
 }
 
+// Corpo di POST /companies/import: l'intero payload prodotto da
+// GET /companies/{id}/export (CompanyExportData) più la password che l'owner
+// sceglie per LA NUOVA istanza di destinazione — mai quella originale, che
+// non esiste nell'export in primo luogo (models/user.ts non espone mai la
+// colonna password).
+export interface ImportCompanyRequest {
+  export: CompanyExportData;
+  ownerPassword: string;
+}
+
+// Stessa forma di RegisterCompanyResponse più temporaryPasswords: mostrate
+// una sola volta dal frontend (stesso principio del recoveryCode), da
+// consegnare ai dipendenti/manager importati fuori banda.
+export interface ImportCompanyResponse {
+  user: User;
+  company: Company;
+  token: string;
+  recoveryCode: string;
+  temporaryPasswords: TemporaryPasswordEntry[];
+}
+
 // Stringa vuota e null sono equivalenti in ingresso ("campo non compilato"):
 // il controller normalizza entrambi a null prima di passarli al service,
 // così l'owner può anche svuotare un campo già compilato in precedenza.
@@ -73,6 +104,124 @@ export interface CreateEmployeeRequest {
 // ambito.
 function companyNotFoundResponse(id: string): CompanyErrorResponse {
   return { message: `Company con id ${id} non trovata` };
+}
+
+// Punto 4 del piano: stessa disciplina di validazione di register()/
+// updateCompany() sotto (isValidEmail/isValidPassword/PIVA_REGEX/
+// CODICE_FISCALE_REGEX riapplicati riga per riga), qui su un intero payload
+// annidato invece che su pochi campi flat. Eseguita PRIMA di aprire la
+// transazione in importCompanyData: un payload malformato deve rispondere 422
+// senza aver toccato il database, non emergere a metà transazione come un
+// errore Postgres generico. Restituisce il primo messaggio di errore trovato,
+// o null se il payload è accettabile.
+function validateImportPayload(body: ImportCompanyRequest): string | null {
+  if (!isValidPassword(body.ownerPassword)) {
+    return PASSWORD_POLICY_MESSAGE;
+  }
+
+  const data = body.export;
+  if (!data || typeof data !== 'object') {
+    return "il campo 'export' è obbligatorio";
+  }
+
+  if (!data.company || data.company.name.trim().length === 0) {
+    return "Il nome dell'azienda non può essere vuoto";
+  }
+  const piva = data.company.piva;
+  if (piva !== null && piva !== undefined && piva !== '' && !PIVA_REGEX.test(piva)) {
+    return 'piva deve essere composta da 11 cifre';
+  }
+  const codiceFiscale = data.company.codiceFiscale;
+  if (codiceFiscale !== null && codiceFiscale !== undefined && codiceFiscale !== '' && !CODICE_FISCALE_REGEX.test(codiceFiscale)) {
+    return 'codiceFiscale deve essere di 11 cifre o 16 caratteri alfanumerici';
+  }
+  const pec = data.company.pec;
+  if (pec !== null && pec !== undefined && pec !== '' && !isValidEmail(pec)) {
+    return 'pec non valida';
+  }
+
+  if (!Array.isArray(data.users) || data.users.length === 0) {
+    return "il campo 'export.users' deve contenere almeno l'owner";
+  }
+  const owners = data.users.filter((u) => u.role === 'owner');
+  if (owners.length !== 1 || owners[0].id !== data.company.ownerId) {
+    return "l'export deve contenere esattamente un utente owner, con id uguale a export.company.ownerId";
+  }
+  for (const user of data.users) {
+    if (user.username.trim().length === 0) {
+      return 'username non può essere vuoto (in export.users)';
+    }
+    if (!isValidEmail(user.email)) {
+      return 'email non valida (in export.users)';
+    }
+    if (user.role !== 'owner' && user.role !== 'manager' && user.role !== 'employee') {
+      return "role deve essere 'owner', 'manager' o 'employee' (in export.users)";
+    }
+  }
+
+  if (!Array.isArray(data.projects)) {
+    return "il campo 'export.projects' deve essere un array";
+  }
+  const projectIds = new Set(data.projects.map((p) => p.id));
+  for (const project of data.projects) {
+    if (project.name.trim().length === 0) {
+      return 'name non può essere vuoto (in export.projects)';
+    }
+  }
+
+  if (!Array.isArray(data.projectAssignments)) {
+    return "il campo 'export.projectAssignments' deve essere un array";
+  }
+  const userIds = new Set(data.users.map((u) => u.id));
+  for (const assignment of data.projectAssignments) {
+    if (!projectIds.has(assignment.projectId) || !userIds.has(assignment.userId)) {
+      return 'export.projectAssignments contiene un riferimento a un progetto o utente non presente nello stesso export';
+    }
+  }
+
+  if (!Array.isArray(data.tasks)) {
+    return "il campo 'export.tasks' deve essere un array";
+  }
+  const taskIds = new Set(data.tasks.map((t) => t.id));
+  for (const task of data.tasks) {
+    if (task.title.trim().length === 0) {
+      return 'title non può essere vuoto (in export.tasks)';
+    }
+    if (!projectIds.has(task.projectId)) {
+      return 'export.tasks contiene un riferimento a un progetto non presente nello stesso export';
+    }
+    if (!isValidTaskStatus(task.status)) {
+      return 'status non valido (in export.tasks)';
+    }
+    if (!isValidPriority(task.priority)) {
+      return 'priority deve essere un intero tra 1 e 10 (in export.tasks)';
+    }
+    if (task.dueDate !== null && !isValidDueDate(task.dueDate)) {
+      return 'dueDate non valida (in export.tasks)';
+    }
+    for (const assignee of task.assignees) {
+      if (!userIds.has(assignee.id)) {
+        return 'export.tasks contiene un assegnatario non presente in export.users';
+      }
+    }
+  }
+
+  if (!Array.isArray(data.comments)) {
+    return "il campo 'export.comments' deve essere un array";
+  }
+  for (const comment of data.comments) {
+    if (comment.body.trim().length === 0) {
+      return 'body non può essere vuoto (in export.comments)';
+    }
+    if (!taskIds.has(comment.taskId)) {
+      return 'export.comments contiene un riferimento a un task non presente nello stesso export';
+    }
+    if (!userIds.has(comment.authorId)) {
+      return 'export.comments contiene un riferimento a un autore non presente in export.users';
+    }
+  }
+
+  return null;
 }
 
 // Il path va scritto come stringa letterale: tsoa lo legge dall'AST prima
@@ -152,6 +301,26 @@ export class CompanyController extends Controller {
     return company;
   }
 
+  // Punto 2 del piano "Export/import e cancellazione completa di account e
+  // azienda": riservato all'owner, stesso controllo di scoping di
+  // updateCompany sotto (non di getCompany sopra, visibile a chiunque nella
+  // company: qui invece escono anche gli utenti, i task e i backup metadata di
+  // tutti, un livello di dettaglio riservato).
+  @Get('{id}/export')
+  @Security('owner')
+  @Response<CompanyErrorResponse>(404, 'Company non trovata')
+  public async exportCompany(
+    @Path() id: string,
+    @Request() request: ExRequest,
+  ): Promise<CompanyExportData | CompanyErrorResponse> {
+    const requester = getAuthenticatedUser(request);
+    if (requester.companyId === null || id !== requester.companyId) {
+      this.setStatus(404);
+      return companyNotFoundResponse(id);
+    }
+    return exportCompanyData(id);
+  }
+
   // Riservato all'owner (a differenza di getCompany sopra, visibile a
   // chiunque nella company): sono gli stessi dati che finiscono in fattura,
   // stesso livello di riservatezza dei backup (backupController.ts) e della
@@ -202,6 +371,26 @@ export class CompanyController extends Controller {
     return updated;
   }
 
+  // Punto 3 del piano: elimina l'intera azienda, incluso l'owner stesso
+  // (l'unico ruolo che può chiamare questa rotta). Nessun body richiesto: la
+  // conferma per nome esatto dell'azienda ("ridigita il nome dell'azienda")
+  // è validata lato frontend prima della chiamata, stesso pattern
+  // "conferma poi chiama" già usato da deleteEmployeeModal. Stesso controllo
+  // di scoping di updateCompany sopra.
+  @Delete('{id}')
+  @Security('owner')
+  @SuccessResponse(204, 'Azienda eliminata')
+  @Response<CompanyErrorResponse>(404, 'Company non trovata')
+  public async deleteCompany(@Path() id: string, @Request() request: ExRequest): Promise<void> {
+    const requester = getAuthenticatedUser(request);
+    if (requester.companyId === null || id !== requester.companyId) {
+      this.setStatus(404);
+      return;
+    }
+    await deleteCompanyService(id, requester.id);
+    this.setStatus(204);
+  }
+
   // Nessun self-signup per dipendenti: solo l'owner autenticato della
   // company crea le loro credenziali (punto 3 del task "Azienda
   // multi-utente"), a differenza di register() sopra che è pubblico.
@@ -249,6 +438,43 @@ export class CompanyController extends Controller {
       });
       this.setStatus(201);
       return employee;
+    } catch (err) {
+      if (err instanceof UserConflictError) {
+        this.setStatus(409);
+        return { message: err.message };
+      }
+      throw err;
+    }
+  }
+
+  // Punto 4 del piano: endpoint pubblico deliberatamente, stesso principio di
+  // register() sopra — è l'unico modo di popolare un'istanza vuota a partire
+  // da un export prodotto da GET /companies/{id}/export su un'altra
+  // installazione, senza avere già una sessione su QUESTA. Il limite più alto
+  // sul body JSON di questa singola rotta è applicato in app.ts (un export
+  // aziendale con molti progetti/task/commenti può superare il limite globale
+  // di 1mb), non qui: tsoa non ha modo di dichiarare un limite per-rotta.
+  @Post('import')
+  @SuccessResponse(201, 'Azienda importata')
+  @Response<CompanyErrorResponse>(422, "export malformato o ownerPassword non valida")
+  @Response<CompanyErrorResponse>(409, "username o email dell'export già in uso su questa istanza")
+  public async importCompany(
+    @Body() body: ImportCompanyRequest,
+  ): Promise<ImportCompanyResponse | CompanyErrorResponse> {
+    const validationError = validateImportPayload(body);
+    if (validationError) {
+      this.setStatus(422);
+      return { message: validationError };
+    }
+
+    try {
+      const { user, company, recoveryCode, temporaryPasswords } = await importCompanyData({
+        data: body.export,
+        ownerPassword: body.ownerPassword,
+      });
+      const token = signSessionToken(user.id);
+      this.setStatus(201);
+      return { user, company, token, recoveryCode, temporaryPasswords };
     } catch (err) {
       if (err instanceof UserConflictError) {
         this.setStatus(409);

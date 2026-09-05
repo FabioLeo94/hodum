@@ -7,13 +7,15 @@ import { updateStoredUser, useAuthUser } from "../../services/auth/authService";
 import { getCompanyName } from "../../services/company/companyService";
 import { getProjectName, listProjectsSummary } from "../../services/project/projectService";
 import type { ProjectSummary } from "../../services/project/projectService";
-import { updateEmployee } from "../../services/user/userService";
+import { deleteEmployee, exportUserData, updateEmployee } from "../../services/user/userService";
 import AvatarComponent from "../avatar/avatarComponent";
 import EditAccountModalComponent from "../editAccountModal/editAccountModalComponent";
+import DeleteEmployeeModalComponent from "../deleteEmployeeModal/deleteEmployeeModalComponent";
 import NotificationBellComponent from "../notificationBell/notificationBellComponent";
 import LanguageSwitcherComponent from "../languageSwitcher/languageSwitcherComponent";
 import type { EditAccountFormValues } from "../editAccountModal/editAccountModalComponent";
 import { formatDateTime } from "../../../shared/utils/formatDate";
+import { downloadJsonFile } from "../../../shared/utils/downloadJsonFile";
 import styles from "./topbarComponent.module.css";
 
 interface Prop {
@@ -78,6 +80,10 @@ function TopbarComponent({ onLogout }: Prop) {
 
   const [isEditAccountModalOpen, setIsEditAccountModalOpen] = useState(false);
   const [editAccountError, setEditAccountError] = useState("");
+  const [exportAccountError, setExportAccountError] = useState("");
+
+  const [isDeleteAccountModalOpen, setIsDeleteAccountModalOpen] = useState(false);
+  const [deleteAccountError, setDeleteAccountError] = useState("");
 
   const [isProjectsMenuOpen, setIsProjectsMenuOpen] = useState(false);
   // undefined = non ancora caricato: la fetch parte solo alla prima apertura
@@ -260,12 +266,59 @@ function TopbarComponent({ onLogout }: Prop) {
   function handleEditAccountClick() {
     setIsMenuOpen(false);
     setEditAccountError("");
+    setExportAccountError("");
     setIsEditAccountModalOpen(true);
   }
 
   function closeEditAccountModal() {
     setEditAccountError("");
+    setExportAccountError("");
     setIsEditAccountModalOpen(false);
+  }
+
+  // GET /users/{id}/export self-service (vedi userService.ts): eventuali
+  // errori restano qui (exportAccountError), la modale non lancia mai — il
+  // suo unico compito è disabilitare il bottone durante il download.
+  async function handleExportAccount() {
+    if (!authUser) return;
+    try {
+      const data = await exportUserData(authUser.id);
+      downloadJsonFile(data, "hodum-export-utente.json");
+    } catch (error) {
+      setExportAccountError(
+        error instanceof Error ? error.message : t("components.topbar.account.exportError"),
+      );
+    }
+  }
+
+  // Apre la conferma di cancellazione al posto della modale di modifica
+  // account, stesso "conferma poi chiama" già usato da employees.tsx: le due
+  // modali non stanno mai aperte insieme.
+  function handleRequestDeleteAccount() {
+    setIsEditAccountModalOpen(false);
+    setDeleteAccountError("");
+    setIsDeleteAccountModalOpen(true);
+  }
+
+  function closeDeleteAccountModal() {
+    setDeleteAccountError("");
+    setIsDeleteAccountModalOpen(false);
+  }
+
+  // DELETE /users/{id} instrada già il self-service (vedi deleteEmployee in
+  // userService.ts): dopo il successo l'utente non esiste più, stesso
+  // logout+redirect già usato dal resto della topbar (onLogout è la stessa
+  // funzione che le pagine passano al bottone "Disconnetti").
+  async function handleConfirmDeleteAccount() {
+    if (!authUser) return;
+    try {
+      await deleteEmployee(authUser.id);
+      onLogout();
+    } catch (error) {
+      setDeleteAccountError(
+        error instanceof Error ? error.message : t("components.topbar.account.deleteAccountError"),
+      );
+    }
   }
 
   // PUT /users/{id} instrada già il self-service quando id === requester.id
@@ -516,8 +569,24 @@ function TopbarComponent({ onLogout }: Prop) {
           currentUsername={authUser.username}
           currentEmail={authUser.email}
           currentCreatedAt={authUser.createdAt}
+          isOwner={isOwner}
           onSave={handleSaveAccount}
+          onExport={handleExportAccount}
+          onRequestDelete={handleRequestDeleteAccount}
           submitError={editAccountError}
+          exportError={exportAccountError}
+        />
+      )}
+
+      {isDeleteAccountModalOpen && authUser && (
+        <DeleteEmployeeModalComponent
+          key={authUser.id}
+          isOpen={isDeleteAccountModalOpen}
+          onClose={closeDeleteAccountModal}
+          employeeUsername={authUser.username}
+          onConfirm={handleConfirmDeleteAccount}
+          submitError={deleteAccountError}
+          variant="self"
         />
       )}
     </header>

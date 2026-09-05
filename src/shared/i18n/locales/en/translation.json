@@ -24,7 +24,9 @@
         "editAccount": "Edit account",
         "logout": "Sign out",
         "lastLogin": "Last login: {{date}}",
-        "updateError": "Unable to update the account."
+        "updateError": "Unable to update the account.",
+        "exportError": "Unable to export your data. Please try again later.",
+        "deleteAccountError": "Unable to delete the account. Please try again later."
       }
     },
     "authForm": {
@@ -88,6 +90,32 @@
       "acknowledge": "I've saved the code somewhere safe",
       "defaultConfirmLabel": "I've saved the code, continue"
     },
+    "importCompanyForm": {
+      "fileLabel": "Export file",
+      "fileRequired": "Select an export file.",
+      "invalidJson": "The selected file isn't a valid export.",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Password",
+      "confirmPasswordLabel": "Confirm password",
+      "confirmPasswordPlaceholder": "Confirm password",
+      "passwordInvalid": "The password must be at least 8 characters long and include a lowercase letter, an uppercase letter, and a number.",
+      "passwordMismatch": "Passwords don't match.",
+      "importFailed": "Import failed. Please try again later.",
+      "submitting": "Importing...",
+      "submit": "Import company"
+    },
+    "importedCredentialsDisplay": {
+      "title": "Imported employees' credentials",
+      "description": "Every imported employee and project manager received a new temporary password, never the one from the source installation: share them out of band, they won't be recoverable from here again. They'll be asked to replace it at their first sign-in.",
+      "empty": "No employee or project manager to import.",
+      "columnUsername": "Username",
+      "columnRole": "Role",
+      "columnPassword": "Temporary password",
+      "roleManager": "Project Manager",
+      "roleEmployee": "Employee",
+      "acknowledge": "I've saved or shared all the credentials",
+      "confirm": "I've saved the credentials, go to the dashboard"
+    },
     "changePasswordForm": {
       "newPasswordLabel": "New password",
       "newPasswordPlaceholder": "New password",
@@ -150,11 +178,17 @@
       "passwordMismatch": "Passwords don't match."
     },
     "deleteEmployeeModal": {
-      "title": "Delete employee",
+      "title": {
+        "employee": "Delete employee",
+        "self": "Delete my account"
+      },
       "submitting": "Deleting...",
       "submit": "Delete",
       "cancel": "Cancel",
-      "description": "You are about to delete “{{username}}”. This action cannot be undone and will also remove their project assignments."
+      "description": {
+        "employee": "You are about to delete “{{username}}”. This action cannot be undone and will also remove their project assignments.",
+        "self": "You are about to delete your account “{{username}}”. This action cannot be undone: you'll lose access immediately."
+      }
     },
     "createProjectModal": {
       "title": "New project",
@@ -234,7 +268,11 @@
       "usernameRequired": "Enter a username.",
       "emailInvalid": "Enter a valid email address.",
       "passwordInvalid": "The password must be at least 8 characters long and include a lowercase letter, an uppercase letter, and a number.",
-      "passwordMismatch": "Passwords don't match."
+      "passwordMismatch": "Passwords don't match.",
+      "exportButton": "Export my data",
+      "exporting": "Exporting...",
+      "deleteAccountHint": "Permanently delete your account and all related data (assigned tasks, comments, project assignments).",
+      "deleteAccountButton": "Delete my account"
     },
     "editCompanyDrawer": {
       "title": "Edit company details",
@@ -255,6 +293,14 @@
       "pecInvalid": "Enter a valid certified email address (PEC).",
       "loadError": "Unable to load company data.",
       "saveError": "Unable to save company data."
+    },
+    "deleteCompanyModal": {
+      "title": "Delete company",
+      "submitting": "Deleting...",
+      "submit": "Delete",
+      "cancel": "Cancel",
+      "description": "You are about to permanently delete “{{companyName}}”: employees, projects, tasks and comments will be removed along with your owner account. This action cannot be undone.",
+      "confirmationLabel": "Type “{{companyName}}” to confirm"
     },
     "backupHistoryItem": {
       "triggerLabels": {
@@ -508,24 +554,30 @@
       "eyebrow": "Hodum",
       "title": {
         "login": "Welcome back",
-        "register": "Create your account"
+        "register": "Create your account",
+        "import": "Import your company"
       },
       "subtitle": {
         "login": "Sign in to keep managing your projects and tasks.",
-        "register": "Sign up to start managing projects and tasks with ease."
+        "register": "Sign up to start managing projects and tasks with ease.",
+        "import": "Upload the export produced by another Hodum installation and choose a new password for the owner: employees, projects, tasks and comments will be recreated here."
       },
       "toggle": {
         "toRegister": "Don't have an account? Sign up",
-        "toLogin": "Already have an account? Sign in"
+        "toLogin": "Already have an account? Sign in",
+        "toImport": "Have an export from another installation? Import company",
+        "backToRegister": "Back to sign up"
       },
       "meta": {
         "title": {
           "login": "Sign in",
-          "register": "Sign up"
+          "register": "Sign up",
+          "import": "Import company"
         },
         "description": {
           "login": "Sign in to Hodum to manage your projects and tasks.",
-          "register": "Create a Hodum account to start managing projects and tasks with ease."
+          "register": "Create a Hodum account to start managing projects and tasks with ease.",
+          "import": "Import a company exported from another Hodum installation."
         }
       }
     },
@@ -605,8 +657,21 @@
         "backup": {
           "title": "Backup",
           "description": "Manage your company's database backups: frequency, how many to keep and how to name them."
+        },
+        "exportCompany": {
+          "title": "Export company data",
+          "description": "Download a complete JSON of the company, employees, projects, tasks and comments: useful when migrating to a new installation."
+        },
+        "deleteCompany": {
+          "title": "Delete company",
+          "description": "Permanently delete the company, all employees, projects and your owner account."
         }
       },
+      "dangerZone": {
+        "title": "Danger zone"
+      },
+      "exportError": "Unable to export company data. Please try again later.",
+      "deleteError": "Unable to delete the company. Please try again later.",
       "meta": {
         "title": "Company management"
       }

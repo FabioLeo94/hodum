@@ -1,6 +1,7 @@
 import styles from "./auth.module.css";
 import AuthFormComponent from "../../components/authForm/authFormComponent";
 import RegisterFormComponent from "../../components/registerForm/registerFormComponent";
+import ImportCompanyFormComponent from "../../components/importCompanyForm/importCompanyFormComponent";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { isAuthenticated } from "../../services/auth/authService";
@@ -8,7 +9,7 @@ import { useNavigate } from "react-router";
 import { usePageMeta } from "../../../shared/hooks/usePageMeta";
 import LanguageSwitcherComponent from "../../components/languageSwitcher/languageSwitcherComponent";
 
-type AuthMode = "login" | "register";
+type AuthMode = "login" | "register" | "import";
 
 function Auth() {
   const navigate = useNavigate();
@@ -25,12 +26,19 @@ function Auth() {
   }, [navigate]);
 
   const isLogin = mode === "login";
+  const isImport = mode === "import";
 
   usePageMeta({
-    title: isLogin ? t("pages.auth.meta.title.login") : t("pages.auth.meta.title.register"),
+    title: isLogin
+      ? t("pages.auth.meta.title.login")
+      : isImport
+        ? t("pages.auth.meta.title.import")
+        : t("pages.auth.meta.title.register"),
     description: isLogin
       ? t("pages.auth.meta.description.login")
-      : t("pages.auth.meta.description.register"),
+      : isImport
+        ? t("pages.auth.meta.description.import")
+        : t("pages.auth.meta.description.register"),
   });
 
   return (
@@ -41,21 +49,51 @@ function Auth() {
       <div className={styles.authHero}>
         <span className={styles.authEyebrow}>{t("pages.auth.eyebrow")}</span>
         <h1 className={styles.authTitle}>
-          {isLogin ? t("pages.auth.title.login") : t("pages.auth.title.register")}
+          {isLogin
+            ? t("pages.auth.title.login")
+            : isImport
+              ? t("pages.auth.title.import")
+              : t("pages.auth.title.register")}
         </h1>
         <p className={styles.authSubtitle}>
-          {isLogin ? t("pages.auth.subtitle.login") : t("pages.auth.subtitle.register")}
+          {isLogin
+            ? t("pages.auth.subtitle.login")
+            : isImport
+              ? t("pages.auth.subtitle.import")
+              : t("pages.auth.subtitle.register")}
         </p>
       </div>
       <div className={styles.authFormWrapper} key={mode}>
-        {isLogin ? <AuthFormComponent /> : <RegisterFormComponent />}
+        {isLogin ? (
+          <AuthFormComponent />
+        ) : isImport ? (
+          <ImportCompanyFormComponent />
+        ) : (
+          <RegisterFormComponent />
+        )}
       </div>
+      {/* Link secondario (non un terzo bottone alla pari col toggle
+          login/registrati sotto): l'import resta un caso raro, riservato a
+          chi arriva da un'altra installazione Hodum. */}
+      {mode === "register" && (
+        <button
+          type="button"
+          className={styles.authSecondaryLink}
+          onClick={() => setMode("import")}
+        >
+          {t("pages.auth.toggle.toImport")}
+        </button>
+      )}
       <button
         type="button"
         className={styles.authToggle}
-        onClick={() => setMode(isLogin ? "register" : "login")}
+        onClick={() => setMode(isImport || isLogin ? "register" : "login")}
       >
-        {isLogin ? t("pages.auth.toggle.toRegister") : t("pages.auth.toggle.toLogin")}
+        {isImport
+          ? t("pages.auth.toggle.backToRegister")
+          : isLogin
+            ? t("pages.auth.toggle.toRegister")
+            : t("pages.auth.toggle.toLogin")}
       </button>
     </div>
   );

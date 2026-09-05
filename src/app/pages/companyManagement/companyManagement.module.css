@@ -28,6 +28,25 @@
   gap: var(--m-lg);
 }
 
+.errorBanner {
+  color: var(--color-danger);
+  font-size: 0.9rem;
+}
+
+.dangerZone {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-md);
+  padding-top: var(--m-lg);
+  border-top: 1px solid var(--bg-field);
+}
+
+.dangerZoneTitle {
+  color: var(--color-danger);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
 @media (max-width: 400px) {
   .title {
     font-size: 1.5rem;

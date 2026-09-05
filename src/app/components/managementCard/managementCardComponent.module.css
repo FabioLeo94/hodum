@@ -39,6 +39,19 @@
   color: var(--bg-primary);
 }
 
+/* Azione distruttiva (es. "Elimina azienda"): stesso --color-danger già usato
+   da ButtonComponent/ModalBaseComponent per lo stesso significato, un bordo
+   basta a separarla visivamente dalle altre card senza un colore di sfondo
+   pieno che le farebbe perdere coerenza con la griglia. */
+.card[data-variant="danger"] {
+  border: 1px solid var(--color-danger);
+}
+
+.card[data-variant="danger"] .icon {
+  background-color: color-mix(in srgb, var(--color-danger) 16%, transparent);
+  color: var(--color-danger);
+}
+
 .title {
   color: var(--text-primary);
   font-size: 1.05rem;

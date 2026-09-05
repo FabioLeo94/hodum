@@ -54,6 +54,27 @@ async function assertOwnEmployee(employeeId: string, companyId: string): Promise
   }
 }
 
+// Coppie (projectId, userId) grezze, non Project[]/User[]: usata solo da
+// exportService.exportCompanyData per includere nell'export chi è assegnato
+// a quali progetti, dato che il modello Project esposto dall'API non porta
+// questa informazione (a differenza di Task.assignees). Senza, importCompanyData
+// non avrebbe modo di ricostruire project_assignments sulla nuova istanza: un
+// dipendente importato erediterebbe i propri task (via Task.assignees) ma
+// risulterebbe assegnato a zero progetti, invisibili per il suo ruolo
+// (assertProjectAccessible sopra).
+export async function listAllAssignmentsByCompany(
+  companyId: string,
+): Promise<{ projectId: string; userId: string }[]> {
+  const result = await pool.query<{ project_id: string; user_id: string }>(
+    `SELECT pa.project_id, pa.user_id
+     FROM project_assignments pa
+     JOIN projects p ON p.id = pa.project_id
+     WHERE p.company_id = $1`,
+    [companyId],
+  );
+  return result.rows.map((row) => ({ projectId: row.project_id, userId: row.user_id }));
+}
+
 export async function listAssignedProjects(employeeId: string, companyId: string): Promise<Project[]> {
   await assertOwnEmployee(employeeId, companyId);
 

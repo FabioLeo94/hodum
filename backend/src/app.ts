@@ -24,6 +24,17 @@ export async function createApp(): Promise<Express> {
   // per chi fa ricognizione sul framework in uso.
   app.disable('x-powered-by');
 
+  // POST /companies/import (companyController.ts) riceve l'intero export di
+  // un'azienda (utenti, progetti, task, commenti): con aziende grandi può
+  // superare facilmente il limite globale di 1mb sotto. Montato PRIMA del
+  // parser globale e solo su questo path: express.json() (body-parser sotto)
+  // salta silenziosamente il proprio parsing se req._body è già valorizzato
+  // da un middleware precedente, quindi per questa unica rotta si applica il
+  // limite più alto qui e il parser globale sotto diventa un no-op; per ogni
+  // altra rotta questo middleware non scatta affatto (path non combaciante) e
+  // resta in vigore solo il limite di 1mb.
+  app.use('/companies/import', express.json({ limit: '20mb' }));
+
   // Limite esplicito: senza, un body enorme è un DoS a costo zero per il client.
   app.use(express.json({ limit: '1mb' }));
 

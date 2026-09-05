@@ -48,6 +48,37 @@
   }
 }
 
+.authSecondaryLink {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  opacity: 0.85;
+  transition:
+    color 150ms ease,
+    opacity 150ms ease;
+}
+
+.authSecondaryLink:hover {
+  color: var(--text-primary);
+  opacity: 1;
+}
+
+.authSecondaryLink:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+  border-radius: var(--radious-xs);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .authSecondaryLink {
+    transition: none;
+  }
+}
+
 .authToggle {
   background: none;
   border: none;

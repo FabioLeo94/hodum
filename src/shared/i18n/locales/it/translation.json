@@ -24,7 +24,9 @@
         "editAccount": "Modifica account",
         "logout": "Disconnetti",
         "lastLogin": "Ultimo accesso: {{date}}",
-        "updateError": "Impossibile aggiornare l'account."
+        "updateError": "Impossibile aggiornare l'account.",
+        "exportError": "Impossibile esportare i dati. Riprova più tardi.",
+        "deleteAccountError": "Impossibile eliminare l'account. Riprova più tardi."
       }
     },
     "authForm": {
@@ -88,6 +90,32 @@
       "acknowledge": "Ho salvato il codice in un posto sicuro",
       "defaultConfirmLabel": "Ho salvato il codice, continua"
     },
+    "importCompanyForm": {
+      "fileLabel": "File di export",
+      "fileRequired": "Seleziona un file di export.",
+      "invalidJson": "Il file selezionato non è un export valido.",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Password",
+      "confirmPasswordLabel": "Conferma password",
+      "confirmPasswordPlaceholder": "Conferma password",
+      "passwordInvalid": "La password deve contenere almeno 8 caratteri, una minuscola, una maiuscola e un numero.",
+      "passwordMismatch": "Le password non coincidono.",
+      "importFailed": "Importazione non riuscita. Riprova più tardi.",
+      "submitting": "Importazione in corso...",
+      "submit": "Importa azienda"
+    },
+    "importedCredentialsDisplay": {
+      "title": "Credenziali dei dipendenti importati",
+      "description": "Ogni dipendente e project manager importato ha ricevuto una nuova password temporanea, mai quella dell'installazione di origine: comunicale fuori banda, non saranno più recuperabili da qui. Al primo accesso verrà chiesto di sostituirla.",
+      "empty": "Nessun dipendente o project manager da importare.",
+      "columnUsername": "Username",
+      "columnRole": "Ruolo",
+      "columnPassword": "Password temporanea",
+      "roleManager": "Project Manager",
+      "roleEmployee": "Dipendente",
+      "acknowledge": "Ho salvato o comunicato tutte le credenziali",
+      "confirm": "Ho salvato le credenziali, vai alla dashboard"
+    },
     "changePasswordForm": {
       "newPasswordLabel": "Nuova password",
       "newPasswordPlaceholder": "Nuova password",
@@ -150,11 +178,17 @@
       "passwordMismatch": "Le password non coincidono."
     },
     "deleteEmployeeModal": {
-      "title": "Elimina dipendente",
+      "title": {
+        "employee": "Elimina dipendente",
+        "self": "Elimina il mio account"
+      },
       "submitting": "Eliminazione in corso...",
       "submit": "Elimina",
       "cancel": "Annulla",
-      "description": "Stai per eliminare «{{username}}». L'operazione non è reversibile e rimuove anche le sue assegnazioni ai progetti."
+      "description": {
+        "employee": "Stai per eliminare «{{username}}». L'operazione non è reversibile e rimuove anche le sue assegnazioni ai progetti.",
+        "self": "Stai per eliminare il tuo account «{{username}}». L'operazione non è reversibile: perderai l'accesso immediatamente."
+      }
     },
     "createProjectModal": {
       "title": "Nuovo progetto",
@@ -234,7 +268,11 @@
       "usernameRequired": "Inserire uno username.",
       "emailInvalid": "Inserire una email valida.",
       "passwordInvalid": "La password deve contenere almeno 8 caratteri, una minuscola, una maiuscola e un numero.",
-      "passwordMismatch": "Le password non coincidono."
+      "passwordMismatch": "Le password non coincidono.",
+      "exportButton": "Esporta i miei dati",
+      "exporting": "Esportazione in corso...",
+      "deleteAccountHint": "Elimina definitivamente il tuo account e tutti i dati collegati (task assegnati, commenti, assegnazioni ai progetti).",
+      "deleteAccountButton": "Elimina il mio account"
     },
     "editCompanyDrawer": {
       "title": "Modifica dati aziendali",
@@ -255,6 +293,14 @@
       "pecInvalid": "Inserire una PEC valida.",
       "loadError": "Impossibile caricare i dati aziendali.",
       "saveError": "Impossibile salvare i dati aziendali."
+    },
+    "deleteCompanyModal": {
+      "title": "Elimina azienda",
+      "submitting": "Eliminazione in corso...",
+      "submit": "Elimina",
+      "cancel": "Annulla",
+      "description": "Stai per eliminare definitivamente «{{companyName}}»: dipendenti, progetti, task e commenti verranno rimossi insieme al tuo account owner. L'operazione non è reversibile.",
+      "confirmationLabel": "Ridigita «{{companyName}}» per confermare"
     },
     "backupHistoryItem": {
       "triggerLabels": {
@@ -508,24 +554,30 @@
       "eyebrow": "Hodum",
       "title": {
         "login": "Bentornato",
-        "register": "Crea il tuo account"
+        "register": "Crea il tuo account",
+        "import": "Importa la tua azienda"
       },
       "subtitle": {
         "login": "Accedi per continuare a gestire i tuoi progetti e le tue attività.",
-        "register": "Registrati per iniziare a gestire i tuoi progetti e le tue attività."
+        "register": "Registrati per iniziare a gestire i tuoi progetti e le tue attività.",
+        "import": "Carica l'export prodotto da un'altra installazione Hodum e scegli una nuova password per l'owner: dipendenti, progetti, task e commenti verranno ricreati qui."
       },
       "toggle": {
         "toRegister": "Non hai un account? Registrati",
-        "toLogin": "Hai già un account? Accedi"
+        "toLogin": "Hai già un account? Accedi",
+        "toImport": "Hai un export da un'altra installazione? Importa azienda",
+        "backToRegister": "Torna alla registrazione"
       },
       "meta": {
         "title": {
           "login": "Accedi",
-          "register": "Registrati"
+          "register": "Registrati",
+          "import": "Importa azienda"
         },
         "description": {
           "login": "Accedi a Hodum per gestire i tuoi progetti e le tue attività.",
-          "register": "Crea un account Hodum per iniziare a gestire progetti e attività in modo semplice."
+          "register": "Crea un account Hodum per iniziare a gestire progetti e attività in modo semplice.",
+          "import": "Importa un'azienda esportata da un'altra installazione Hodum."
         }
       }
     },
@@ -605,8 +657,21 @@
         "backup": {
           "title": "Backup",
           "description": "Gestisci i backup del database della tua azienda: frequenza, quanti conservarne e come nominarli."
+        },
+        "exportCompany": {
+          "title": "Esporta dati azienda",
+          "description": "Scarica un JSON completo di azienda, dipendenti, progetti, task e commenti: utile per una migrazione verso una nuova installazione."
+        },
+        "deleteCompany": {
+          "title": "Elimina azienda",
+          "description": "Elimina definitivamente l'azienda, tutti i dipendenti, i progetti e il tuo account owner."
         }
       },
+      "dangerZone": {
+        "title": "Zona pericolosa"
+      },
+      "exportError": "Impossibile esportare i dati dell'azienda. Riprova più tardi.",
+      "deleteError": "Impossibile eliminare l'azienda. Riprova più tardi.",
       "meta": {
         "title": "Gestione aziendale"
       }

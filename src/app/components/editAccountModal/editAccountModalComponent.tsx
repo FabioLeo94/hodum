@@ -24,8 +24,20 @@ interface Prop {
   currentUsername: string;
   currentEmail: string;
   currentCreatedAt: string;
+  // L'owner non ha un percorso di cancellazione self-service (vincolo FK
+  // companies.owner_id/users.company_id, vedi deleteCompanyModalComponent):
+  // deve passare dalla cancellazione azienda. Solo per decidere se mostrare
+  // "Elimina il mio account" sotto, non cambia il resto della modale.
+  isOwner: boolean;
   onSave: (values: EditAccountFormValues) => void | Promise<void>;
+  // Fire-and-forget dal punto di vista della modale: eventuali errori sono
+  // già catturati e trasformati in exportError dal chiamante (stesso pattern
+  // di submitError/onSave), qui serve solo per disabilitare il bottone
+  // durante il download.
+  onExport: () => void | Promise<void>;
+  onRequestDelete: () => void;
   submitError?: string;
+  exportError?: string;
 }
 
 function EditAccountModalComponent({
@@ -34,8 +46,12 @@ function EditAccountModalComponent({
   currentUsername,
   currentEmail,
   currentCreatedAt,
+  isOwner,
   onSave,
+  onExport,
+  onRequestDelete,
   submitError,
+  exportError,
 }: Prop) {
   const { t } = useTranslation();
   // Precompilato solo al mount: il chiamante rimonta il componente (via
@@ -47,6 +63,10 @@ function EditAccountModalComponent({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const { isSubmitting, submit } = useAsyncSubmit();
+  // Istanza separata da submit sopra: l'esportazione non condivide lo stesso
+  // ciclo isSubmitting del salvataggio, i due bottoni devono potersi
+  // disabilitare indipendentemente.
+  const { isSubmitting: isExporting, submit: submitExport } = useAsyncSubmit();
 
   const usernameError =
     submitAttempted && username.trim() === ""
@@ -83,6 +103,12 @@ function EditAccountModalComponent({
   function handleClose() {
     resetForm();
     onClose();
+  }
+
+  async function handleExport() {
+    await submitExport(async () => {
+      await onExport();
+    });
   }
 
   async function handleSave() {
@@ -187,6 +213,39 @@ function EditAccountModalComponent({
           />
         </div>
       </div>
+
+      <div className={styles.exportRow}>
+        <button
+          type="button"
+          className={styles.exportButton}
+          onClick={handleExport}
+          disabled={isExporting}
+        >
+          {isExporting
+            ? t("components.editAccountModal.exporting")
+            : t("components.editAccountModal.exportButton")}
+        </button>
+      </div>
+      {exportError && (
+        <p role="alert" className={styles.submitError}>
+          {exportError}
+        </p>
+      )}
+
+      {/* Non mostrato all'owner: deve passare dal flusso di cancellazione
+          azienda (deleteCompanyModalComponent), per via del vincolo FK
+          companies.owner_id/users.company_id che non ha una cascade. */}
+      {!isOwner && (
+        <div className={styles.dangerZone}>
+          <p className={styles.dangerZoneHint}>
+            {t("components.editAccountModal.deleteAccountHint")}
+          </p>
+          <ButtonComponent onClick={onRequestDelete} variant="danger" type="button">
+            {t("components.editAccountModal.deleteAccountButton")}
+          </ButtonComponent>
+        </div>
+      )}
+
       {submitError && (
         <p role="alert" className={styles.submitError}>
           {submitError}

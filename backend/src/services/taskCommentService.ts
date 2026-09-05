@@ -94,6 +94,31 @@ export async function listCommentsByTask(
   return result.rows.map(toTaskComment);
 }
 
+// Usata solo da exportService.exportUserData: tutti i commenti scritti da un
+// utente, indipendentemente da progetto/task, per l'export self-service dei
+// propri dati. Nessun controllo di company qui (a differenza di
+// listCommentsByTask sopra): il chiamante passa già l'id dell'utente
+// autenticato, non un id arbitrario ricevuto dal client.
+export async function listCommentsByAuthor(authorId: string): Promise<TaskComment[]> {
+  const result = await pool.query<TaskCommentRow>(
+    `${TASK_COMMENT_SELECT} WHERE tc.author_id = $1 ORDER BY tc.created_at ASC`,
+    [authorId],
+  );
+  return result.rows.map(toTaskComment);
+}
+
+// Usata solo da exportService.exportCompanyData: tutti i commenti dell'intera
+// azienda, a prescindere da chi li ha scritti. JOIN aggiuntivo su projects
+// (TASK_COMMENT_SELECT si ferma a tasks) perché company_id vive lì, non su
+// task_comments né su tasks.
+export async function listCommentsByCompany(companyId: string): Promise<TaskComment[]> {
+  const result = await pool.query<TaskCommentRow>(
+    `${TASK_COMMENT_SELECT} JOIN projects p ON p.id = t.project_id WHERE p.company_id = $1 ORDER BY tc.created_at ASC`,
+    [companyId],
+  );
+  return result.rows.map(toTaskComment);
+}
+
 export async function createComment(
   projectId: string,
   taskId: string,

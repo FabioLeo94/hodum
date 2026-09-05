@@ -1,6 +1,12 @@
 import { API_BASE_URL, readErrorMessage } from "../httpClient";
 import { authFetch, authHeader } from "../auth/authService";
 import type { EmployeeRole, User } from "../auth/authService";
+import type { BackupRecord } from "../backup/backupService";
+import type {
+  ExportProject,
+  ExportTaskComment,
+  ExportTaskWithProject,
+} from "../../../shared/types/companyExport";
 
 export interface RegisterCompanyInput {
   companyName: string;
@@ -143,4 +149,104 @@ export async function createEmployee(
   }
 
   return (await response.json()) as User;
+}
+
+// Coppia (projectId, userId): stessa forma restituita da
+// listAllAssignmentsByCompany lato backend, vista pubblica dell'export.
+export interface CompanyExportProjectAssignment {
+  projectId: string;
+  userId: string;
+}
+
+// Forma esatta di GET /companies/{id}/export (vedi backend/src/services/exportService.ts,
+// CompanyExportData): stessa struttura usata sia per lo scaricamento
+// dell'export sia come corpo di importCompany sotto, per un'altra istanza.
+export interface CompanyExportData {
+  company: RegisteredCompany;
+  users: User[];
+  projects: ExportProject[];
+  projectAssignments: CompanyExportProjectAssignment[];
+  tasks: ExportTaskWithProject[];
+  comments: ExportTaskComment[];
+  backups: BackupRecord[];
+}
+
+// Riservato all'owner (backend @Security('owner')), stesso scoping 404 di
+// updateCompany sopra: qui escono anche utenti, task e backup metadata di
+// tutta l'azienda, un livello di dettaglio più ampio di getCompany.
+export async function exportCompanyData(id: string): Promise<CompanyExportData> {
+  const response = await authFetch(`${API_BASE_URL}/companies/${id}/export`, {
+    headers: authHeader(),
+  });
+
+  if (!response.ok) {
+    const message = await readErrorMessage(response);
+    throw new Error(message ?? "Impossibile esportare i dati dell'azienda. Riprova più tardi.");
+  }
+
+  return (await response.json()) as CompanyExportData;
+}
+
+// Elimina l'intera azienda, incluso l'owner stesso (backend @Security('owner')):
+// 204 senza corpo, la conferma per nome esatto è già stata validata lato
+// frontend da DeleteCompanyModalComponent prima di questa chiamata.
+export async function deleteCompany(id: string): Promise<void> {
+  const response = await authFetch(`${API_BASE_URL}/companies/${id}`, {
+    method: "DELETE",
+    headers: authHeader(),
+  });
+
+  if (!response.ok) {
+    const message = await readErrorMessage(response);
+    throw new Error(message ?? "Impossibile eliminare l'azienda. Riprova più tardi.");
+  }
+}
+
+// Credenziali generate per un dipendente/manager importato (mai per l'owner,
+// che sceglie la propria password fresca): mostrate una sola volta dal
+// frontend, stesso principio del recoveryCode, mai più recuperabili da qui.
+export interface TemporaryPasswordEntry {
+  username: string;
+  role: EmployeeRole;
+  password: string;
+}
+
+export interface ImportCompanyInput {
+  export: CompanyExportData;
+  // Password scelta dall'owner per LA NUOVA istanza: mai quella originale,
+  // che non esiste nell'export in primo luogo (User non espone mai la password).
+  ownerPassword: string;
+}
+
+export interface ImportCompanyResult {
+  user: User;
+  company: RegisteredCompany;
+  token: string;
+  recoveryCode: string;
+  temporaryPasswords: TemporaryPasswordEntry[];
+}
+
+// Endpoint pubblico deliberatamente (nessuna sessione su QUESTA istanza,
+// stesso principio di registerCompany sopra): è l'unico modo di popolare
+// un'istanza vuota a partire da un export prodotto da exportCompanyData su
+// un'altra installazione.
+export async function importCompany(input: ImportCompanyInput): Promise<ImportCompanyResult> {
+  const response = await fetch(`${API_BASE_URL}/companies/import`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+
+  if (!response.ok) {
+    const message = await readErrorMessage(response);
+    if (response.status === 409) {
+      throw new Error(message ?? "Username o email dell'export già in uso su questa istanza.");
+    }
+    if (response.status === 422) {
+      throw new Error(message ?? "Export non valido o password non conforme.");
+    }
+    throw new Error(message ?? "Importazione non riuscita. Riprova più tardi.");
+  }
+
+  return (await response.json()) as ImportCompanyResult;
 }

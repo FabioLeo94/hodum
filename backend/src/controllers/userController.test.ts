@@ -19,8 +19,12 @@ vi.mock('../services/projectAssignmentService', () => ({
 vi.mock('../services/projectService', () => ({
   ProjectNotFoundError: class ProjectNotFoundError extends Error {},
 }));
+vi.mock('../services/exportService', () => ({
+  exportUserData: vi.fn(),
+}));
 
 import { deleteUser as deleteUserService, getUserById, updateUser as updateUserService } from '../services/userService';
+import { exportUserData } from '../services/exportService';
 import { UserController } from './userController';
 
 function makeUser(overrides: Partial<User> = {}): User {
@@ -51,6 +55,7 @@ beforeEach(() => {
   vi.mocked(getUserById).mockReset();
   vi.mocked(updateUserService).mockReset();
   vi.mocked(deleteUserService).mockReset();
+  vi.mocked(exportUserData).mockReset();
 });
 
 describe('UserController.getUser: visibilità cross-utente', () => {
@@ -230,5 +235,33 @@ describe('UserController.deleteUser: stessa scope-restriction di updateUser', ()
     await controller.deleteUser('user-1', makeRequest(makeUser({ id: 'user-1', role: 'employee' })));
 
     expect(deleteUserService).toHaveBeenCalledWith('user-1');
+  });
+});
+
+describe('UserController.exportUser: self-service puro, nessuna eccezione per owner/manager', () => {
+  it("un utente NON esporta i dati di un altro utente passandone l'id nel path (IDOR), nemmeno un owner: 404 non 403", async () => {
+    const controller = controllerWithStatus();
+
+    const result = await controller.exportUser('altro-utente', makeRequest(makeUser({ id: 'owner-1', role: 'owner' })));
+
+    expect(controller.setStatus).toHaveBeenCalledWith(404);
+    expect(result).toMatchObject({ message: expect.any(String) });
+    expect(exportUserData).not.toHaveBeenCalled();
+  });
+
+  it('un utente esporta i propri dati (self-service)', async () => {
+    vi.mocked(exportUserData).mockResolvedValue({
+      profile: makeUser({ id: 'user-1' }),
+      assignedProjects: [],
+      tasks: [],
+      comments: [],
+      notifications: { items: [], unreadCount: 0 },
+    });
+    const controller = controllerWithStatus();
+
+    const result = await controller.exportUser('user-1', makeRequest(makeUser({ id: 'user-1', companyId: 'company-1' })));
+
+    expect(exportUserData).toHaveBeenCalledWith('user-1', 'company-1');
+    expect(result).toMatchObject({ profile: { id: 'user-1' } });
   });
 });

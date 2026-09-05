@@ -3,6 +3,7 @@ import { Body, Controller, Delete, Get, Path, Put, Request, Response, Route, Sec
 import { getAuthenticatedUser } from '../middleware/authentication';
 import type { Project } from '../models/project';
 import type { User } from '../models/user';
+import { exportUserData, type UserExportData } from '../services/exportService';
 import {
   changePassword,
   deleteUser,
@@ -100,6 +101,27 @@ export class UserController extends Controller {
       }
       throw err;
     }
+  }
+
+  // Punto 2 del piano "Export/import e cancellazione completa di account e
+  // azienda": self-service puro, stesso principio del vecchio
+  // downloadProjectModal ma per l'intero profilo. Nessuna eccezione per
+  // owner/manager che vogliono esportare i dati di un dipendente: solo l'id
+  // combaciante con l'utente autenticato è ammesso, stesso 404 (non 403) di
+  // getUser sopra per un id fuori dal proprio ambito.
+  @Get('{id}/export')
+  @Security('jwt')
+  @Response<UserErrorResponse>(404, 'User non trovato')
+  public async exportUser(
+    @Path() id: string,
+    @Request() request: ExRequest,
+  ): Promise<UserExportData | UserErrorResponse> {
+    const requester = getAuthenticatedUser(request);
+    if (id !== requester.id) {
+      this.setStatus(404);
+      return notFoundResponse(id);
+    }
+    return exportUserData(id, requester.companyId);
   }
 
   // Self-service (id === requester.id) oppure owner che modifica un proprio

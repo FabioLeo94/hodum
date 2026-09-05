@@ -1,10 +1,44 @@
 import { API_BASE_URL, readErrorMessage } from "../httpClient";
 import { authFetch, authHeader, type EmployeeRole, type User } from "../auth/authService";
+import type { NotificationList } from "../notification/notificationService";
+import type {
+  ExportProject,
+  ExportTaskComment,
+  ExportTaskWithProject,
+} from "../../../shared/types/companyExport";
 
 interface ProjectDto {
   id: string;
   name: string;
   isActive: boolean;
+}
+
+// Forma esatta di GET /users/{id}/export (vedi backend/src/services/exportService.ts,
+// UserExportData): notifications riusa NotificationList perché è la stessa
+// forma { items, unreadCount } già usata da listNotifications.
+export interface UserExportData {
+  profile: User;
+  assignedProjects: ExportProject[];
+  tasks: ExportTaskWithProject[];
+  comments: ExportTaskComment[];
+  notifications: NotificationList;
+}
+
+// Self-service puro (backend @Security('jwt') + controllo id === requester.id,
+// vedi userController.ts): id è sempre quello dell'utente autenticato, non di
+// un dipendente arbitrario. Il chiamante converte la risposta in Blob e la
+// scarica (downloadJsonFile), qui c'è solo la fetch.
+export async function exportUserData(id: string): Promise<UserExportData> {
+  const response = await authFetch(`${API_BASE_URL}/users/${id}/export`, {
+    headers: authHeader(),
+  });
+
+  if (!response.ok) {
+    const message = await readErrorMessage(response);
+    throw new Error(message ?? "Impossibile esportare i dati. Riprova più tardi.");
+  }
+
+  return (await response.json()) as UserExportData;
 }
 
 // GET /users è già filtrato lato backend sulla company del richiedente

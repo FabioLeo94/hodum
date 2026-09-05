@@ -49,7 +49,10 @@ const STATUS_NAME_TO_SLUG: Record<string, TaskStatus> = {
 
 // Inverso di STATUS_NAME_TO_SLUG: serve a updateTaskStatus per risolvere lo
 // slug ricevuto dal client verso il task_status.name usato in colonna.
-const SLUG_TO_STATUS_NAME: Record<TaskStatus, string> = {
+// Esportata per companyService.importCompanyData, che deve risolvere lo
+// stesso slug->nome quando reinserisce i task di un'azienda importata, senza
+// duplicare qui la mappa.
+export const SLUG_TO_STATUS_NAME: Record<TaskStatus, string> = {
   progress: 'in progress',
   review: 'review',
   completed: 'completed',
