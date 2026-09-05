@@ -61,6 +61,16 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
   const { isSubmitting: isSaving, submit: submitSave } = useAsyncSubmit();
   const { isSubmitting: isRunning, submit: submitRun } = useAsyncSubmit();
 
+  // Reset di selectedIds ad ogni apertura: aggiustato durante il render (non
+  // in un effect) seguendo il pattern React per "resettare stato quando
+  // cambia una prop" (https://react.dev/learn/you-might-not-need-an-effect),
+  // dato che qui non dipende da nessuna lettura del DOM/rete, solo da isOpen.
+  const [prevIsOpenForSelection, setPrevIsOpenForSelection] = useState(isOpen);
+  if (isOpen !== prevIsOpenForSelection) {
+    setPrevIsOpenForSelection(isOpen);
+    if (isOpen) setSelectedIds(new Set());
+  }
+
   function applySettings(loaded: BackupSettings) {
     setSettings(loaded);
     setIntervalMinutes(String(loaded.intervalMinutes));
@@ -93,7 +103,6 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
   useEffect(() => {
     if (!isOpen) return;
     let cancelled = false;
-    setSelectedIds(new Set());
 
     getBackupSettings(companyId)
       .then((loaded) => {

@@ -44,6 +44,19 @@ function EditCompanyDrawerComponent({ isOpen, onClose, companyId }: Prop) {
 
   const { isSubmitting, submit } = useAsyncSubmit();
 
+  // Reset di submitAttempted/saveError ad ogni apertura: aggiustato durante
+  // il render (non in un effect) seguendo il pattern React per "resettare
+  // stato quando cambia una prop" (https://react.dev/learn/you-might-not-need-an-effect),
+  // dato che qui non dipende da nessuna lettura del DOM/rete, solo da isOpen.
+  const [prevIsOpenForReset, setPrevIsOpenForReset] = useState(isOpen);
+  if (isOpen !== prevIsOpenForReset) {
+    setPrevIsOpenForReset(isOpen);
+    if (isOpen) {
+      setSubmitAttempted(false);
+      setSaveError("");
+    }
+  }
+
   function applyCompany(loaded: RegisteredCompany) {
     setCompany(loaded);
     setName(loaded.name);
@@ -61,8 +74,6 @@ function EditCompanyDrawerComponent({ isOpen, onClose, companyId }: Prop) {
   useEffect(() => {
     if (!isOpen) return;
     let cancelled = false;
-    setSubmitAttempted(false);
-    setSaveError("");
 
     getCompany(companyId)
       .then((loaded) => {
