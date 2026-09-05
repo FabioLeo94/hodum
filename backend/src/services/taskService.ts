@@ -33,6 +33,11 @@ interface TaskRow {
   // setTypeParser custom in src/db): tipizzato Date per rispecchiare il
   // valore reale, non la colonna SQL.
   due_date: Date | null;
+  // Timer di lavorazione (migration 0031): stesso trattamento Date | null di
+  // due_date/status_changed_at per le due colonne timestamptz.
+  work_started_at: Date | null;
+  work_accumulated_seconds: number;
+  work_ended_at: Date | null;
 }
 
 // task_status.name (seed in migrations/0004_task_status_smallint_identity_e_seed_stati_assegnabili.sql)
@@ -61,7 +66,7 @@ export const SLUG_TO_STATUS_NAME: Record<TaskStatus, string> = {
 
 // Select condivisa da getTaskById e listTasksByProject: stessa forma di riga
 // (TaskRow) per entrambe, cambia solo il filtro WHERE.
-const TASK_SELECT = `SELECT t.id, t.project_id, t.title, t.description, t.priority, t.due_date, ts.name AS status_name
+const TASK_SELECT = `SELECT t.id, t.project_id, t.title, t.description, t.priority, t.due_date, t.work_started_at, t.work_accumulated_seconds, t.work_ended_at, ts.name AS status_name
      FROM tasks t
      JOIN task_status ts ON ts.id = t.status`;
 
@@ -69,7 +74,7 @@ const TASK_SELECT = `SELECT t.id, t.project_id, t.title, t.description, t.priori
 // che a differenza di TASK_SELECT deve comunque sapere a quale progetto
 // appartiene ogni riga (qui i task di più progetti convivono nello stesso
 // risultato).
-const TASK_WITH_PROJECT_SELECT = `SELECT t.id, t.project_id, t.title, t.description, t.priority, t.due_date, ts.name AS status_name, p.name AS project_name
+const TASK_WITH_PROJECT_SELECT = `SELECT t.id, t.project_id, t.title, t.description, t.priority, t.due_date, t.work_started_at, t.work_accumulated_seconds, t.work_ended_at, ts.name AS status_name, p.name AS project_name
      FROM tasks t
      JOIN task_status ts ON ts.id = t.status
      JOIN projects p ON p.id = t.project_id`;
@@ -78,7 +83,7 @@ const TASK_WITH_PROJECT_SELECT = `SELECT t.id, t.project_id, t.title, t.descript
 // solo da listStaleTasks, l'unica query che deve sapere da quanto tempo un
 // task è fermo nello stato attuale (le altre non ne hanno bisogno, quindi non
 // è nella select condivisa).
-const STALE_TASK_SELECT = `SELECT t.id, t.project_id, t.title, t.description, t.priority, t.due_date, ts.name AS status_name, p.name AS project_name, t.status_changed_at
+const STALE_TASK_SELECT = `SELECT t.id, t.project_id, t.title, t.description, t.priority, t.due_date, t.work_started_at, t.work_accumulated_seconds, t.work_ended_at, ts.name AS status_name, p.name AS project_name, t.status_changed_at
      FROM tasks t
      JOIN task_status ts ON ts.id = t.status
      JOIN projects p ON p.id = t.project_id`;
@@ -97,6 +102,17 @@ export function isValidPriority(value: number): boolean {
 // quindi a un parametro NULL silenzioso) più a valle.
 export function isValidTaskStatus(value: unknown): value is TaskStatus {
   return typeof value === 'string' && value in SLUG_TO_STATUS_NAME;
+}
+
+// Le quattro azioni del timer di lavorazione (vedi migration 0031 e
+// updateTaskWorkTimer più sotto): non uno stato da impostare, ma un comando
+// applicato ai tre campi work_* in base al loro valore attuale.
+export type WorkTimerAction = 'start' | 'pause' | 'stop' | 'reset';
+
+const WORK_TIMER_ACTIONS: readonly WorkTimerAction[] = ['start', 'pause', 'stop', 'reset'];
+
+export function isValidWorkTimerAction(value: unknown): value is WorkTimerAction {
+  return typeof value === 'string' && (WORK_TIMER_ACTIONS as readonly string[]).includes(value);
 }
 
 // Usata solo quando il valore è presente e non-null (stesso schema di
@@ -137,6 +153,9 @@ function toTask(row: TaskRow, assignees: TaskAssignee[]): Task {
     priority: row.priority,
     dueDate: row.due_date ? formatDateOnly(row.due_date) : null,
     assignees,
+    workStartedAt: row.work_started_at ? row.work_started_at.toISOString() : null,
+    workAccumulatedSeconds: row.work_accumulated_seconds,
+    workEndedAt: row.work_ended_at ? row.work_ended_at.toISOString() : null,
   };
 }
 
@@ -431,6 +450,20 @@ export async function updateTaskStatus(
     } else if (currentRow.status_name === 'completed') {
       setClauses.push('completed_at = NULL');
     }
+    // Il timer si considera "terminato" (non una semplice pausa) entrando in
+    // uno stato finale: stessa espressione CASE di stop/pause in
+    // updateTaskWorkTimer più sotto, che accumula il segmento in corso solo
+    // se il timer era davvero in esecuzione. Nessuna azione simmetrica
+    // quando si esce da completed/rejected verso un altro stato: il timer
+    // resta congelato finché non arriva un Play manuale (scelta esplicita
+    // dell'utente, non un dettaglio implementativo).
+    if (statusName === 'completed' || statusName === 'rejected') {
+      setClauses.push(
+        `work_accumulated_seconds = work_accumulated_seconds + CASE WHEN work_started_at IS NOT NULL THEN GREATEST(0, EXTRACT(EPOCH FROM (now() - work_started_at))::int) ELSE 0 END`,
+      );
+      setClauses.push('work_started_at = NULL');
+      setClauses.push('work_ended_at = now()');
+    }
   }
 
   // Il filtro su project_id impedisce di spostare un task passando l'id del
@@ -445,6 +478,85 @@ export async function updateTaskStatus(
   if (result.rowCount === 0) {
     throw new TaskNotFoundError(taskId);
   }
+  const task = await getTaskById(taskId);
+  emitTaskUpdated(task);
+  return task;
+}
+
+// Un solo UPDATE per azione invece di leggere prima lo stato e decidere in
+// JS: ogni query è scritta per essere un no-op sicuro quando l'azione non si
+// applica allo stato attuale (es. "start" mentre è già in esecuzione), così
+// due click ravvicinati o due tab aperte sullo stesso task non producono un
+// risultato inconsistente. L'unico vero errore possibile resta il task non
+// trovato, verificato con la stessa query di esistenza già usata da
+// updateTaskStatus (SELECT prima dell'UPDATE, scoping su project_id incluso).
+export async function updateTaskWorkTimer(
+  projectId: string,
+  taskId: string,
+  action: WorkTimerAction,
+  companyId?: string | null,
+): Promise<Task> {
+  await getProjectById(projectId, companyId);
+  if (!isValidUuid(taskId)) {
+    throw new TaskNotFoundError(taskId);
+  }
+
+  const existsResult = await pool.query('SELECT 1 FROM tasks WHERE id = $1 AND project_id = $2', [
+    taskId,
+    projectId,
+  ]);
+  if (existsResult.rowCount === 0) {
+    throw new TaskNotFoundError(taskId);
+  }
+
+  // Stessa espressione CASE già usata in updateTaskStatus per il fermo
+  // automatico su completed/rejected: accumula il segmento in corso solo se
+  // il timer era davvero in esecuzione (work_started_at IS NOT NULL),
+  // altrimenti non aggiunge nulla.
+  const ACCUMULATE_RUNNING_SEGMENT =
+    'work_accumulated_seconds + CASE WHEN work_started_at IS NOT NULL THEN GREATEST(0, EXTRACT(EPOCH FROM (now() - work_started_at))::int) ELSE 0 END';
+
+  switch (action) {
+    case 'start':
+      await pool.query(
+        `UPDATE tasks SET work_started_at = now() WHERE id = $1 AND project_id = $2 AND work_started_at IS NULL`,
+        [taskId, projectId],
+      );
+      break;
+    case 'pause':
+      await pool.query(
+        `UPDATE tasks
+         SET work_accumulated_seconds = ${ACCUMULATE_RUNNING_SEGMENT},
+             work_started_at = NULL
+         WHERE id = $1 AND project_id = $2 AND work_started_at IS NOT NULL`,
+        [taskId, projectId],
+      );
+      break;
+    case 'stop':
+      // A differenza di pause, non condizionato a work_started_at IS NOT
+      // NULL: "termina lavorazione" deve poter finalizzare (valorizzare
+      // work_ended_at) anche da una pausa già in corso, non solo da in
+      // esecuzione. ACCUMULATE_RUNNING_SEGMENT resta comunque un no-op sulla
+      // parte di accumulo se il timer non stava girando.
+      await pool.query(
+        `UPDATE tasks
+         SET work_accumulated_seconds = ${ACCUMULATE_RUNNING_SEGMENT},
+             work_started_at = NULL,
+             work_ended_at = now()
+         WHERE id = $1 AND project_id = $2`,
+        [taskId, projectId],
+      );
+      break;
+    case 'reset':
+      await pool.query(
+        `UPDATE tasks
+         SET work_started_at = NULL, work_accumulated_seconds = 0, work_ended_at = NULL
+         WHERE id = $1 AND project_id = $2`,
+        [taskId, projectId],
+      );
+      break;
+  }
+
   const task = await getTaskById(taskId);
   emitTaskUpdated(task);
   return task;

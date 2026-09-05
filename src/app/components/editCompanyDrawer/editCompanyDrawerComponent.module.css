@@ -77,6 +77,17 @@
   gap: var(--m-md);
 }
 
+.sectionTitle {
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.fieldGroupLabel {
+  composes: fieldLabel from "../../../shared/styles/fieldBase.module.css";
+  margin-bottom: var(--m-sm);
+}
+
 .hint {
   color: var(--text-muted);
   font-size: 0.8rem;

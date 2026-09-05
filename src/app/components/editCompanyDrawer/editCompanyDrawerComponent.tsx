@@ -3,12 +3,37 @@ import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import InputComponent from "../input/inputComponent";
 import ButtonComponent from "../button/buttonComponent";
+import RateInputComponent from "../rateInput/rateInputComponent";
+import WorkDaysSelectorComponent from "../workDaysSelector/workDaysSelectorComponent";
+import WorkHoursEditorComponent from "../workHoursEditor/workHoursEditorComponent";
 import { getCompany, updateCompany } from "../../services/company/companyService";
 import type { RegisteredCompany } from "../../services/company/companyService";
 import { validateEmail } from "../../services/validation/validationService";
 import { useAsyncSubmit } from "../../../shared/hooks/useAsyncSubmit";
 import { formatDate } from "../../../shared/utils/formatDate";
+import type { RateUnit, WorkDays, WorkHours } from "../../../shared/utils/rateConversion";
 import styles from "./editCompanyDrawerComponent.module.css";
+
+// Stato "vuoto" usato solo prima che il primo fetch risolva: la sezione che
+// li mostra è montata solo quando `company` è già valorizzato (vedi il ramo
+// `company ? ... : loading` più sotto), quindi questi default non vengono mai
+// renderizzati per davvero, servono solo a tipizzare lo state iniziale.
+const EMPTY_WORK_DAYS: WorkDays = {
+  lunedi: false,
+  martedi: false,
+  mercoledi: false,
+  giovedi: false,
+  venerdi: false,
+  sabato: false,
+  domenica: false,
+};
+const EMPTY_WORK_HOURS: WorkHours = {
+  continuativo: true,
+  inizio1: null,
+  fine1: null,
+  inizio2: null,
+  fine2: null,
+};
 
 interface Prop {
   isOpen: boolean;
@@ -39,6 +64,10 @@ function EditCompanyDrawerComponent({ isOpen, onClose, companyId }: Prop) {
   const [codiceFiscale, setCodiceFiscale] = useState("");
   const [indirizzo, setIndirizzo] = useState("");
   const [pec, setPec] = useState("");
+  const [tariffaOraria, setTariffaOraria] = useState<number | null>(null);
+  const [tariffaUnita, setTariffaUnita] = useState<RateUnit | null>(null);
+  const [giorniLavorativi, setGiorniLavorativi] = useState<WorkDays>(EMPTY_WORK_DAYS);
+  const [orarioLavoro, setOrarioLavoro] = useState<WorkHours>(EMPTY_WORK_HOURS);
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [saveError, setSaveError] = useState("");
 
@@ -65,6 +94,10 @@ function EditCompanyDrawerComponent({ isOpen, onClose, companyId }: Prop) {
     setCodiceFiscale(loaded.codiceFiscale ?? "");
     setIndirizzo(loaded.indirizzo ?? "");
     setPec(loaded.pec ?? "");
+    setTariffaOraria(loaded.tariffaOraria);
+    setTariffaUnita(loaded.tariffaUnita);
+    setGiorniLavorativi(loaded.giorniLavorativi);
+    setOrarioLavoro(loaded.orarioLavoro);
   }
 
   // Ricaricato ad ogni apertura, non solo al mount: il drawer resta montato
@@ -147,6 +180,10 @@ function EditCompanyDrawerComponent({ isOpen, onClose, companyId }: Prop) {
           codiceFiscale: trimmedCodiceFiscale || null,
           indirizzo: indirizzo.trim() || null,
           pec: trimmedPec || null,
+          tariffaOraria,
+          tariffaUnita,
+          giorniLavorativi,
+          orarioLavoro,
         });
         applyCompany(updated);
         setSubmitAttempted(false);
@@ -247,6 +284,36 @@ function EditCompanyDrawerComponent({ isOpen, onClose, companyId }: Prop) {
                 error={pecError}
                 showLabel
               />
+            </div>
+
+            <div className={styles.section}>
+              <h3 className={styles.sectionTitle}>
+                {t("components.editCompanyDrawer.rateAndScheduleSectionTitle")}
+              </h3>
+              <RateInputComponent
+                label={t("components.editCompanyDrawer.companyRateLabel")}
+                name="tariffaOraria"
+                value={tariffaOraria}
+                unit={tariffaUnita}
+                workDays={giorniLavorativi}
+                workHours={orarioLavoro}
+                onChange={(newValue, newUnit) => {
+                  setTariffaOraria(newValue);
+                  setTariffaUnita(newUnit);
+                }}
+              />
+              <div>
+                <p className={styles.fieldGroupLabel}>
+                  {t("components.editCompanyDrawer.workDaysLabel")}
+                </p>
+                <WorkDaysSelectorComponent value={giorniLavorativi} onChange={setGiorniLavorativi} />
+              </div>
+              <div>
+                <p className={styles.fieldGroupLabel}>
+                  {t("components.editCompanyDrawer.workHoursLabel")}
+                </p>
+                <WorkHoursEditorComponent value={orarioLavoro} onChange={setOrarioLavoro} />
+              </div>
             </div>
 
             <ButtonComponent onClick={handleSave} disabled={isSubmitting}>

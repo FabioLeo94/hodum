@@ -1,0 +1,13 @@
+.description {
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.submitError {
+  composes: submitError from "../../../shared/styles/modalForm.module.css";
+}
+
+.cancelButton {
+  composes: cancelButton from "../../../shared/styles/modalForm.module.css";
+}

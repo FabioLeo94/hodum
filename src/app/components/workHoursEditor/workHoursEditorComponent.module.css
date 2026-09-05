@@ -1,0 +1,73 @@
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-md);
+}
+
+.switch {
+  display: flex;
+  align-items: center;
+  gap: var(--m-sm);
+  align-self: flex-start;
+  cursor: pointer;
+}
+
+.switch:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+.switchTrack {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  border-radius: var(--radious-xl);
+  background-color: var(--bg-field);
+  transition: background-color 150ms ease;
+}
+
+.switch[aria-checked="true"] .switchTrack {
+  background-color: var(--bg-primary);
+}
+
+.switchThumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: var(--text-primary);
+  transition: transform 150ms ease;
+}
+
+.switch[aria-checked="true"] .switchThumb {
+  transform: translateX(16px);
+}
+
+.switchLabel {
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.groupLabel {
+  composes: fieldLabel from "../../../shared/styles/fieldBase.module.css";
+}
+
+.timeRow {
+  display: flex;
+  gap: var(--m-md);
+}
+
+.timeRow > * {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .switchTrack,
+  .switchThumb {
+    transition: none;
+  }
+}

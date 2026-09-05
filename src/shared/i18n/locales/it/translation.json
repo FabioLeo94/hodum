@@ -292,7 +292,11 @@
       "codiceFiscaleInvalid": "Il codice fiscale deve essere di 11 cifre o 16 caratteri alfanumerici.",
       "pecInvalid": "Inserire una PEC valida.",
       "loadError": "Impossibile caricare i dati aziendali.",
-      "saveError": "Impossibile salvare i dati aziendali."
+      "saveError": "Impossibile salvare i dati aziendali.",
+      "rateAndScheduleSectionTitle": "Tariffa e orari di lavoro",
+      "companyRateLabel": "Tariffa aziendale",
+      "workDaysLabel": "Giorni lavorativi",
+      "workHoursLabel": "Orario di lavoro"
     },
     "deleteCompanyModal": {
       "title": "Elimina azienda",
@@ -301,6 +305,35 @@
       "cancel": "Annulla",
       "description": "Stai per eliminare definitivamente «{{companyName}}»: dipendenti, progetti, task e commenti verranno rimossi insieme al tuo account owner. L'operazione non è reversibile.",
       "confirmationLabel": "Ridigita «{{companyName}}» per confermare"
+    },
+    "customersDrawer": {
+      "title": "Clienti",
+      "closeLabel": "Chiudi",
+      "backLabel": "Indietro",
+      "newCustomer": "Nuovo cliente",
+      "empty": "Nessun cliente registrato.",
+      "loadError": "Impossibile caricare i clienti.",
+      "createTitle": "Nuovo cliente",
+      "editTitle": "Modifica cliente",
+      "nameLabel": "Nome cliente",
+      "descriptionLabel": "Descrizione",
+      "rateLabel": "Tariffa cliente",
+      "nameRequired": "Il nome del cliente non può essere vuoto.",
+      "registeredOn": "Registrato il {{date}}",
+      "lastInvoicedOn": "Ultima fatturazione: {{date}}",
+      "neverInvoiced": "Mai fatturato",
+      "saving": "Salvataggio in corso...",
+      "save": "Salva",
+      "saveError": "Impossibile salvare il cliente.",
+      "delete": "Elimina cliente",
+      "deleteError": "Impossibile eliminare il cliente."
+    },
+    "deleteCustomerModal": {
+      "title": "Elimina cliente",
+      "submitting": "Eliminazione in corso...",
+      "confirm": "Elimina",
+      "cancel": "Annulla",
+      "warning": "Stai per eliminare definitivamente il cliente «{{customerName}}». L'operazione non è reversibile."
     },
     "backupHistoryItem": {
       "triggerLabels": {
@@ -389,6 +422,12 @@
       "triggerLabel": "Assegna dipendenti a {{taskTitle}}",
       "panelLabel": "Dipendenti assegnabili a {{taskTitle}}",
       "noEmployees": "Nessun dipendente disponibile"
+    },
+    "taskWorkTimer": {
+      "playLabel": "Imposta inizio lavorazione per {{taskTitle}}",
+      "pauseLabel": "Metti in pausa il timer di {{taskTitle}}",
+      "stopLabel": "Termina lavorazione di {{taskTitle}}",
+      "resetLabel": "Azzera il timer di {{taskTitle}}"
     },
     "taskDetailModal": {
       "title": "{{projectName}} · Dettaglio task",
@@ -524,9 +563,44 @@
       "rename": "Rinomina",
       "delete": "Elimina",
       "download": "Scarica..."
+    },
+    "rateInput": {
+      "unitLabel": "Unità tariffa",
+      "units": {
+        "oraria": "All'ora",
+        "giornaliera": "Al giorno",
+        "settimanale": "Alla settimana",
+        "mensile": "Al mese",
+        "annuale": "All'anno"
+      },
+      "scheduleHint": "Imposta giorni e orari di lavoro per calcolare tariffe non orarie."
+    },
+    "workDaysSelector": {
+      "groupLabel": "Giorni lavorativi",
+      "dayLabels": {
+        "lunedi": "Lunedì",
+        "martedi": "Martedì",
+        "mercoledi": "Mercoledì",
+        "giovedi": "Giovedì",
+        "venerdi": "Venerdì",
+        "sabato": "Sabato",
+        "domenica": "Domenica"
+      }
+    },
+    "workHoursEditor": {
+      "continuousLabel": "Continuativo",
+      "openingLabel": "Apertura",
+      "closingLabel": "Chiusura",
+      "morningLabel": "Fascia mattutina",
+      "morningStartLabel": "Inizio mattina",
+      "morningEndLabel": "Fine mattina",
+      "afternoonLabel": "Fascia pomeridiana",
+      "afternoonStartLabel": "Inizio pomeriggio",
+      "afternoonEndLabel": "Fine pomeriggio"
     }
   },
   "shared": {
+    "weekdaysShort": ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"],
     "taskStatus": {
       "group": {
         "progress": "In corso",
@@ -654,6 +728,10 @@
           "title": "Modifica dati aziendali",
           "description": "Nome, ragione sociale, P.IVA, codice fiscale, indirizzo e PEC della tua azienda."
         },
+        "customers": {
+          "title": "Clienti",
+          "description": "Gestisci l'anagrafica dei clienti: nome, descrizione e stato della fatturazione."
+        },
         "backup": {
           "title": "Backup",
           "description": "Gestisci i backup del database della tua azienda: frequenza, quanti conservarne e come nominarli."
@@ -690,6 +768,7 @@
       "statusUpdateError": "Impossibile aggiornare lo stato del task.",
       "priorityUpdateError": "Impossibile aggiornare la priorità del task.",
       "assigneesUpdateError": "Impossibile aggiornare gli assegnatari del task.",
+      "workTimerUpdateError": "Impossibile aggiornare il timer di lavorazione del task.",
       "dueDateUpdateError": "Impossibile aggiornare la scadenza del task.",
       "viewSwitchLabel": "Modalità di visualizzazione",
       "viewList": "Lista",
@@ -720,6 +799,7 @@
       "columnDescription": "Descrizione",
       "columnStatus": "Stato",
       "columnPriority": "Priorità",
+      "columnWorkTimer": "Timer",
       "columnAssignees": "Assegnatari",
       "dropHereToMove": "Rilascia qui per spostare il task",
       "noMatchingTasks": "Nessun task corrispondente ai filtri",

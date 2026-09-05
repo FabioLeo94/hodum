@@ -1,4 +1,9 @@
 export type TaskStatus = "completed" | "progress" | "review" | "rejected";
+
+// Le quattro azioni del timer di lavorazione (vedi Task.workStartedAt/
+// workAccumulatedSeconds/workEndedAt sotto): un comando applicato ai tre
+// campi work_* in base al loro valore attuale, non uno stato da impostare.
+export type WorkTimerAction = "start" | "pause" | "stop" | "reset";
 export interface Project {
   id: string;
   name: string;
@@ -21,6 +26,15 @@ export interface Task {
   // Stringa YYYY-MM-DD, o null se il task non ha una scadenza impostata.
   dueDate: string | null;
   assignees: TaskAssignee[];
+  // Timer di lavorazione (backend/src/models/task.ts): tre campi derivati,
+  // non uno stato esplicito. workStartedAt non-null solo mentre il timer sta
+  // girando; workAccumulatedSeconds somma i segmenti già chiusi da
+  // pausa/termina; workEndedAt è il timestamp dell'ultima terminazione
+  // (manuale o automatica su completed/rejected) e resta valorizzato finché
+  // non arriva un reset esplicito.
+  workStartedAt: string | null;
+  workAccumulatedSeconds: number;
+  workEndedAt: string | null;
 }
 
 // Usato solo dalla vista calendario aggregata della dashboard (getAllCompanyTasks):

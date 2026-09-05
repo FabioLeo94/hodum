@@ -8,12 +8,12 @@ const mockProject: Project = {
   id: "1",
   name: "Progetto Demo",
   tasks: [
-    { id: "t1", title: "Task 1", description: "desc 1", status: "completed", priority: 5, dueDate: null, assignees: [] },
-    { id: "t2", title: "Task 2", description: "desc 2", status: "completed", priority: 5, dueDate: null, assignees: [] },
-    { id: "t3", title: "Task 3", description: "desc 3", status: "progress", priority: 5, dueDate: null, assignees: [] },
-    { id: "t4", title: "Task 4", description: "desc 4", status: "progress", priority: 5, dueDate: null, assignees: [] },
-    { id: "t5", title: "Task 5", description: "desc 5", status: "review", priority: 5, dueDate: null, assignees: [] },
-    { id: "t6", title: "Task 6", description: "desc 6", status: "review", priority: 5, dueDate: null, assignees: [] },
+    { id: "t1", title: "Task 1", description: "desc 1", status: "completed", priority: 5, dueDate: null, assignees: [], workStartedAt: null, workAccumulatedSeconds: 0, workEndedAt: null },
+    { id: "t2", title: "Task 2", description: "desc 2", status: "completed", priority: 5, dueDate: null, assignees: [], workStartedAt: null, workAccumulatedSeconds: 0, workEndedAt: null },
+    { id: "t3", title: "Task 3", description: "desc 3", status: "progress", priority: 5, dueDate: null, assignees: [], workStartedAt: null, workAccumulatedSeconds: 0, workEndedAt: null },
+    { id: "t4", title: "Task 4", description: "desc 4", status: "progress", priority: 5, dueDate: null, assignees: [], workStartedAt: null, workAccumulatedSeconds: 0, workEndedAt: null },
+    { id: "t5", title: "Task 5", description: "desc 5", status: "review", priority: 5, dueDate: null, assignees: [], workStartedAt: null, workAccumulatedSeconds: 0, workEndedAt: null },
+    { id: "t6", title: "Task 6", description: "desc 6", status: "review", priority: 5, dueDate: null, assignees: [], workStartedAt: null, workAccumulatedSeconds: 0, workEndedAt: null },
   ],
 };
 

@@ -1,0 +1,63 @@
+/* Badge compatto (tempo + bottoni icona) pensato per convivere sia in una
+   cella di tabella (colonna Timer di taskList.tsx) sia nel footer di una
+   card kanban: nessuna larghezza fissa, si adatta al contenitore. */
+.timer {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--m-sm);
+  min-width: 0;
+}
+
+.time {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--m-xs);
+}
+
+.actionButton,
+.actionButtonDanger {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radious-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.actionButton:hover {
+  background-color: var(--bg-field);
+  color: var(--text-primary);
+}
+
+.actionButtonDanger:hover {
+  background-color: color-mix(in srgb, var(--color-danger) 18%, transparent);
+  color: var(--color-danger);
+}
+
+.actionButton:focus-visible,
+.actionButtonDanger:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .actionButton,
+  .actionButtonDanger {
+    transition: none;
+  }
+}

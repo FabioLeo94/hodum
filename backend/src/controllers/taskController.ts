@@ -8,6 +8,7 @@ import {
   isValidDueDate,
   isValidPriority,
   isValidTaskStatus,
+  isValidWorkTimerAction,
   listTasksByProject,
   ProjectNotFoundError,
   setTaskAssignees,
@@ -15,6 +16,8 @@ import {
   updateTask,
   updateTaskPriority,
   updateTaskStatus,
+  updateTaskWorkTimer,
+  type WorkTimerAction,
 } from '../services/taskService';
 import { assertProjectAccessible } from '../services/projectAssignmentService';
 import { UserNotFoundError } from '../services/userService';
@@ -41,6 +44,10 @@ export interface UpdateTaskStatusRequest {
 
 export interface UpdateTaskPriorityRequest {
   priority: number;
+}
+
+export interface UpdateTaskWorkTimerRequest {
+  action: WorkTimerAction;
 }
 
 export interface UpdateTaskRequest {
@@ -210,6 +217,34 @@ export class TaskController extends Controller {
     try {
       await assertProjectAccessible(projectId, user);
       return await updateTaskPriority(projectId, taskId, body.priority, user.companyId);
+    } catch (err) {
+      if (err instanceof TaskNotFoundError || err instanceof ProjectNotFoundError) {
+        this.setStatus(404);
+        return { message: err.message };
+      }
+      throw err;
+    }
+  }
+
+  @Patch('{projectId}/tasks/{taskId}/work-timer')
+  @Security('jwt')
+  @Response<TaskErrorResponse>(404, 'Project o task non trovato')
+  @Response<TaskErrorResponse>(422, 'action non valida')
+  public async updateTaskWorkTimer(
+    @Path() projectId: string,
+    @Path() taskId: string,
+    @Body() body: UpdateTaskWorkTimerRequest,
+    @Request() request: ExRequest,
+  ): Promise<Task | TaskErrorResponse> {
+    if (!isValidWorkTimerAction(body.action)) {
+      this.setStatus(422);
+      return { message: "action deve essere 'start', 'pause', 'stop' o 'reset'" };
+    }
+
+    const user = getAuthenticatedUser(request);
+    try {
+      await assertProjectAccessible(projectId, user);
+      return await updateTaskWorkTimer(projectId, taskId, body.action, user.companyId);
     } catch (err) {
       if (err instanceof TaskNotFoundError || err instanceof ProjectNotFoundError) {
         this.setStatus(404);

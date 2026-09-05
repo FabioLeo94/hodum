@@ -28,6 +28,15 @@ export interface Task {
   // Assegnazione many-to-many (task_assignments): ordinati per username,
   // stesso ordine della query bulk in taskService.ts.
   assignees: TaskAssignee[];
+  // Timer di lavorazione (migration 0031): tre campi derivati, non uno stato
+  // esplicito. workStartedAt non-null solo mentre il timer sta girando;
+  // workAccumulatedSeconds somma i segmenti già chiusi da pausa/termina;
+  // workEndedAt è il timestamp dell'ultima terminazione (manuale o
+  // automatica su completed/rejected, vedi updateTaskStatus in
+  // taskService.ts) e resta valorizzato finché non arriva un reset esplicito.
+  workStartedAt: string | null;
+  workAccumulatedSeconds: number;
+  workEndedAt: string | null;
 }
 
 // Usato solo dall'endpoint aggregato GET /tasks (companyTasksController.ts):

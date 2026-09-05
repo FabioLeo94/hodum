@@ -301,23 +301,27 @@
    scadenza, quindi vive dentro .titleCell e occupa solo lo spazio del
    simbolo stesso. */
 .colTitle {
-  width: 24%;
+  width: 22%;
 }
 
 .colDescription {
-  width: 32%;
+  width: 28%;
 }
 
 .colStatus {
-  width: 15%;
+  width: 13%;
 }
 
 .colPriority {
-  width: 15%;
+  width: 13%;
+}
+
+.colWorkTimer {
+  width: 12%;
 }
 
 .colAssignees {
-  width: 14%;
+  width: 12%;
 }
 
 .groupHeaderCell {

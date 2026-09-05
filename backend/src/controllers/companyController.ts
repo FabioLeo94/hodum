@@ -1,7 +1,7 @@
 import type { Request as ExRequest } from 'express';
 import { Body, Controller, Delete, Get, Path, Post, Put, Request, Response, Route, Security, SuccessResponse } from 'tsoa';
 import { getAuthenticatedUser } from '../middleware/authentication';
-import type { Company } from '../models/company';
+import type { Company, RateUnit } from '../models/company';
 import type { User } from '../models/user';
 import {
   createEmployee,
@@ -26,6 +26,12 @@ import { isValidEmail, isValidPassword, PASSWORD_POLICY_MESSAGE } from '../utils
 // sbagliati prima che finiscano su un documento fiscale.
 const PIVA_REGEX = /^\d{11}$/;
 const CODICE_FISCALE_REGEX = /^(\d{11}|[A-Za-z0-9]{16})$/;
+// Formato orario accettato per inizio1/fine1/inizio2/fine2: "HH:mm", stesso
+// formato in cui il service normalizza le colonne time in lettura
+// (companyService.normalizeTime).
+const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
+// Stessi 5 valori del CHECK su companies.tariffa_unita (migration 0033).
+const RATE_UNITS: RateUnit[] = ['oraria', 'giornaliera', 'settimanale', 'mensile', 'annuale'];
 
 // Nome distinto dagli omonimi "ErrorResponse" degli altri controller: tsoa
 // risolve i modelli per nome dell'interfaccia a livello globale (non per
@@ -85,6 +91,26 @@ export interface UpdateCompanyRequest {
   codiceFiscale?: string | null;
   indirizzo?: string | null;
   pec?: string | null;
+  // Se assente/null: nessuna tariffa impostata, tariffaUnita viene forzato a
+  // null indipendentemente da cosa arriva nel body (vedi updateCompany sotto).
+  tariffaOraria?: number | null;
+  tariffaUnita?: RateUnit | null;
+  giorniLavorativi?: {
+    lunedi: boolean;
+    martedi: boolean;
+    mercoledi: boolean;
+    giovedi: boolean;
+    venerdi: boolean;
+    sabato: boolean;
+    domenica: boolean;
+  };
+  orarioLavoro?: {
+    continuativo: boolean;
+    inizio1: string | null;
+    fine1: string | null;
+    inizio2: string | null;
+    fine2: string | null;
+  };
 }
 
 export interface CreateEmployeeRequest {
@@ -328,7 +354,10 @@ export class CompanyController extends Controller {
   @Put('{id}')
   @Security('owner')
   @Response<CompanyErrorResponse>(404, 'Company non trovata')
-  @Response<CompanyErrorResponse>(422, 'name, piva, codiceFiscale o pec non validi')
+  @Response<CompanyErrorResponse>(
+    422,
+    'name, piva, codiceFiscale, pec, tariffaOraria, tariffaUnita o orarioLavoro non validi',
+  )
   public async updateCompany(
     @Path() id: string,
     @Body() body: UpdateCompanyRequest,
@@ -360,6 +389,91 @@ export class CompanyController extends Controller {
       return { message: 'pec non valida' };
     }
 
+    // Accoppiamento tariffaOraria/tariffaUnita: niente unità senza un valore
+    // (forzata a null), default 'oraria' se il valore c'è ma l'unità manca
+    // (vedi CLAUDE.md/task: la conversione tra unità è calcolo frontend, qui
+    // si valida solo la coppia canonica).
+    if (
+      body.tariffaOraria !== undefined &&
+      body.tariffaOraria !== null &&
+      (typeof body.tariffaOraria !== 'number' || Number.isNaN(body.tariffaOraria) || body.tariffaOraria < 0)
+    ) {
+      this.setStatus(422);
+      return { message: 'tariffaOraria deve essere un numero maggiore o uguale a 0' };
+    }
+    const tariffaOraria = body.tariffaOraria ?? null;
+    let tariffaUnita: RateUnit | null = null;
+    if (tariffaOraria !== null) {
+      tariffaUnita = body.tariffaUnita ?? 'oraria';
+      if (!RATE_UNITS.includes(tariffaUnita)) {
+        this.setStatus(422);
+        return { message: `tariffaUnita deve essere una tra: ${RATE_UNITS.join(', ')}` };
+      }
+    }
+
+    // Assente = nessun giorno lavorativo impostato, coerente col default
+    // false della migration: un PUT che non lo invia azzera i giorni già
+    // impostati, stesso comportamento "rappresentazione intera" già in uso
+    // per ragioneSociale/piva/ecc. sopra.
+    const giorniLavorativi = body.giorniLavorativi ?? {
+      lunedi: false,
+      martedi: false,
+      mercoledi: false,
+      giovedi: false,
+      venerdi: false,
+      sabato: false,
+      domenica: false,
+    };
+
+    // Assente = fascia unica non impostata, coerente col DEFAULT della
+    // migration (orario_continuativo true, ore tutte NULL).
+    const orarioLavoroInput = body.orarioLavoro ?? {
+      continuativo: true,
+      inizio1: null,
+      fine1: null,
+      inizio2: null,
+      fine2: null,
+    };
+    if (orarioLavoroInput.inizio1 !== null && !TIME_REGEX.test(orarioLavoroInput.inizio1)) {
+      this.setStatus(422);
+      return { message: 'orarioLavoro.inizio1 deve essere nel formato HH:mm' };
+    }
+    if (orarioLavoroInput.fine1 !== null && !TIME_REGEX.test(orarioLavoroInput.fine1)) {
+      this.setStatus(422);
+      return { message: 'orarioLavoro.fine1 deve essere nel formato HH:mm' };
+    }
+    if (
+      orarioLavoroInput.inizio1 !== null &&
+      orarioLavoroInput.fine1 !== null &&
+      orarioLavoroInput.fine1 <= orarioLavoroInput.inizio1
+    ) {
+      this.setStatus(422);
+      return { message: 'orarioLavoro.fine1 deve essere successivo a orarioLavoro.inizio1' };
+    }
+
+    // inizio2/fine2 non sono significative quando continuativo è true: si
+    // azzerano a prescindere da cosa arriva nel body, non si valida un dato
+    // che verrà comunque scartato.
+    let inizio2 = orarioLavoroInput.inizio2;
+    let fine2 = orarioLavoroInput.fine2;
+    if (orarioLavoroInput.continuativo) {
+      inizio2 = null;
+      fine2 = null;
+    } else {
+      if (inizio2 !== null && !TIME_REGEX.test(inizio2)) {
+        this.setStatus(422);
+        return { message: 'orarioLavoro.inizio2 deve essere nel formato HH:mm' };
+      }
+      if (fine2 !== null && !TIME_REGEX.test(fine2)) {
+        this.setStatus(422);
+        return { message: 'orarioLavoro.fine2 deve essere nel formato HH:mm' };
+      }
+      if (inizio2 !== null && fine2 !== null && fine2 <= inizio2) {
+        this.setStatus(422);
+        return { message: 'orarioLavoro.fine2 deve essere successivo a orarioLavoro.inizio2' };
+      }
+    }
+
     const updated = await updateCompany(id, {
       name: body.name.trim(),
       ragioneSociale: body.ragioneSociale?.trim() || null,
@@ -367,6 +481,16 @@ export class CompanyController extends Controller {
       codiceFiscale,
       indirizzo: body.indirizzo?.trim() || null,
       pec,
+      tariffaOraria,
+      tariffaUnita,
+      giorniLavorativi,
+      orarioLavoro: {
+        continuativo: orarioLavoroInput.continuativo,
+        inizio1: orarioLavoroInput.inizio1,
+        fine1: orarioLavoroInput.fine1,
+        inizio2,
+        fine2,
+      },
     });
     return updated;
   }

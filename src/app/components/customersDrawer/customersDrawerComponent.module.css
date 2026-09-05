@@ -1,0 +1,242 @@
+/* Stessa struttura overlay modale di editCompanyDrawerComponent.module.css/
+   backupSettingsDrawerComponent.module.css (backdrop cliccabile + Escape
+   gestito nel componente): non esiste ancora una base condivisa per i
+   drawer, duplicata qui per lo stesso motivo per cui lo era già in quei file. */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+  background-color: rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+}
+
+.panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-lg);
+  width: min(420px, 100vw);
+  height: 100vh;
+  padding: var(--p-xl);
+  background-color: var(--bg-surface);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  transform: translateX(100%);
+  transition: transform 260ms ease;
+}
+
+.panel[data-open="true"] {
+  transform: translateX(0);
+}
+
+.header {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--m-sm);
+}
+
+.title {
+  color: var(--text-primary);
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.closeButton {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radious-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.closeButton:hover {
+  background-color: var(--bg-field);
+  color: var(--text-primary);
+}
+
+.closeButton:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+/* Le due "viste" (lista/form) sono due pannelli fratelli larghi ciascuno il
+   50% di .track (200% del viewport): passare da list a form è solo un
+   translateX(-50%) su .track, senza smontare/rimontare nessuno dei due. */
+.viewport {
+  flex: 1;
+  overflow: hidden auto;
+}
+
+.track {
+  display: flex;
+  width: 200%;
+  height: 100%;
+  transition: transform 260ms ease;
+}
+
+.track[data-view="form"] {
+  transform: translateX(-50%);
+}
+
+.pane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-lg);
+  width: 50%;
+  flex-shrink: 0;
+  min-width: 0;
+  padding-right: var(--p-sm);
+}
+
+.hint {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.errorBanner {
+  padding: var(--p-sm) var(--p-md);
+  border-left: 3px solid var(--color-danger);
+  border-radius: var(--radious-sm);
+  background-color: var(--bg-field);
+  /* Stesso schiarimento all'86% verso il bianco già usato in
+     editCompanyDrawerComponent.module.css per la stessa combinazione di
+     colori, per restare sopra la soglia AA 4.5:1. */
+  color: color-mix(in srgb, var(--color-danger) 86%, white);
+  font-size: 0.8rem;
+}
+
+.listHeader {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.customerList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-md);
+  list-style: none;
+}
+
+.customerCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-xs);
+  width: 100%;
+  padding: var(--p-md) var(--p-lg);
+  border: 1px solid transparent;
+  border-radius: var(--radious-md);
+  background-color: var(--bg-field);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 150ms ease;
+}
+
+.customerCard:hover {
+  border-color: var(--bg-primary);
+}
+
+.customerCard:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+.customerName {
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.customerDescription {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.customerMeta {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.formHeader {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--m-sm);
+}
+
+.backButton {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radious-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.backButton:hover {
+  background-color: var(--bg-field);
+  color: var(--text-primary);
+}
+
+.backButton:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+.formTitle {
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-md);
+}
+
+.deleteLink {
+  align-self: flex-start;
+  color: var(--color-danger);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.deleteLink:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel,
+  .track,
+  .closeButton,
+  .backButton,
+  .customerCard {
+    transition: none;
+  }
+}

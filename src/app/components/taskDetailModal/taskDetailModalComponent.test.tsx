@@ -33,6 +33,9 @@ const task: TaskWithProject = {
   priority: 3,
   dueDate: "2026-09-10",
   assignees: [{ id: "user-1", username: "mario" }],
+  workStartedAt: null,
+  workAccumulatedSeconds: 0,
+  workEndedAt: null,
 };
 
 describe("TaskDetailModalComponent", () => {

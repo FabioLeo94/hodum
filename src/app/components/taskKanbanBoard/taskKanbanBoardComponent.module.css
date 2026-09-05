@@ -222,6 +222,16 @@
   margin-top: var(--m-xs);
 }
 
+/* "Al fondo della card" (richiesta esplicita): riga propria sotto
+   cardFooter, non un elemento in più dentro la stessa riga di stato/priorità/
+   assegnatari. */
+.cardWorkTimer {
+  display: flex;
+  padding-top: var(--m-xs);
+  border-top: 1px solid var(--bg-field);
+  margin-top: var(--m-xs);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .column,
   .card,

@@ -1,0 +1,42 @@
+.days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--m-sm);
+}
+
+.dayPill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  padding: var(--p-sm) var(--p-md);
+  border-radius: var(--radious-md);
+  background-color: var(--bg-field);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.dayPill:hover {
+  background-color: color-mix(in srgb, var(--bg-field) 85%, white 15%);
+}
+
+.dayPill:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+.dayPill[aria-pressed="true"] {
+  background-color: var(--bg-primary);
+  color: var(--text-on-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dayPill {
+    transition: none;
+  }
+}

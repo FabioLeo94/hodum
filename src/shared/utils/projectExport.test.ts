@@ -14,6 +14,9 @@ const project: Project = {
       priority: 3,
       dueDate: "2026-01-01",
       assignees: [{ id: "u1", username: "mario" }],
+      workStartedAt: null,
+      workAccumulatedSeconds: 0,
+      workEndedAt: null,
     },
   ],
 };

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { DatabaseError } from 'pg';
 import { pool } from '../db/pool';
-import type { Company } from '../models/company';
+import type { Company, RateUnit, WorkDays, WorkHours } from '../models/company';
 import type { User } from '../models/user';
 import { generateRecoveryCode, normalizeRecoveryCode } from '../utils/recoveryCode';
 import { generateTemporaryPassword } from '../utils/temporaryPassword';
@@ -26,6 +26,25 @@ interface CompanyRow {
   codice_fiscale: string | null;
   indirizzo: string | null;
   pec: string | null;
+  // numeric in pg torna come stringa dal driver (nessun parser custom
+  // registrato per OID 1700), va convertito con Number(...) in toCompany:
+  // lasciarla stringa romperebbe qualsiasi calcolo lato frontend.
+  tariffa_oraria: string | null;
+  tariffa_unita: RateUnit | null;
+  lavora_lunedi: boolean;
+  lavora_martedi: boolean;
+  lavora_mercoledi: boolean;
+  lavora_giovedi: boolean;
+  lavora_venerdi: boolean;
+  lavora_sabato: boolean;
+  lavora_domenica: boolean;
+  orario_continuativo: boolean;
+  // time in pg torna come stringa "HH:mm:ss": troncata a "HH:mm" in
+  // toCompany (vedi normalizeTime sotto).
+  ora_inizio_1: string | null;
+  ora_fine_1: string | null;
+  ora_inizio_2: string | null;
+  ora_fine_2: string | null;
   created_at: Date;
 }
 
@@ -33,7 +52,18 @@ interface CompanyRow {
 // restituire un CompanyRow completo (via toCompany) la riusa, invece di
 // ripetere l'elenco colonne a rischio di disallineamento.
 export const COMPANY_COLUMNS =
-  'id, name, owner_id, ragione_sociale, piva, codice_fiscale, indirizzo, pec, created_at';
+  'id, name, owner_id, ragione_sociale, piva, codice_fiscale, indirizzo, pec, ' +
+  'tariffa_oraria, tariffa_unita, ' +
+  'lavora_lunedi, lavora_martedi, lavora_mercoledi, lavora_giovedi, lavora_venerdi, lavora_sabato, lavora_domenica, ' +
+  'orario_continuativo, ora_inizio_1, ora_fine_1, ora_inizio_2, ora_fine_2, ' +
+  'created_at';
+
+// Il driver pg restituisce le colonne time come "HH:mm:ss": qui si tronca ai
+// minuti, formato concordato con il frontend per input/visualizzazione.
+// null passa invariato (nessuna fascia impostata).
+function normalizeTime(value: string | null): string | null {
+  return value === null ? null : value.slice(0, 5);
+}
 
 function toCompany(row: CompanyRow): Company {
   return {
@@ -45,6 +75,24 @@ function toCompany(row: CompanyRow): Company {
     codiceFiscale: row.codice_fiscale,
     indirizzo: row.indirizzo,
     pec: row.pec,
+    tariffaOraria: row.tariffa_oraria === null ? null : Number(row.tariffa_oraria),
+    tariffaUnita: row.tariffa_unita,
+    giorniLavorativi: {
+      lunedi: row.lavora_lunedi,
+      martedi: row.lavora_martedi,
+      mercoledi: row.lavora_mercoledi,
+      giovedi: row.lavora_giovedi,
+      venerdi: row.lavora_venerdi,
+      sabato: row.lavora_sabato,
+      domenica: row.lavora_domenica,
+    },
+    orarioLavoro: {
+      continuativo: row.orario_continuativo,
+      inizio1: normalizeTime(row.ora_inizio_1),
+      fine1: normalizeTime(row.ora_fine_1),
+      inizio2: normalizeTime(row.ora_inizio_2),
+      fine2: normalizeTime(row.ora_fine_2),
+    },
     createdAt: row.created_at.toISOString(),
   };
 }
@@ -150,6 +198,14 @@ export interface UpdateCompanyInput {
   codiceFiscale: string | null;
   indirizzo: string | null;
   pec: string | null;
+  // Accoppiamento (tariffaUnita null se tariffaOraria è null, default
+  // 'oraria' altrimenti) già applicato dal controller: il service scrive
+  // quello che riceve senza rivalidare.
+  tariffaOraria: number | null;
+  tariffaUnita: RateUnit | null;
+  giorniLavorativi: WorkDays;
+  // inizio2/fine2 già azzerati dal controller se continuativo è true.
+  orarioLavoro: WorkHours;
 }
 
 // Nessun controllo "riga trovata" separato: il chiamante (companyController)
@@ -159,10 +215,36 @@ export interface UpdateCompanyInput {
 export async function updateCompany(id: string, input: UpdateCompanyInput): Promise<Company> {
   const result = await pool.query<CompanyRow>(
     `UPDATE companies
-     SET name = $2, ragione_sociale = $3, piva = $4, codice_fiscale = $5, indirizzo = $6, pec = $7
+     SET name = $2, ragione_sociale = $3, piva = $4, codice_fiscale = $5, indirizzo = $6, pec = $7,
+         tariffa_oraria = $8, tariffa_unita = $9,
+         lavora_lunedi = $10, lavora_martedi = $11, lavora_mercoledi = $12, lavora_giovedi = $13,
+         lavora_venerdi = $14, lavora_sabato = $15, lavora_domenica = $16,
+         orario_continuativo = $17, ora_inizio_1 = $18, ora_fine_1 = $19, ora_inizio_2 = $20, ora_fine_2 = $21
      WHERE id = $1
      RETURNING ${COMPANY_COLUMNS}`,
-    [id, input.name, input.ragioneSociale, input.piva, input.codiceFiscale, input.indirizzo, input.pec],
+    [
+      id,
+      input.name,
+      input.ragioneSociale,
+      input.piva,
+      input.codiceFiscale,
+      input.indirizzo,
+      input.pec,
+      input.tariffaOraria,
+      input.tariffaUnita,
+      input.giorniLavorativi.lunedi,
+      input.giorniLavorativi.martedi,
+      input.giorniLavorativi.mercoledi,
+      input.giorniLavorativi.giovedi,
+      input.giorniLavorativi.venerdi,
+      input.giorniLavorativi.sabato,
+      input.giorniLavorativi.domenica,
+      input.orarioLavoro.continuativo,
+      input.orarioLavoro.inizio1,
+      input.orarioLavoro.fine1,
+      input.orarioLavoro.inizio2,
+      input.orarioLavoro.fine2,
+    ],
   );
   return toCompany(result.rows[0]);
 }

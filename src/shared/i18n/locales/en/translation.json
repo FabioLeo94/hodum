@@ -292,7 +292,11 @@
       "codiceFiscaleInvalid": "The tax code must be 11 digits or 16 alphanumeric characters.",
       "pecInvalid": "Enter a valid certified email address (PEC).",
       "loadError": "Unable to load company data.",
-      "saveError": "Unable to save company data."
+      "saveError": "Unable to save company data.",
+      "rateAndScheduleSectionTitle": "Rate and work schedule",
+      "companyRateLabel": "Company rate",
+      "workDaysLabel": "Work days",
+      "workHoursLabel": "Work hours"
     },
     "deleteCompanyModal": {
       "title": "Delete company",
@@ -301,6 +305,35 @@
       "cancel": "Cancel",
       "description": "You are about to permanently delete “{{companyName}}”: employees, projects, tasks and comments will be removed along with your owner account. This action cannot be undone.",
       "confirmationLabel": "Type “{{companyName}}” to confirm"
+    },
+    "customersDrawer": {
+      "title": "Customers",
+      "closeLabel": "Close",
+      "backLabel": "Back",
+      "newCustomer": "New customer",
+      "empty": "No customers registered yet.",
+      "loadError": "Unable to load customers.",
+      "createTitle": "New customer",
+      "editTitle": "Edit customer",
+      "nameLabel": "Customer name",
+      "descriptionLabel": "Description",
+      "rateLabel": "Customer rate",
+      "nameRequired": "The customer name cannot be empty.",
+      "registeredOn": "Registered on {{date}}",
+      "lastInvoicedOn": "Last invoiced: {{date}}",
+      "neverInvoiced": "Never invoiced",
+      "saving": "Saving...",
+      "save": "Save",
+      "saveError": "Unable to save the customer.",
+      "delete": "Delete customer",
+      "deleteError": "Unable to delete the customer."
+    },
+    "deleteCustomerModal": {
+      "title": "Delete customer",
+      "submitting": "Deleting...",
+      "confirm": "Delete",
+      "cancel": "Cancel",
+      "warning": "You are about to permanently delete the customer “{{customerName}}”. This action cannot be undone."
     },
     "backupHistoryItem": {
       "triggerLabels": {
@@ -389,6 +422,12 @@
       "triggerLabel": "Assign employees to {{taskTitle}}",
       "panelLabel": "Employees assignable to {{taskTitle}}",
       "noEmployees": "No employees available"
+    },
+    "taskWorkTimer": {
+      "playLabel": "Set work start for {{taskTitle}}",
+      "pauseLabel": "Pause the timer for {{taskTitle}}",
+      "stopLabel": "End work on {{taskTitle}}",
+      "resetLabel": "Reset the timer for {{taskTitle}}"
     },
     "taskDetailModal": {
       "title": "{{projectName}} · Task detail",
@@ -524,9 +563,44 @@
       "rename": "Rename",
       "delete": "Delete",
       "download": "Download..."
+    },
+    "rateInput": {
+      "unitLabel": "Rate unit",
+      "units": {
+        "oraria": "Per hour",
+        "giornaliera": "Per day",
+        "settimanale": "Per week",
+        "mensile": "Per month",
+        "annuale": "Per year"
+      },
+      "scheduleHint": "Set work days and hours to calculate non-hourly rates."
+    },
+    "workDaysSelector": {
+      "groupLabel": "Work days",
+      "dayLabels": {
+        "lunedi": "Monday",
+        "martedi": "Tuesday",
+        "mercoledi": "Wednesday",
+        "giovedi": "Thursday",
+        "venerdi": "Friday",
+        "sabato": "Saturday",
+        "domenica": "Sunday"
+      }
+    },
+    "workHoursEditor": {
+      "continuousLabel": "Continuous",
+      "openingLabel": "Opening",
+      "closingLabel": "Closing",
+      "morningLabel": "Morning shift",
+      "morningStartLabel": "Morning start",
+      "morningEndLabel": "Morning end",
+      "afternoonLabel": "Afternoon shift",
+      "afternoonStartLabel": "Afternoon start",
+      "afternoonEndLabel": "Afternoon end"
     }
   },
   "shared": {
+    "weekdaysShort": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
     "taskStatus": {
       "group": {
         "progress": "In progress",
@@ -654,6 +728,10 @@
           "title": "Edit company details",
           "description": "Your company's name, legal name, VAT number, tax code, address and certified email (PEC)."
         },
+        "customers": {
+          "title": "Customers",
+          "description": "Manage your customer records: name, description and invoicing status."
+        },
         "backup": {
           "title": "Backup",
           "description": "Manage your company's database backups: frequency, how many to keep and how to name them."
@@ -690,6 +768,7 @@
       "statusUpdateError": "Unable to update the task's status.",
       "priorityUpdateError": "Unable to update the task's priority.",
       "assigneesUpdateError": "Unable to update the task's assignees.",
+      "workTimerUpdateError": "Unable to update the task's work timer.",
       "dueDateUpdateError": "Unable to update the task's due date.",
       "viewSwitchLabel": "Display mode",
       "viewList": "List",
@@ -720,6 +799,7 @@
       "columnDescription": "Description",
       "columnStatus": "Status",
       "columnPriority": "Priority",
+      "columnWorkTimer": "Timer",
       "columnAssignees": "Assignees",
       "dropHereToMove": "Drop here to move the task",
       "noMatchingTasks": "No task matches the filters",

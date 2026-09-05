@@ -12,6 +12,9 @@ interface TaskEventDto {
   priority: number;
   dueDate: string | null;
   assignees: TaskAssignee[];
+  workStartedAt: string | null;
+  workAccumulatedSeconds: number;
+  workEndedAt: string | null;
 }
 
 interface ProjectEventDto {
@@ -101,6 +104,9 @@ function toTask(dto: TaskEventDto): Task {
     priority: dto.priority,
     dueDate: dto.dueDate ?? null,
     assignees: dto.assignees,
+    workStartedAt: dto.workStartedAt,
+    workAccumulatedSeconds: dto.workAccumulatedSeconds,
+    workEndedAt: dto.workEndedAt,
   };
 }
 

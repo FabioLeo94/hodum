@@ -1,6 +1,24 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createEmployee, updateCompany } from "./companyService";
 import { AUTH_TOKEN_KEY } from "../auth/authService";
+import type { WorkDays, WorkHours } from "../../../shared/utils/rateConversion";
+
+const NO_WORK_DAYS: WorkDays = {
+  lunedi: false,
+  martedi: false,
+  mercoledi: false,
+  giovedi: false,
+  venerdi: false,
+  sabato: false,
+  domenica: false,
+};
+const NO_WORK_HOURS: WorkHours = {
+  continuativo: true,
+  inizio1: null,
+  fine1: null,
+  inizio2: null,
+  fine2: null,
+};
 
 function jsonResponse(status: number, body: unknown = {}): Response {
   return {
@@ -92,6 +110,10 @@ const updatedCompany = {
   codiceFiscale: "12345678901",
   indirizzo: "Via Roma 1, Milano",
   pec: "azienda@pec.it",
+  tariffaOraria: null,
+  tariffaUnita: null,
+  giorniLavorativi: NO_WORK_DAYS,
+  orarioLavoro: NO_WORK_HOURS,
   createdAt: "2026-01-01T00:00:00.000Z",
 };
 
@@ -117,6 +139,10 @@ describe("companyService.updateCompany", () => {
       codiceFiscale: "12345678901",
       indirizzo: "Via Roma 1, Milano",
       pec: "azienda@pec.it",
+      tariffaOraria: null,
+      tariffaUnita: null,
+      giorniLavorativi: NO_WORK_DAYS,
+      orarioLavoro: NO_WORK_HOURS,
     };
 
     await expect(updateCompany("10", input)).resolves.toEqual(updatedCompany);
@@ -144,6 +170,10 @@ describe("companyService.updateCompany", () => {
         codiceFiscale: null,
         indirizzo: null,
         pec: null,
+        tariffaOraria: null,
+        tariffaUnita: null,
+        giorniLavorativi: NO_WORK_DAYS,
+        orarioLavoro: NO_WORK_HOURS,
       }),
     ).rejects.toThrow("piva deve essere composta da 11 cifre");
   });
@@ -159,6 +189,10 @@ describe("companyService.updateCompany", () => {
         codiceFiscale: null,
         indirizzo: null,
         pec: null,
+        tariffaOraria: null,
+        tariffaUnita: null,
+        giorniLavorativi: NO_WORK_DAYS,
+        orarioLavoro: NO_WORK_HOURS,
       }),
     ).rejects.toThrow("Impossibile salvare i dati aziendali.");
   });

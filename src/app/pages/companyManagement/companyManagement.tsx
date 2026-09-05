@@ -1,11 +1,12 @@
 import { Fragment, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
-import { Building2, DatabaseBackup, Download, TriangleAlert } from "lucide-react";
+import { Building2, DatabaseBackup, Download, TriangleAlert, Users } from "lucide-react";
 import TopbarComponent from "../../components/topbar/topbarComponent";
 import ManagementCardComponent from "../../components/managementCard/managementCardComponent";
 import BackupSettingsDrawerComponent from "../../components/backupSettingsDrawer/backupSettingsDrawerComponent";
 import EditCompanyDrawerComponent from "../../components/editCompanyDrawer/editCompanyDrawerComponent";
+import CustomersDrawerComponent from "../../components/customersDrawer/customersDrawerComponent";
 import DeleteCompanyModalComponent from "../../components/deleteCompanyModal/deleteCompanyModalComponent";
 import { getUser, isAuthenticated, logout, useAuthUser } from "../../services/auth/authService";
 import {
@@ -31,6 +32,7 @@ function CompanyManagement() {
 
   const [isBackupDrawerOpen, setIsBackupDrawerOpen] = useState(false);
   const [isEditCompanyDrawerOpen, setIsEditCompanyDrawerOpen] = useState(false);
+  const [isCustomersDrawerOpen, setIsCustomersDrawerOpen] = useState(false);
   const [exportError, setExportError] = useState("");
   const [isDeleteCompanyModalOpen, setIsDeleteCompanyModalOpen] = useState(false);
   const [deleteCompanyError, setDeleteCompanyError] = useState("");
@@ -131,6 +133,12 @@ function CompanyManagement() {
               onClick={() => setIsEditCompanyDrawerOpen(true)}
             />
             <ManagementCardComponent
+              icon={<Users size={26} strokeWidth={2} aria-hidden="true" />}
+              title={t("pages.companyManagement.cards.customers.title")}
+              description={t("pages.companyManagement.cards.customers.description")}
+              onClick={() => setIsCustomersDrawerOpen(true)}
+            />
+            <ManagementCardComponent
               icon={<DatabaseBackup size={26} strokeWidth={2} aria-hidden="true" />}
               title={t("pages.companyManagement.cards.backup.title")}
               description={t("pages.companyManagement.cards.backup.description")}
@@ -174,6 +182,13 @@ function CompanyManagement() {
         <EditCompanyDrawerComponent
           isOpen={isEditCompanyDrawerOpen}
           onClose={() => setIsEditCompanyDrawerOpen(false)}
+          companyId={companyId}
+        />
+      )}
+      {companyId && (
+        <CustomersDrawerComponent
+          isOpen={isCustomersDrawerOpen}
+          onClose={() => setIsCustomersDrawerOpen(false)}
           companyId={companyId}
         />
       )}

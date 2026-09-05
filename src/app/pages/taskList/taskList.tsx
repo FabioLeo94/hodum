@@ -3,7 +3,7 @@ import type { DragEvent } from "react";
 import { useNavigate, useOutletContext, useParams, useSearchParams } from "react-router";
 import { ChevronRight, GripVertical, Plus, Search, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import type { Project, Task, TaskStatus } from "../../../shared/types/project";
+import type { Project, Task, TaskStatus, WorkTimerAction } from "../../../shared/types/project";
 import {
   createTask,
   getProjectById,
@@ -11,6 +11,7 @@ import {
   updateTaskAssignees,
   updateTaskPriority,
   updateTaskStatus,
+  updateTaskWorkTimer,
 } from "../../services/project/projectService";
 import { subscribeToProjectTasks } from "../../services/realtime/socketService";
 import { getDueUrgency } from "../../../shared/utils/taskDueDate";
@@ -22,6 +23,7 @@ import TaskStatusSelectComponent from "../../components/taskStatusSelect/taskSta
 import PrioritySelectComponent from "../../components/prioritySelect/prioritySelectComponent";
 import TaskAssigneesComponent from "../../components/taskAssignees/taskAssigneesComponent";
 import TaskKanbanBoardComponent from "../../components/taskKanbanBoard/taskKanbanBoardComponent";
+import TaskWorkTimerComponent from "../../components/taskWorkTimer/taskWorkTimerComponent";
 import TaskCalendarComponent from "../../components/taskCalendar/taskCalendarComponent";
 import ExpandableContainerComponent from "../../components/expandableContainer/expandableContainerComponent";
 import type { AssistantLayoutContext } from "../../components/protectedLayout/protectedLayoutComponent";
@@ -413,6 +415,22 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
     }
   }
 
+  async function handleWorkTimerAction(taskId: string, action: WorkTimerAction) {
+    try {
+      const updatedTask = await updateTaskWorkTimer(progettoId, taskId, action);
+      setProject((current) =>
+        current ? replaceTaskInProject(current, updatedTask) : current,
+      );
+      setInlineUpdateError("");
+    } catch (error) {
+      setInlineUpdateError(
+        error instanceof Error
+          ? error.message
+          : t("pages.taskList.workTimerUpdateError"),
+      );
+    }
+  }
+
   // Drag & drop di un dot su un altro giorno nella vista Calendario (vedi
   // onDueDateChange in TaskCalendarComponent): riusa updateTask, lo stesso
   // endpoint della modale di modifica, non ce n'è uno dedicato alla sola
@@ -693,6 +711,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
             onOpenTask={openEditModal}
             employees={employees}
             onAssigneesChange={handleAssigneesChange}
+            onWorkTimerAction={handleWorkTimerAction}
             hasActiveFilters={hasActiveFilters}
           />
         ) : viewMode === "calendar" ? (
@@ -721,6 +740,9 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
                   </th>
                   <th className={styles.colPriority} scope="col">
                     {t("pages.taskList.columnPriority")}
+                  </th>
+                  <th className={styles.colWorkTimer} scope="col">
+                    {t("pages.taskList.columnWorkTimer")}
                   </th>
                   <th className={styles.colAssignees} scope="col">
                     {t("pages.taskList.columnAssignees")}
@@ -752,7 +774,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
                         <tr>
                           <th
                             className={`${styles.groupHeaderCell} ${STATUS_STYLES[status]}`}
-                            colSpan={5}
+                            colSpan={6}
                             scope="colgroup"
                           >
                             {locked ? (
@@ -791,7 +813,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
                                     <td
                                       className={styles.emptyRow}
                                       data-drop-target={dragOverStatus === status}
-                                      colSpan={5}
+                                      colSpan={6}
                                     >
                                       {dragOverStatus === status
                                         ? t("pages.taskList.dropHereToMove")
@@ -863,6 +885,16 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
                                         onChange={(newPriority) =>
                                           handlePriorityChange(task.id, newPriority)
                                         }
+                                      />
+                                    </td>
+                                    <td>
+                                      <TaskWorkTimerComponent
+                                        status={task.status}
+                                        taskTitle={task.title}
+                                        workStartedAt={task.workStartedAt}
+                                        workAccumulatedSeconds={task.workAccumulatedSeconds}
+                                        workEndedAt={task.workEndedAt}
+                                        onAction={(action) => handleWorkTimerAction(task.id, action)}
                                       />
                                     </td>
                                     <td>

@@ -1,4 +1,4 @@
-import type { Project, Task, TaskAssignee, TaskComment, TaskStatus, TaskWithProject } from "../../../shared/types/project";
+import type { Project, Task, TaskAssignee, TaskComment, TaskStatus, TaskWithProject, WorkTimerAction } from "../../../shared/types/project";
 import { authFetch, authHeader } from "../auth/authService";
 import { API_BASE_URL, readErrorMessage } from "../httpClient";
 
@@ -17,6 +17,9 @@ interface TaskDto {
   priority: number;
   dueDate: string | null;
   assignees: TaskAssignee[];
+  workStartedAt: string | null;
+  workAccumulatedSeconds: number;
+  workEndedAt: string | null;
 }
 
 function toTask(dto: TaskDto): Task {
@@ -28,6 +31,9 @@ function toTask(dto: TaskDto): Task {
     priority: dto.priority,
     dueDate: dto.dueDate ?? null,
     assignees: dto.assignees,
+    workStartedAt: dto.workStartedAt,
+    workAccumulatedSeconds: dto.workAccumulatedSeconds,
+    workEndedAt: dto.workEndedAt,
   };
 }
 
@@ -236,6 +242,27 @@ export async function updateTaskStatus(
   if (!response.ok) {
     const message = await readErrorMessage(response);
     throw new Error(message ?? "Impossibile aggiornare lo stato del task.");
+  }
+  const task = (await response.json()) as TaskDto;
+  return toTask(task);
+}
+
+export async function updateTaskWorkTimer(
+  projectId: string,
+  taskId: string,
+  action: WorkTimerAction,
+): Promise<Task> {
+  const response = await authFetch(
+    `${API_BASE_URL}/projects/${projectId}/tasks/${taskId}/work-timer`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...authHeader() },
+      body: JSON.stringify({ action }),
+    },
+  );
+  if (!response.ok) {
+    const message = await readErrorMessage(response);
+    throw new Error(message ?? "Impossibile aggiornare il timer di lavorazione.");
   }
   const task = (await response.json()) as TaskDto;
   return toTask(task);

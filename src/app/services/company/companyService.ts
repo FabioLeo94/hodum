@@ -7,6 +7,7 @@ import type {
   ExportTaskComment,
   ExportTaskWithProject,
 } from "../../../shared/types/companyExport";
+import type { RateUnit, WorkDays, WorkHours } from "../../../shared/utils/rateConversion";
 
 export interface RegisterCompanyInput {
   companyName: string;
@@ -27,6 +28,12 @@ export interface RegisteredCompany {
   codiceFiscale: string | null;
   indirizzo: string | null;
   pec: string | null;
+  // Prerequisiti per la futura pre-fatturazione (vedi backend/src/models/company.ts):
+  // tariffaUnita è null se e solo se tariffaOraria è null.
+  tariffaOraria: number | null;
+  tariffaUnita: RateUnit | null;
+  giorniLavorativi: WorkDays;
+  orarioLavoro: WorkHours;
   createdAt: string;
 }
 
@@ -94,6 +101,10 @@ export interface UpdateCompanyInput {
   codiceFiscale: string | null;
   indirizzo: string | null;
   pec: string | null;
+  tariffaOraria: number | null;
+  tariffaUnita: RateUnit | null;
+  giorniLavorativi: WorkDays;
+  orarioLavoro: WorkHours;
 }
 
 // Riservato all'owner (backend @Security('owner')): stesso principio di

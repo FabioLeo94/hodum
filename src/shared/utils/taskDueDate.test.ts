@@ -13,6 +13,9 @@ function buildTask(overrides: Partial<Task>): Task {
     priority: 5,
     dueDate: null,
     assignees: [],
+    workStartedAt: null,
+    workAccumulatedSeconds: 0,
+    workEndedAt: null,
     ...overrides,
   };
 }

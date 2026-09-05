@@ -1,13 +1,14 @@
 import { useState } from "react";
 import type { DragEvent } from "react";
 import { useTranslation } from "react-i18next";
-import type { Task, TaskStatus } from "../../../shared/types/project";
+import type { Task, TaskStatus, WorkTimerAction } from "../../../shared/types/project";
 import { STATUS_ORDER, useStatusGroupLabels } from "../../../shared/constants/taskStatus";
 import { getDueUrgency } from "../../../shared/utils/taskDueDate";
 import type { User } from "../../services/auth/authService";
 import TaskStatusSelectComponent from "../taskStatusSelect/taskStatusSelectComponent";
 import PrioritySelectComponent from "../prioritySelect/prioritySelectComponent";
 import TaskAssigneesComponent from "../taskAssignees/taskAssigneesComponent";
+import TaskWorkTimerComponent from "../taskWorkTimer/taskWorkTimerComponent";
 import styles from "./taskKanbanBoardComponent.module.css";
 
 const COLUMN_STYLES: Record<TaskStatus, string> = {
@@ -31,6 +32,7 @@ interface TaskKanbanBoardComponentProps {
   onOpenTask: (task: Task) => void;
   employees: User[];
   onAssigneesChange: (taskId: string, userIds: string[]) => void;
+  onWorkTimerAction: (taskId: string, action: WorkTimerAction) => void;
   /** True quando la toolbar di ricerca/filtri di taskList.tsx ha almeno un
    * criterio attivo: distingue "colonna vuota perché non ci sono task in
    * questo stato" da "colonna vuota perché i filtri hanno escluso tutto". */
@@ -48,6 +50,7 @@ function TaskKanbanBoardComponent({
   onOpenTask,
   employees,
   onAssigneesChange,
+  onWorkTimerAction,
   hasActiveFilters = false,
 }: TaskKanbanBoardComponentProps) {
   const { t } = useTranslation();
@@ -172,6 +175,16 @@ function TaskKanbanBoardComponent({
                         selectedIds={task.assignees.map((assignee) => assignee.id)}
                         taskTitle={task.title}
                         onChange={(userIds) => onAssigneesChange(task.id, userIds)}
+                      />
+                    </div>
+                    <div className={styles.cardWorkTimer}>
+                      <TaskWorkTimerComponent
+                        status={task.status}
+                        taskTitle={task.title}
+                        workStartedAt={task.workStartedAt}
+                        workAccumulatedSeconds={task.workAccumulatedSeconds}
+                        workEndedAt={task.workEndedAt}
+                        onAction={(action) => onWorkTimerAction(task.id, action)}
                       />
                     </div>
                   </div>
