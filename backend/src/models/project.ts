@@ -6,4 +6,8 @@ export interface Project {
   id: string;
   name: string;
   isActive: boolean;
+  // Cliente a cui il progetto è fatturabile (customers, migration 0035):
+  // opzionale per sempre, a differenza di company_id (NOT NULL) non tutti i
+  // progetti sono legati a un cliente specifico.
+  customerId: string | null;
 }

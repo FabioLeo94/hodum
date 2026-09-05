@@ -200,14 +200,18 @@
       "namePlaceholder": "E.g. Website redesign",
       "nameRequired": "Enter a name for the project."
     },
-    "renameProjectModal": {
-      "title": "Rename project",
+    "editProjectModal": {
+      "title": "Edit project",
       "submitting": "Saving...",
       "submit": "Save",
       "cancel": "Cancel",
       "nameLabel": "Project name",
       "namePlaceholder": "E.g. Website redesign",
-      "nameRequired": "Enter a name for the project."
+      "nameRequired": "Enter a name for the project.",
+      "customerLabel": "Customer",
+      "noCustomerOption": "No customer",
+      "noCustomers": "Add your customers on the company management page to assign this project.",
+      "customersLoadError": "Unable to load customers."
     },
     "deleteProjectModal": {
       "title": "Delete project",
@@ -293,6 +297,7 @@
       "pecInvalid": "Enter a valid certified email address (PEC).",
       "loadError": "Unable to load company data.",
       "saveError": "Unable to save company data.",
+      "companyDataSectionTitle": "Company data",
       "rateAndScheduleSectionTitle": "Rate and work schedule",
       "companyRateLabel": "Company rate",
       "workDaysLabel": "Work days",
@@ -334,6 +339,34 @@
       "confirm": "Delete",
       "cancel": "Cancel",
       "warning": "You are about to permanently delete the customer “{{customerName}}”. This action cannot be undone."
+    },
+    "generateInvoiceDrawer": {
+      "title": "Generate pre-invoice",
+      "closeLabel": "Close",
+      "customerLabel": "Customer",
+      "selectCustomerPlaceholder": "Select a customer",
+      "loadCustomersError": "Unable to load customers.",
+      "loadingTasks": "Loading billable tasks...",
+      "loadTasksError": "Unable to load billable tasks.",
+      "noBillableTasks": "No billable tasks for this customer.",
+      "tableCaption": "Billable tasks for the selected customer",
+      "columnInclude": "Include",
+      "columnTask": "Task",
+      "columnProject": "Project",
+      "columnHours": "Hours",
+      "columnNonBillable": "Non-billable",
+      "includeLabel": "Include {{title}} in the pre-invoice",
+      "nonBillableLabel": "Mark {{title}} as non-billable",
+      "generate": "Generate pre-invoice",
+      "generating": "Generating...",
+      "generateError": "Unable to generate the pre-invoice."
+    },
+    "invoicePreview": {
+      "title": "Pre-invoice preview",
+      "loading": "Loading PDF...",
+      "loadError": "Unable to load the pre-invoice PDF.",
+      "frameTitle": "Pre-invoice PDF",
+      "close": "Close"
     },
     "backupHistoryItem": {
       "triggerLabels": {
@@ -438,7 +471,8 @@
       "dueDateLabel": "Due date",
       "noDueDate": "None",
       "assigneesLabel": "Assignees",
-      "noAssignees": "No assignees."
+      "noAssignees": "No assignees.",
+      "viewInvoiceButton": "View invoice"
     },
     "taskFormModal": {
       "create": {
@@ -463,13 +497,18 @@
       "statusLabel": "Status",
       "priorityLabel": "Priority",
       "untitledTaskFallback": "new task",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "readOnlyNotice": "This task has been invoiced: its data is read-only and can no longer be changed.",
+      "viewInvoiceButton": "View invoice"
     },
     "taskKanbanBoard": {
       "ariaLabel": "Tasks grouped by status, Kanban view",
       "dropHere": "Drop here",
       "noMatchingTasks": "No task matches the filters",
       "noTasks": "No tasks"
+    },
+    "taskLockedBadge": {
+      "label": "Invoiced task, read-only"
     },
     "taskCalendar": {
       "weekdays": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
@@ -560,7 +599,7 @@
       "noTasks": "No tasks",
       "totalTasks": "total tasks",
       "otherActionsLabel": "More actions for {{name}}",
-      "rename": "Rename",
+      "edit": "Edit",
       "delete": "Delete",
       "download": "Download..."
     },
@@ -732,6 +771,10 @@
           "title": "Customers",
           "description": "Manage your customer records: name, description and invoicing status."
         },
+        "invoices": {
+          "title": "Invoices",
+          "description": "Generate invoices from completed tasks and browse the history of issued invoices."
+        },
         "backup": {
           "title": "Backup",
           "description": "Manage your company's database backups: frequency, how many to keep and how to name them."
@@ -789,6 +832,7 @@
       },
       "assigneeFilterLabel": "Assignee",
       "allAssignees": "All assignees",
+      "showInvoicedLabel": "Show invoiced",
       "sortByPriorityLabel": "Sort by priority",
       "sortNone": "No sorting",
       "sortUrgentFirst": "Most urgent first",
@@ -806,6 +850,25 @@
       "dragHandleTitle": "Drag to change status",
       "urgencyAriaLabel": "{{title}} — {{urgency}}",
       "createTaskLabel": "Create new task"
+    },
+    "invoices": {
+      "title": "Invoices",
+      "generateButton": "Generate pre-invoice",
+      "loading": "Loading invoices...",
+      "loadErrorTitle": "Loading error",
+      "loadError": "Unable to load invoices.",
+      "emptyTitle": "No invoices yet",
+      "emptyText": "The pre-invoices you generate will appear here.",
+      "tableCaption": "Company invoices",
+      "columnNumber": "Number",
+      "columnDate": "Date",
+      "columnCustomer": "Customer",
+      "columnHours": "Hours",
+      "columnAmount": "Amount",
+      "numberPrefix": "#{{number}}",
+      "meta": {
+        "title": "Invoices"
+      }
     }
   }
 }

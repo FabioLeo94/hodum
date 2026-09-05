@@ -68,7 +68,7 @@
   height: 100vh;
   padding: var(--p-xl);
   background-color: var(--bg-surface);
-  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow-panel-edge);
   transform: translateX(100%);
   transition: transform 260ms ease;
 }
@@ -322,19 +322,14 @@
   }
 }
 
+/* flex-shrink: 0 locale (non nello stile condiviso): qui il banner vive in
+   un pannello flex a colonna che scrolla (a differenza degli altri drawer
+   consumer, dove il contenitore padre non comprime i figli), senza non
+   resterebbe alla sua altezza naturale quando lo storico messaggi sopra
+   cresce. */
 .errorBanner {
+  composes: errorBanner from "../../../shared/styles/errorBanner.module.css";
   flex-shrink: 0;
-  padding: var(--p-sm) var(--p-md);
-  border-left: 3px solid var(--color-danger);
-  border-radius: var(--radious-sm);
-  background-color: var(--bg-field);
-  /* --color-danger puro su --bg-field solido da' un contrasto di ~4.02:1,
-     sotto la soglia AA 4.5:1 per testo 0.8rem: stesso schiarimento all'86%
-     verso il bianco gia' usato per lo stesso sfondo in .groupHeaderRejected
-     (taskList.module.css) e .columnHeaderRejected (taskKanbanBoardComponent),
-     per raggiungere ~4.71:1. */
-  color: color-mix(in srgb, var(--color-danger) 86%, white);
-  font-size: 0.8rem;
 }
 
 .composer {

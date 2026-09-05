@@ -1,5 +1,5 @@
 import type { Request as ExRequest } from 'express';
-import { Body, Controller, Delete, Get, Path, Post, Put, Request, Response, Route, Security, SuccessResponse } from 'tsoa';
+import { Body, Controller, Delete, Get, Path, Post, Put, Request, Response, Route, Security, SuccessResponse } from '@tsoa/runtime';
 import { getAuthenticatedUser } from '../middleware/authentication';
 import type { BackupRecord, BackupSettings } from '../models/backup';
 import {
@@ -13,7 +13,6 @@ import {
   runBackup,
   updateBackupSettings,
 } from '../services/backupService';
-import { isValidFilenameFormat } from '../utils/backupFilename';
 
 // Nome distinto dall'omonimo "ErrorResponse" degli altri controller: tsoa
 // risolve i modelli per nome dell'interfaccia a livello globale, non per
@@ -36,11 +35,6 @@ export interface UpdateBackupSettingsRequest {
   maxBackups: number;
   filenameFormat: string;
 }
-
-const MIN_INTERVAL_MINUTES = 1;
-const MAX_INTERVAL_MINUTES = 10_080; // 7 giorni: oltre non ha senso chiamarlo backup "periodico".
-const MIN_MAX_BACKUPS = 1;
-const MAX_MAX_BACKUPS = 500; // Limite di buon senso: oltre, la rotazione perde significato pratico per una PMI.
 
 // Route annidata sotto 'companies/{id}', stesso pattern di 'companies/{id}/employees'
 // in companyController.ts: ogni endpoint verifica che {id} combaci con la
@@ -78,30 +72,10 @@ export class BackupController extends Controller {
       return companyNotFoundResponse(id);
     }
 
-    if (
-      !Number.isInteger(body.intervalMinutes) ||
-      body.intervalMinutes < MIN_INTERVAL_MINUTES ||
-      body.intervalMinutes > MAX_INTERVAL_MINUTES
-    ) {
-      this.setStatus(422);
-      return { message: `intervalMinutes deve essere un intero tra ${MIN_INTERVAL_MINUTES} e ${MAX_INTERVAL_MINUTES}` };
-    }
-    if (
-      !Number.isInteger(body.maxBackups) ||
-      body.maxBackups < MIN_MAX_BACKUPS ||
-      body.maxBackups > MAX_MAX_BACKUPS
-    ) {
-      this.setStatus(422);
-      return { message: `maxBackups deve essere un intero tra ${MIN_MAX_BACKUPS} e ${MAX_MAX_BACKUPS}` };
-    }
-    if (!isValidFilenameFormat(body.filenameFormat)) {
-      this.setStatus(422);
-      return {
-        message:
-          'filenameFormat non valido: sono ammessi solo lettere, numeri, spazi, "_", "-", "." e i placeholder {company} {date} {time} {index}',
-      };
-    }
-
+    // intervalMinutes/maxBackups/filenameFormat validati in
+    // backupService.updateBackupSettings (punto 2 della code review "niente
+    // logica nei controller"): la ValidationError che lancia è mappata a 422
+    // nell'error handler globale (app.ts), non qui.
     return updateBackupSettings(id, body);
   }
 

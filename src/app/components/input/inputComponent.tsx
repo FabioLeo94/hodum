@@ -17,6 +17,7 @@ interface Prop {
    * serve dove il placeholder da solo non basta a capire cosa contiene il
    * campo (es. un input date, che non mostra placeholder nativo). */
   showLabel?: boolean;
+  disabled?: boolean;
 }
 function InputComponent({
   type,
@@ -30,6 +31,7 @@ function InputComponent({
   autoFocus,
   error,
   showLabel = false,
+  disabled = false,
 }: Prop) {
   const inputId = useId();
   const errorId = useId();
@@ -57,6 +59,7 @@ function InputComponent({
         required={required}
         autoComplete={autoComplete}
         autoFocus={autoFocus}
+        disabled={disabled}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? errorId : undefined}
       />

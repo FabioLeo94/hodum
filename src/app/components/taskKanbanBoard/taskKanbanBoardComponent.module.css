@@ -14,7 +14,7 @@
   max-width: 340px;
   background-color: var(--bg-surface);
   border-radius: var(--radious-sm) var(--radious-sm) var(--radious-lg) var(--radious-lg);
-  box-shadow: 0 0 16px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--shadow-card);
   overflow: hidden;
   transition:
     background-color 150ms ease,
@@ -161,7 +161,18 @@
   background-color: color-mix(in srgb, var(--bg-field) 60%, var(--bg-main));
 }
 
+/* Titolo + badge di blocco sulla stessa riga: il badge non deve spingere il
+   titolo a capo su una riga propria, solo affiancarsi quando c'è spazio. */
+.cardTitleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--m-xs);
+  min-width: 0;
+}
+
 .cardTitle {
+  min-width: 0;
+  overflow: hidden;
   background: none;
   border: none;
   padding: 0;
@@ -169,8 +180,11 @@
   font: inherit;
   font-weight: 600;
   text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   cursor: pointer;
 }
+
 
 .cardTitle:hover {
   text-decoration: underline;

@@ -180,7 +180,7 @@
   padding: var(--p-sm);
   border-radius: var(--radious-md);
   background-color: var(--bg-field);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-popover);
   animation: popoverPopIn 140ms ease both;
 }
 

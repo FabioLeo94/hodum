@@ -15,12 +15,14 @@ interface TaskEventDto {
   workStartedAt: string | null;
   workAccumulatedSeconds: number;
   workEndedAt: string | null;
+  invoiceId: string | null;
 }
 
 interface ProjectEventDto {
   id: string;
   name: string;
   isActive: boolean;
+  customerId: string | null;
 }
 
 export type NotificationType =
@@ -107,6 +109,7 @@ function toTask(dto: TaskEventDto): Task {
     workStartedAt: dto.workStartedAt,
     workAccumulatedSeconds: dto.workAccumulatedSeconds,
     workEndedAt: dto.workEndedAt,
+    invoiceId: dto.invoiceId,
   };
 }
 

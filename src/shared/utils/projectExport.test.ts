@@ -5,6 +5,7 @@ import type { Project } from "../types/project";
 const project: Project = {
   id: "p1",
   name: "Progetto Alpha!",
+  customerId: null,
   tasks: [
     {
       id: "t1",
@@ -17,6 +18,7 @@ const project: Project = {
       workStartedAt: null,
       workAccumulatedSeconds: 0,
       workEndedAt: null,
+      invoiceId: null,
     },
   ],
 };

@@ -7,6 +7,7 @@ import CreateProjectModalComponent from "../../components/createProjectModal/cre
 import TopbarComponent from "../../components/topbar/topbarComponent";
 import TaskCalendarComponent from "../../components/taskCalendar/taskCalendarComponent";
 import TaskDetailModalComponent from "../../components/taskDetailModal/taskDetailModalComponent";
+import MessageCardComponent from "../../components/messageCard/messageCardComponent";
 import type { AssistantLayoutContext } from "../../components/protectedLayout/protectedLayoutComponent";
 import {
   createProject,
@@ -23,6 +24,7 @@ import type {
   Task,
   TaskWithProject,
 } from "../../../shared/types/project";
+import type { EditProjectFormValues } from "../../components/editProjectModal/editProjectModalComponent";
 import { usePageMeta } from "../../../shared/hooks/usePageMeta";
 import styles from "./dashboard.module.css";
 
@@ -130,7 +132,7 @@ function Dashboard() {
           }
           return [
             ...current,
-            { id: project.id, name: project.name, tasks: [] },
+            { id: project.id, name: project.name, customerId: project.customerId, tasks: [] },
           ];
         });
       },
@@ -138,7 +140,7 @@ function Dashboard() {
         setProjects((current) =>
           current.map((existing) =>
             existing.id === project.id
-              ? { ...existing, name: project.name }
+              ? { ...existing, name: project.name, customerId: project.customerId }
               : existing,
           ),
         );
@@ -184,11 +186,13 @@ function Dashboard() {
     }
   }
 
-  async function handleRenameProject(id: string, name: string) {
-    const updated = await updateProject(id, name);
+  async function handleEditProject(id: string, values: EditProjectFormValues) {
+    const updated = await updateProject(id, values);
     setProjects((current) =>
       current.map((project) =>
-        project.id === id ? { ...project, name: updated.name } : project,
+        project.id === id
+          ? { ...project, name: updated.name, customerId: updated.customerId }
+          : project,
       ),
     );
   }
@@ -256,15 +260,17 @@ function Dashboard() {
         </header>
 
         {loadError ? (
-          <div className={styles.emptyState} data-variant="error" role="alert">
-            <p className={styles.emptyStateTitle}>{t("pages.dashboard.loadErrorTitle")}</p>
-            <p className={styles.emptyStateText}>{loadError}</p>
-          </div>
+          <MessageCardComponent
+            variant="error"
+            role="alert"
+            title={t("pages.dashboard.loadErrorTitle")}
+            text={loadError}
+          />
         ) : !isLoading && projects.length === 0 ? (
-          <div className={styles.emptyState}>
-            <p className={styles.emptyStateTitle}>{t("pages.dashboard.emptyTitle")}</p>
-            <p className={styles.emptyStateText}>{t("pages.dashboard.emptyText")}</p>
-          </div>
+          <MessageCardComponent
+            title={t("pages.dashboard.emptyTitle")}
+            text={t("pages.dashboard.emptyText")}
+          />
         ) : !isLoading ? (
           <div className={styles.projectsGrid}>
             {projects.map((project) => (
@@ -272,7 +278,7 @@ function Dashboard() {
                 key={project.id}
                 {...project}
                 canManage={canManage}
-                onRenameProject={handleRenameProject}
+                onEditProject={handleEditProject}
                 onDeleteProject={handleDeleteProject}
               />
             ))}

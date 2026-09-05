@@ -7,6 +7,8 @@ import type { TaskWithProject } from "../../../shared/types/project";
 import { useStatusGroupLabels } from "../../../shared/constants/taskStatus";
 import { parseDateOnly } from "../../../shared/utils/taskDueDate";
 import { resolveDateLocale } from "../../../shared/utils/formatDate";
+import { getUser } from "../../services/auth/authService";
+import { useViewInvoice } from "../../../shared/hooks/useViewInvoice";
 import styles from "./taskDetailModalComponent.module.css";
 
 interface Prop {
@@ -23,9 +25,16 @@ interface Prop {
 // TaskFormModalComponent: si smonta semplicemente quando non c'è un task.
 function TaskDetailModalComponent({ isOpen, task, onClose, onGoToTask }: Prop) {
   const { t } = useTranslation();
+  const viewInvoice = useViewInvoice();
   const STATUS_GROUP_LABELS = useStatusGroupLabels();
+  const isOwner = getUser()?.role === "owner";
 
   if (!isOpen || !task) return null;
+
+  function handleViewInvoice() {
+    if (!task?.invoiceId) return;
+    viewInvoice(task.invoiceId, onClose);
+  }
 
   return (
     <ModalBaseComponent
@@ -39,9 +48,20 @@ function TaskDetailModalComponent({ isOpen, task, onClose, onGoToTask }: Prop) {
         </ButtonComponent>
       }
       secondaryActions={
-        <button type="button" className={styles.closeButton} onClick={onClose}>
-          {t("components.taskDetailModal.close")}
-        </button>
+        <>
+          {isOwner && task.invoiceId && (
+            <button
+              type="button"
+              className={styles.viewInvoiceButton}
+              onClick={handleViewInvoice}
+            >
+              {t("components.taskDetailModal.viewInvoiceButton")}
+            </button>
+          )}
+          <button type="button" className={styles.closeButton} onClick={onClose}>
+            {t("components.taskDetailModal.close")}
+          </button>
+        </>
       }
     >
       <div className={styles.detailLayout}>

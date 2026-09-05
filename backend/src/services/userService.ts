@@ -3,6 +3,7 @@ import { DatabaseError } from 'pg';
 import { pool } from '../db/pool';
 import type { User, UserRole } from '../models/user';
 import { emitUserUpdated } from '../realtime/io';
+import { assertNonEmpty } from '../utils/validation';
 
 // Cost factor per bcrypt: 12 round è il compromesso standard attuale tra
 // resistenza a brute-force e tempo di hashing lato server.
@@ -125,6 +126,13 @@ export interface UpdateUserInput {
 }
 
 export async function updateUser(id: string, input: UpdateUserInput): Promise<User> {
+  // Punto 2 della code review "niente logica nei controller": prima un
+  // controllo identico in userController.updateUser, solo se il chiamante ha
+  // effettivamente toccato il campo (un PUT parziale può ometterlo).
+  if (input.username !== undefined) {
+    assertNonEmpty(input.username, 'username');
+  }
+
   // La password va ri-hashata prima di entrare nella query: COALESCE non può
   // saperlo, quindi se non fornita passiamo null e la colonna resta invariata,
   // esattamente come per gli altri campi opzionali.

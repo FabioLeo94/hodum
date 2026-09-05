@@ -85,7 +85,7 @@
   overflow-y: auto;
   border-radius: var(--radious-md);
   background-color: var(--bg-surface);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-popover);
   animation: panelPopIn 140ms ease both;
   scrollbar-width: thin;
   /* .panel vive in un portal (document.body o il <dialog> aperto), quindi

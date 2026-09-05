@@ -3,15 +3,31 @@ import { DatabaseError } from 'pg';
 import { pool } from '../db/pool';
 import type { Company, RateUnit, WorkDays, WorkHours } from '../models/company';
 import type { User } from '../models/user';
+import { validateAndNormalizeRate } from '../utils/rateUnit';
 import { generateRecoveryCode, normalizeRecoveryCode } from '../utils/recoveryCode';
 import { generateTemporaryPassword } from '../utils/temporaryPassword';
+import { assertNonEmpty, isValidEmail, isValidPassword, PASSWORD_POLICY_MESSAGE } from '../utils/validation';
 // Solo il tipo: exportService.ts importa a runtime getCompanyById da questo
 // stesso modulo, quindi un import a runtime nella direzione opposta
 // creerebbe un ciclo. `import type` viene eraso a compile time, nessun ciclo
 // a runtime.
 import type { CompanyExportData } from './exportService';
-import { SLUG_TO_STATUS_NAME } from './taskService';
+import { isValidDueDate, isValidPriority, isValidTaskStatus, SLUG_TO_STATUS_NAME } from './taskService';
 import { hashPassword, mapUserUniqueViolation, toUser, USER_COLUMNS, type UserRow } from './userService';
+
+// Campi opzionali, ma quando presenti (stringa non vuota) devono avere un
+// formato plausibile: P.IVA italiana a 11 cifre, codice fiscale a 11 cifre
+// (azienda) o 16 caratteri alfanumerici (persona fisica, es. ditta
+// individuale). Spostate qui da companyController.ts (punto 1 della code
+// review "niente logica nei controller"): non è una validazione di forma
+// della richiesta HTTP ma di dominio (deriva dai CHECK/dalla semantica dei
+// dati anagrafici, migration 0030), quindi appartiene al service.
+const PIVA_REGEX = /^\d{11}$/;
+const CODICE_FISCALE_REGEX = /^(\d{11}|[A-Za-z0-9]{16})$/;
+// Formato orario accettato per inizio1/fine1/inizio2/fine2: "HH:mm", stesso
+// formato in cui questo stesso modulo normalizza le colonne time in lettura
+// (normalizeTime sotto).
+const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 // Riga così come esce da pg per companies: snake_case, coerente con
 // migrations/0013_create_companies_table.sql e
@@ -134,6 +150,16 @@ export interface CreateEmployeeInput {
 // esistono solo come stato transitorio "non ancora agganciato", non come
 // esito valido di una registrazione completata).
 export async function registerCompany(input: RegisterCompanyInput): Promise<RegisterCompanyResult> {
+  // Punto 2 della code review "niente logica nei controller": stesso
+  // controllo prima duplicato identico in ogni controller di scrittura
+  // (companyController.register tra gli altri): "campo vuoto dopo trim" è una
+  // regola di dominio, non di forma della richiesta, e ora si applica una sola
+  // volta qui invece che in ognuno. La validazione di formato di email/password
+  // resta invece nel controller (fuori dallo scope di questo intervento: non
+  // segue lo stesso pattern "duplicato identico ovunque").
+  assertNonEmpty(input.companyName, 'companyName', "Il nome dell'azienda non può essere vuoto");
+  assertNonEmpty(input.username, 'username');
+
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -191,28 +217,172 @@ export async function getCompanyById(id: string): Promise<Company | null> {
   return result.rows[0] ? toCompany(result.rows[0]) : null;
 }
 
+// Segnala un PUT /companies/{id} con dati anagrafici/tariffa/orario non
+// validi (P.IVA, codice fiscale, PEC, accoppiamento tariffa, fasce orarie):
+// prima viveva come una sequenza di controlli in companyController.updateCompany
+// (punto 1 della code review "niente logica nei controller"), ~130 righe di
+// regole di dominio (derivano dai CHECK/dalla semantica dei dati anagrafici,
+// non dalla forma della richiesta HTTP). Distinta da ImportCompanyDataError
+// sotto: rotte diverse, così il controller può intercettare selettivamente
+// quella pertinente a ciascuna.
+export class InvalidCompanyDataError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'InvalidCompanyDataError';
+  }
+}
+
+// Forma grezza così come arriva dal body di PUT /companies/{id}
+// (UpdateCompanyRequest in companyController.ts, stessa struttura): il
+// service riceve i campi non normalizzati ed esegue qui la validazione che
+// prima viveva nel controller.
 export interface UpdateCompanyInput {
+  name: string;
+  ragioneSociale?: string | null;
+  piva?: string | null;
+  codiceFiscale?: string | null;
+  indirizzo?: string | null;
+  pec?: string | null;
+  tariffaOraria?: number | null;
+  tariffaUnita?: RateUnit | null;
+  giorniLavorativi?: WorkDays;
+  orarioLavoro?: WorkHours;
+}
+
+// Dati già validati e normalizzati, pronti per la SET clause della UPDATE
+// sotto: stessa forma dell'UpdateCompanyInput di prima di questa modifica,
+// rinominata per non collidere col nuovo UpdateCompanyInput (grezzo) sopra.
+interface CompanyWriteData {
   name: string;
   ragioneSociale: string | null;
   piva: string | null;
   codiceFiscale: string | null;
   indirizzo: string | null;
   pec: string | null;
-  // Accoppiamento (tariffaUnita null se tariffaOraria è null, default
-  // 'oraria' altrimenti) già applicato dal controller: il service scrive
-  // quello che riceve senza rivalidare.
   tariffaOraria: number | null;
   tariffaUnita: RateUnit | null;
   giorniLavorativi: WorkDays;
-  // inizio2/fine2 già azzerati dal controller se continuativo è true.
   orarioLavoro: WorkHours;
+}
+
+// Stringa vuota e null sono equivalenti in ingresso ("campo non compilato"):
+// normalizzati entrambi a null, così l'owner può anche svuotare un campo già
+// compilato in precedenza (stesso comportamento di quando questa logica viveva
+// nel controller). Lancia InvalidCompanyDataError al primo campo non valido,
+// con lo stesso messaggio già prodotto quando questa validazione viveva nel
+// controller.
+function validateAndNormalizeCompanyUpdate(body: UpdateCompanyInput): CompanyWriteData {
+  // Stesso errore delle altre righe di questa funzione (non ValidationError/
+  // assertNonEmpty come nel resto del punto 2 della code review): qui
+  // companyController.updateCompany intercetta un solo tipo di errore
+  // (InvalidCompanyDataError) per l'intera validazione, invece di doverne
+  // gestire due per la stessa rotta.
+  if (body.name.trim().length === 0) {
+    throw new InvalidCompanyDataError("Il nome dell'azienda non può essere vuoto");
+  }
+
+  const piva = body.piva?.trim() || null;
+  if (piva !== null && !PIVA_REGEX.test(piva)) {
+    throw new InvalidCompanyDataError('piva deve essere composta da 11 cifre');
+  }
+  const codiceFiscale = body.codiceFiscale?.trim() || null;
+  if (codiceFiscale !== null && !CODICE_FISCALE_REGEX.test(codiceFiscale)) {
+    throw new InvalidCompanyDataError('codiceFiscale deve essere di 11 cifre o 16 caratteri alfanumerici');
+  }
+  const pec = body.pec?.trim() || null;
+  if (pec !== null && !isValidEmail(pec)) {
+    throw new InvalidCompanyDataError('pec non valida');
+  }
+
+  // Accoppiamento tariffaOraria/tariffaUnita condiviso con customerService
+  // (vedi utils/rateUnit.ts, punto 3 della code review): niente unità senza
+  // un valore (forzata a null), default 'oraria' se il valore c'è ma l'unità
+  // manca.
+  const tariffa = validateAndNormalizeRate(body.tariffaOraria, body.tariffaUnita, (message) => new InvalidCompanyDataError(message));
+
+  // Assente = nessun giorno lavorativo impostato, coerente col default false
+  // della migration: un PUT che non lo invia azzera i giorni già impostati,
+  // stesso comportamento "rappresentazione intera" già applicato a
+  // ragioneSociale/piva/ecc. sopra.
+  const giorniLavorativi = body.giorniLavorativi ?? {
+    lunedi: false,
+    martedi: false,
+    mercoledi: false,
+    giovedi: false,
+    venerdi: false,
+    sabato: false,
+    domenica: false,
+  };
+
+  // Assente = fascia unica non impostata, coerente col DEFAULT della
+  // migration (orario_continuativo true, ore tutte NULL).
+  const orarioLavoroInput = body.orarioLavoro ?? {
+    continuativo: true,
+    inizio1: null,
+    fine1: null,
+    inizio2: null,
+    fine2: null,
+  };
+  if (orarioLavoroInput.inizio1 !== null && !TIME_REGEX.test(orarioLavoroInput.inizio1)) {
+    throw new InvalidCompanyDataError('orarioLavoro.inizio1 deve essere nel formato HH:mm');
+  }
+  if (orarioLavoroInput.fine1 !== null && !TIME_REGEX.test(orarioLavoroInput.fine1)) {
+    throw new InvalidCompanyDataError('orarioLavoro.fine1 deve essere nel formato HH:mm');
+  }
+  if (
+    orarioLavoroInput.inizio1 !== null &&
+    orarioLavoroInput.fine1 !== null &&
+    orarioLavoroInput.fine1 <= orarioLavoroInput.inizio1
+  ) {
+    throw new InvalidCompanyDataError('orarioLavoro.fine1 deve essere successivo a orarioLavoro.inizio1');
+  }
+
+  // inizio2/fine2 non sono significative quando continuativo è true: si
+  // azzerano a prescindere da cosa arriva nel body, non si valida un dato che
+  // verrà comunque scartato.
+  let inizio2 = orarioLavoroInput.inizio2;
+  let fine2 = orarioLavoroInput.fine2;
+  if (orarioLavoroInput.continuativo) {
+    inizio2 = null;
+    fine2 = null;
+  } else {
+    if (inizio2 !== null && !TIME_REGEX.test(inizio2)) {
+      throw new InvalidCompanyDataError('orarioLavoro.inizio2 deve essere nel formato HH:mm');
+    }
+    if (fine2 !== null && !TIME_REGEX.test(fine2)) {
+      throw new InvalidCompanyDataError('orarioLavoro.fine2 deve essere nel formato HH:mm');
+    }
+    if (inizio2 !== null && fine2 !== null && fine2 <= inizio2) {
+      throw new InvalidCompanyDataError('orarioLavoro.fine2 deve essere successivo a orarioLavoro.inizio2');
+    }
+  }
+
+  return {
+    name: body.name.trim(),
+    ragioneSociale: body.ragioneSociale?.trim() || null,
+    piva,
+    codiceFiscale,
+    indirizzo: body.indirizzo?.trim() || null,
+    pec,
+    tariffaOraria: tariffa.tariffaOraria,
+    tariffaUnita: tariffa.tariffaUnita,
+    giorniLavorativi,
+    orarioLavoro: {
+      continuativo: orarioLavoroInput.continuativo,
+      inizio1: orarioLavoroInput.inizio1,
+      fine1: orarioLavoroInput.fine1,
+      inizio2,
+      fine2,
+    },
+  };
 }
 
 // Nessun controllo "riga trovata" separato: il chiamante (companyController)
 // ha già verificato che id combaci con la company del richiedente autenticato
 // prima di arrivare qui, stesso principio delle altre funzioni di questo
 // service che ricevono un id già validato (es. createEmployee).
-export async function updateCompany(id: string, input: UpdateCompanyInput): Promise<Company> {
+export async function updateCompany(id: string, body: UpdateCompanyInput): Promise<Company> {
+  const input = validateAndNormalizeCompanyUpdate(body);
   const result = await pool.query<CompanyRow>(
     `UPDATE companies
      SET name = $2, ragione_sociale = $3, piva = $4, codice_fiscale = $5, indirizzo = $6, pec = $7,
@@ -255,6 +425,10 @@ export async function updateCompany(id: string, input: UpdateCompanyInput): Prom
 // aggiornare in un secondo tempo, quindi niente transazione a più passi da
 // far fallire a metà.
 export async function createEmployee(companyId: string, input: CreateEmployeeInput): Promise<User> {
+  // Stesso principio di registerCompany sopra (punto 2 della code review):
+  // "campo vuoto dopo trim" prima duplicato in companyController.createEmployee.
+  assertNonEmpty(input.username, 'username');
+
   const userId = randomUUID();
   const passwordHash = await hashPassword(input.password);
 
@@ -341,15 +515,138 @@ export interface ImportCompanyResult {
   temporaryPasswords: TemporaryPasswordEntry[];
 }
 
-// Segnala un payload che ha già passato la validazione superficiale del
-// controller (companyController.validateImportPayload) ma è comunque
-// internamente incoerente (es. nessun utente con l'id di company.ownerId):
-// non dovrebbe mai accadere con un payload prodotto da exportCompanyData, ma
-// il service non deve assumerlo senza verificarlo.
+// Segnala un payload di import non valido o internamente incoerente (formato
+// scorretto di un campo, riferimento a un progetto/utente/task assente dallo
+// stesso export, nessun utente con l'id di company.ownerId...): il controller
+// la intercetta e risponde 422, senza distinguere se a fallire è stato il
+// controllo di formato o quello referenziale, la stessa che chi importa
+// riceve. Prima "il controllo di formato" viveva come validateImportPayload
+// in companyController.ts (punto 1 della code review "niente logica nei
+// controller", ~110 righe): non è validazione di forma della richiesta HTTP,
+// è la stessa famiglia di regole di dominio del controllo referenziale che
+// questa classe segnalava già, quindi confluiscono nello stesso errore.
 export class ImportCompanyDataError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'ImportCompanyDataError';
+  }
+}
+
+// Stessa disciplina di validazione di registerCompany/updateCompany sopra
+// (isValidEmail/isValidPassword/PIVA_REGEX/CODICE_FISCALE_REGEX riapplicati
+// campo per campo), qui su un intero payload annidato invece che su pochi
+// campi flat. Eseguita PRIMA di aprire la transazione sotto: un payload
+// malformato deve rispondere 422 senza aver toccato il database, non emergere
+// a metà transazione come un errore Postgres generico. Lancia
+// ImportCompanyDataError al primo problema trovato (stesso messaggio già
+// prodotto quando questo controllo viveva nel controller).
+function validateImportPayload(input: ImportCompanyInput): void {
+  if (!isValidPassword(input.ownerPassword)) {
+    throw new ImportCompanyDataError(PASSWORD_POLICY_MESSAGE);
+  }
+
+  const data = input.data;
+  if (!data || typeof data !== 'object') {
+    throw new ImportCompanyDataError("il campo 'export' è obbligatorio");
+  }
+
+  if (!data.company || data.company.name.trim().length === 0) {
+    throw new ImportCompanyDataError("Il nome dell'azienda non può essere vuoto");
+  }
+  const piva = data.company.piva;
+  if (piva !== null && piva !== undefined && piva !== '' && !PIVA_REGEX.test(piva)) {
+    throw new ImportCompanyDataError('piva deve essere composta da 11 cifre');
+  }
+  const codiceFiscale = data.company.codiceFiscale;
+  if (codiceFiscale !== null && codiceFiscale !== undefined && codiceFiscale !== '' && !CODICE_FISCALE_REGEX.test(codiceFiscale)) {
+    throw new ImportCompanyDataError('codiceFiscale deve essere di 11 cifre o 16 caratteri alfanumerici');
+  }
+  const pec = data.company.pec;
+  if (pec !== null && pec !== undefined && pec !== '' && !isValidEmail(pec)) {
+    throw new ImportCompanyDataError('pec non valida');
+  }
+
+  if (!Array.isArray(data.users) || data.users.length === 0) {
+    throw new ImportCompanyDataError("il campo 'export.users' deve contenere almeno l'owner");
+  }
+  const owners = data.users.filter((u) => u.role === 'owner');
+  if (owners.length !== 1 || owners[0].id !== data.company.ownerId) {
+    throw new ImportCompanyDataError("l'export deve contenere esattamente un utente owner, con id uguale a export.company.ownerId");
+  }
+  for (const user of data.users) {
+    if (user.username.trim().length === 0) {
+      throw new ImportCompanyDataError('username non può essere vuoto (in export.users)');
+    }
+    if (!isValidEmail(user.email)) {
+      throw new ImportCompanyDataError('email non valida (in export.users)');
+    }
+    if (user.role !== 'owner' && user.role !== 'manager' && user.role !== 'employee') {
+      throw new ImportCompanyDataError("role deve essere 'owner', 'manager' o 'employee' (in export.users)");
+    }
+  }
+
+  if (!Array.isArray(data.projects)) {
+    throw new ImportCompanyDataError("il campo 'export.projects' deve essere un array");
+  }
+  const projectIds = new Set(data.projects.map((p) => p.id));
+  for (const project of data.projects) {
+    if (project.name.trim().length === 0) {
+      throw new ImportCompanyDataError('name non può essere vuoto (in export.projects)');
+    }
+  }
+
+  if (!Array.isArray(data.projectAssignments)) {
+    throw new ImportCompanyDataError("il campo 'export.projectAssignments' deve essere un array");
+  }
+  const userIds = new Set(data.users.map((u) => u.id));
+  for (const assignment of data.projectAssignments) {
+    if (!projectIds.has(assignment.projectId) || !userIds.has(assignment.userId)) {
+      throw new ImportCompanyDataError(
+        'export.projectAssignments contiene un riferimento a un progetto o utente non presente nello stesso export',
+      );
+    }
+  }
+
+  if (!Array.isArray(data.tasks)) {
+    throw new ImportCompanyDataError("il campo 'export.tasks' deve essere un array");
+  }
+  const taskIds = new Set(data.tasks.map((t) => t.id));
+  for (const task of data.tasks) {
+    if (task.title.trim().length === 0) {
+      throw new ImportCompanyDataError('title non può essere vuoto (in export.tasks)');
+    }
+    if (!projectIds.has(task.projectId)) {
+      throw new ImportCompanyDataError('export.tasks contiene un riferimento a un progetto non presente nello stesso export');
+    }
+    if (!isValidTaskStatus(task.status)) {
+      throw new ImportCompanyDataError('status non valido (in export.tasks)');
+    }
+    if (!isValidPriority(task.priority)) {
+      throw new ImportCompanyDataError('priority deve essere un intero tra 1 e 10 (in export.tasks)');
+    }
+    if (task.dueDate !== null && !isValidDueDate(task.dueDate)) {
+      throw new ImportCompanyDataError('dueDate non valida (in export.tasks)');
+    }
+    for (const assignee of task.assignees) {
+      if (!userIds.has(assignee.id)) {
+        throw new ImportCompanyDataError('export.tasks contiene un assegnatario non presente in export.users');
+      }
+    }
+  }
+
+  if (!Array.isArray(data.comments)) {
+    throw new ImportCompanyDataError("il campo 'export.comments' deve essere un array");
+  }
+  for (const comment of data.comments) {
+    if (comment.body.trim().length === 0) {
+      throw new ImportCompanyDataError('body non può essere vuoto (in export.comments)');
+    }
+    if (!taskIds.has(comment.taskId)) {
+      throw new ImportCompanyDataError('export.comments contiene un riferimento a un task non presente nello stesso export');
+    }
+    if (!userIds.has(comment.authorId)) {
+      throw new ImportCompanyDataError('export.comments contiene un riferimento a un autore non presente in export.users');
+    }
   }
 }
 
@@ -360,6 +657,11 @@ export class ImportCompanyDataError extends Error {
 // task: sono le tre entità referenziate da altre righe che questa funzione
 // reinserisce (project_assignments, task_assignments, task_comments).
 export async function importCompanyData(input: ImportCompanyInput): Promise<ImportCompanyResult> {
+  // Eseguita PRIMA di isolare ownerExport sotto: senza, un export.users vuoto
+  // o senza owner produrrebbe un TypeError su owners[0].id invece di un 422
+  // leggibile (vedi validateImportPayload sopra, che copre già questo caso).
+  validateImportPayload(input);
+
   const { data, ownerPassword } = input;
   const ownerExport = data.users.find((u) => u.id === data.company.ownerId);
   if (!ownerExport) {

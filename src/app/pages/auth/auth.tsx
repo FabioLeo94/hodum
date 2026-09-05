@@ -28,18 +28,38 @@ function Auth() {
   const isLogin = mode === "login";
   const isImport = mode === "import";
 
-  usePageMeta({
-    title: isLogin
-      ? t("pages.auth.meta.title.login")
-      : isImport
-        ? t("pages.auth.meta.title.import")
-        : t("pages.auth.meta.title.register"),
-    description: isLogin
-      ? t("pages.auth.meta.description.login")
-      : isImport
-        ? t("pages.auth.meta.description.import")
-        : t("pages.auth.meta.description.register"),
-  });
+  // Stesso pattern di MODE_COPY in taskFormModalComponent: un record indicizzato
+  // dal discriminante invece di ternari annidati ripetuti per ogni testo che
+  // varia con `mode` (meta title/description, titolo, sottotitolo, toggle).
+  const AUTH_COPY: Record<
+    AuthMode,
+    { metaTitle: string; metaDescription: string; title: string; subtitle: string; toggleLabel: string }
+  > = {
+    login: {
+      metaTitle: t("pages.auth.meta.title.login"),
+      metaDescription: t("pages.auth.meta.description.login"),
+      title: t("pages.auth.title.login"),
+      subtitle: t("pages.auth.subtitle.login"),
+      toggleLabel: t("pages.auth.toggle.toRegister"),
+    },
+    import: {
+      metaTitle: t("pages.auth.meta.title.import"),
+      metaDescription: t("pages.auth.meta.description.import"),
+      title: t("pages.auth.title.import"),
+      subtitle: t("pages.auth.subtitle.import"),
+      toggleLabel: t("pages.auth.toggle.backToRegister"),
+    },
+    register: {
+      metaTitle: t("pages.auth.meta.title.register"),
+      metaDescription: t("pages.auth.meta.description.register"),
+      title: t("pages.auth.title.register"),
+      subtitle: t("pages.auth.subtitle.register"),
+      toggleLabel: t("pages.auth.toggle.toLogin"),
+    },
+  };
+  const copy = AUTH_COPY[mode];
+
+  usePageMeta({ title: copy.metaTitle, description: copy.metaDescription });
 
   return (
     <div className={styles.authContainer}>
@@ -48,20 +68,8 @@ function Auth() {
       </div>
       <div className={styles.authHero}>
         <span className={styles.authEyebrow}>{t("pages.auth.eyebrow")}</span>
-        <h1 className={styles.authTitle}>
-          {isLogin
-            ? t("pages.auth.title.login")
-            : isImport
-              ? t("pages.auth.title.import")
-              : t("pages.auth.title.register")}
-        </h1>
-        <p className={styles.authSubtitle}>
-          {isLogin
-            ? t("pages.auth.subtitle.login")
-            : isImport
-              ? t("pages.auth.subtitle.import")
-              : t("pages.auth.subtitle.register")}
-        </p>
+        <h1 className={styles.authTitle}>{copy.title}</h1>
+        <p className={styles.authSubtitle}>{copy.subtitle}</p>
       </div>
       <div className={styles.authFormWrapper} key={mode}>
         {isLogin ? (
@@ -89,11 +97,7 @@ function Auth() {
         className={styles.authToggle}
         onClick={() => setMode(isImport || isLogin ? "register" : "login")}
       >
-        {isImport
-          ? t("pages.auth.toggle.backToRegister")
-          : isLogin
-            ? t("pages.auth.toggle.toRegister")
-            : t("pages.auth.toggle.toLogin")}
+        {copy.toggleLabel}
       </button>
     </div>
   );

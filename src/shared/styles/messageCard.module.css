@@ -1,8 +1,8 @@
 /* Card di messaggio (stato vuoto, errore di caricamento, risorsa non
-   trovata) condivisa da dashboard, taskList ed employees tramite
-   `composes`: stesso riquadro con bordo sinistro che si tinge di rosso
-   nella variante d'errore (`[data-variant="error"]` sullo stesso elemento
-   che porta la classe composta). */
+   trovata): stesso riquadro con bordo sinistro che si tinge di rosso nella
+   variante d'errore (`[data-variant="error"]` sullo stesso elemento che
+   porta la classe composta). Consumata da MessageCardComponent (usato da
+   dashboard, employees, invoices e taskList) tramite `composes`. */
 .messageCard {
   display: flex;
   flex-direction: column;
@@ -13,7 +13,7 @@
   border-left: 3px solid transparent;
   border-radius: var(--radious-lg);
   background-color: var(--bg-surface);
-  box-shadow: 0 0 16px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--shadow-card);
 }
 
 .messageCard[data-variant="error"] {

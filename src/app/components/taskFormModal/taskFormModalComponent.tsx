@@ -9,8 +9,9 @@ import PrioritySelectComponent from "../prioritySelect/prioritySelectComponent";
 import TaskCommentsPanelComponent from "../taskCommentsPanel/taskCommentsPanelComponent";
 import TaskAssigneesComponent from "../taskAssignees/taskAssigneesComponent";
 import type { TaskStatus } from "../../../shared/types/project";
-import type { User } from "../../services/auth/authService";
+import { getUser, type User } from "../../services/auth/authService";
 import { useAsyncSubmit } from "../../../shared/hooks/useAsyncSubmit";
+import { useViewInvoice } from "../../../shared/hooks/useViewInvoice";
 import styles from "./taskFormModalComponent.module.css";
 
 const DEFAULT_STATUS: TaskStatus = "progress";
@@ -38,6 +39,14 @@ interface Prop {
   initialDueDate?: string | null;
   initialAssigneeIds?: string[];
   employees: User[];
+  /** Id della pre-fattura del task, non-null solo in mode "edit" su un task
+   * fatturato (Task.invoiceId): quando presente, tutti i campi diventano di
+   * sola lettura (vedi `readOnly` derivato sotto) e l'azione di salvataggio è
+   * sostituita da "Visualizza fattura" (solo per l'owner), che lo usa per
+   * costruire il link (/invoices?invoiceId=...). Il backend rifiuta comunque
+   * con 409 qualunque update su un task fatturato: questa prop previene
+   * l'interazione invece di limitarsi a reagire all'errore. */
+  invoiceId?: string | null;
 }
 
 function TaskFormModalComponent({
@@ -53,8 +62,16 @@ function TaskFormModalComponent({
   initialDueDate,
   initialAssigneeIds,
   employees,
+  invoiceId = null,
 }: Prop) {
   const { t } = useTranslation();
+  const viewInvoice = useViewInvoice();
+  // Derivato da invoiceId invece di essere una prop separata: i due valori
+  // erano sempre passati in lockstep dall'unico chiamante (taskList.tsx,
+  // readOnly={Boolean(editingTask?.invoiceId)} + invoiceId={editingTask?.invoiceId}),
+  // un prop booleano ridondante che poteva disallinearsi dall'id.
+  const readOnly = invoiceId !== null;
+  const isOwner = getUser()?.role === "owner";
   const MODE_COPY = {
     create: {
       title: t("components.taskFormModal.create.title"),
@@ -103,7 +120,13 @@ function TaskFormModalComponent({
     onClose();
   }
 
+  function handleViewInvoice() {
+    if (!invoiceId) return;
+    viewInvoice(invoiceId, onClose);
+  }
+
   async function handleSubmit() {
+    if (readOnly) return;
     setSubmitAttempted(true);
     const trimmedTitle = title.trim();
     if (trimmedTitle === "") return;
@@ -130,6 +153,7 @@ function TaskFormModalComponent({
   const formFields = (
     <>
       <p className={styles.description}>{copy.description}</p>
+      {readOnly && <p className={styles.readOnlyNotice}>{t("components.taskFormModal.readOnlyNotice")}</p>}
       <InputComponent
         type="text"
         name="taskTitle"
@@ -138,9 +162,10 @@ function TaskFormModalComponent({
         value={title}
         onChange={(event) => setTitle(event.target.value)}
         autoComplete="off"
-        autoFocus
+        autoFocus={!readOnly}
         error={titleError}
         showLabel
+        disabled={readOnly}
       />
       {/* In edit mode la descrizione riempie lo spazio verticale disponibile
           fra titolo e data (fillHeight): ha senso solo lì, dove il form
@@ -158,6 +183,7 @@ function TaskFormModalComponent({
           rows={4}
           showLabel
           fillHeight={mode === "edit"}
+          disabled={readOnly}
         />
       </div>
       <div className={styles.fieldSpacing}>
@@ -168,6 +194,7 @@ function TaskFormModalComponent({
           value={dueDate}
           onChange={(event) => setDueDate(event.target.value)}
           showLabel
+          disabled={readOnly}
         />
       </div>
       <div className={`${styles.fieldSpacing} ${styles.assigneesField}`}>
@@ -177,6 +204,7 @@ function TaskFormModalComponent({
           selectedIds={assigneeIds}
           taskTitle={title.trim() || t("components.taskFormModal.untitledTaskFallback")}
           onChange={setAssigneeIds}
+          disabled={readOnly}
         />
       </div>
       {mode === "create" && (
@@ -213,11 +241,19 @@ function TaskFormModalComponent({
       onClose={handleClose}
       title={copy.title}
       size={mode === "edit" ? "wide" : "default"}
-      onSubmit={handleSubmit}
+      onSubmit={readOnly ? undefined : handleSubmit}
       primaryAction={
-        <ButtonComponent onClick={() => {}} disabled={isSubmitting}>
-          {isSubmitting ? copy.confirmPendingLabel : copy.confirmLabel}
-        </ButtonComponent>
+        readOnly ? (
+          isOwner && invoiceId ? (
+            <ButtonComponent type="button" onClick={handleViewInvoice}>
+              {t("components.taskFormModal.viewInvoiceButton")}
+            </ButtonComponent>
+          ) : null
+        ) : (
+          <ButtonComponent onClick={() => {}} disabled={isSubmitting}>
+            {isSubmitting ? copy.confirmPendingLabel : copy.confirmLabel}
+          </ButtonComponent>
+        )
       }
       secondaryActions={
         <button
@@ -235,7 +271,7 @@ function TaskFormModalComponent({
         <div className={styles.editLayout}>
           <div className={styles.formColumn}>{formFields}</div>
           <div className={styles.commentsColumn}>
-            <TaskCommentsPanelComponent projectId={projectId} taskId={taskId} />
+            <TaskCommentsPanelComponent projectId={projectId} taskId={taskId} readOnly={readOnly} />
           </div>
         </div>
       ) : (

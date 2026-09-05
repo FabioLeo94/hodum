@@ -11,6 +11,7 @@ import AssignProjectsModalComponent from "../../components/assignProjectsModal/a
 import DeleteEmployeeModalComponent from "../../components/deleteEmployeeModal/deleteEmployeeModalComponent";
 import type { AssistantLayoutContext } from "../../components/protectedLayout/protectedLayoutComponent";
 import AvatarComponent from "../../components/avatar/avatarComponent";
+import MessageCardComponent from "../../components/messageCard/messageCardComponent";
 import {
   listUsers,
   updateEmployee,
@@ -232,15 +233,17 @@ function Employees() {
         </header>
 
         {loadError ? (
-          <div className={styles.emptyState} data-variant="error" role="alert">
-            <p className={styles.emptyStateTitle}>{t("pages.employees.loadErrorTitle")}</p>
-            <p className={styles.emptyStateText}>{loadError}</p>
-          </div>
+          <MessageCardComponent
+            variant="error"
+            role="alert"
+            title={t("pages.employees.loadErrorTitle")}
+            text={loadError}
+          />
         ) : !isLoading && employees.length === 0 ? (
-          <div className={styles.emptyState}>
-            <p className={styles.emptyStateTitle}>{t("pages.employees.emptyTitle")}</p>
-            <p className={styles.emptyStateText}>{t("pages.employees.emptyText")}</p>
-          </div>
+          <MessageCardComponent
+            title={t("pages.employees.emptyTitle")}
+            text={t("pages.employees.emptyText")}
+          />
         ) : !isLoading ? (
           <ul className={styles.employeesList}>
             {employees.map((employee) => (

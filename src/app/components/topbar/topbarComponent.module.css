@@ -165,7 +165,7 @@
   overflow-y: auto;
   border-radius: var(--radious-md);
   background-color: var(--bg-surface);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-popover);
   animation: menuPopIn 140ms ease both;
   scrollbar-width: thin;
 }
@@ -271,8 +271,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: var(--icon-button-size-md);
+  height: var(--icon-button-size-md);
   border-radius: 50%;
   background-color: var(--bg-field);
   color: var(--text-muted);
@@ -312,7 +312,7 @@
   padding: var(--p-sm);
   border-radius: var(--radious-md);
   background-color: var(--bg-surface);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-popover);
   animation: menuPopIn 140ms ease both;
 }
 

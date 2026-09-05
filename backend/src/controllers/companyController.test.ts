@@ -6,7 +6,9 @@ vi.mock('../services/companyService', () => ({
   createEmployee: vi.fn(),
   deleteCompany: vi.fn(),
   getCompanyById: vi.fn(),
+  ImportCompanyDataError: class ImportCompanyDataError extends Error {},
   importCompanyData: vi.fn(),
+  InvalidCompanyDataError: class InvalidCompanyDataError extends Error {},
   registerCompany: vi.fn(),
   updateCompany: vi.fn(),
 }));
@@ -24,7 +26,9 @@ import {
   createEmployee,
   deleteCompany as deleteCompanyService,
   getCompanyById,
+  ImportCompanyDataError,
   importCompanyData,
+  InvalidCompanyDataError,
   updateCompany as updateCompanyService,
 } from '../services/companyService';
 import { exportCompanyData } from '../services/exportService';
@@ -111,6 +115,25 @@ describe("CompanyController.updateCompany: riservato all'owner e alla propria co
 
     expect(updateCompanyService).toHaveBeenCalledWith('company-1', expect.objectContaining({ name: 'Nome nuovo' }));
   });
+
+  // Punto 1 della code review "niente logica nei controller": la validazione
+  // di dati anagrafici/tariffa/orario è stata spostata in
+  // companyService.updateCompany (vedi companyService.test.ts per i casi di
+  // validazione veri e propri). Qui si verifica solo che il controller
+  // mappi l'errore del service a 422, non la logica di validazione stessa.
+  it('un InvalidCompanyDataError dal service risponde 422, non 500', async () => {
+    vi.mocked(updateCompanyService).mockRejectedValue(new InvalidCompanyDataError('piva deve essere composta da 11 cifre'));
+    const controller = controllerWithStatus();
+
+    const result = await controller.updateCompany(
+      'company-1',
+      { name: 'Acme', piva: '123' },
+      makeRequest(makeUser({ role: 'owner', companyId: 'company-1' })),
+    );
+
+    expect(controller.setStatus).toHaveBeenCalledWith(422);
+    expect(result).toMatchObject({ message: expect.any(String) });
+  });
 });
 
 describe('CompanyController.createEmployee: creazione dipendenti riservata alla propria company', () => {
@@ -191,7 +214,14 @@ describe("CompanyController.deleteCompany: riservato all'owner e alla propria co
   });
 });
 
-describe('CompanyController.importCompany: validazione del payload prima di aprire la transazione, rotta pubblica', () => {
+// Punto 1 della code review "niente logica nei controller": la validazione
+// del payload (ex validateImportPayload qui) è stata spostata in
+// companyService.importCompanyData (vedi companyService.test.ts per i casi
+// di validazione veri e propri, tra cui "ownerPassword debole" e "nessun
+// owner con id uguale a company.ownerId"). Qui si verifica solo che il
+// controller mappi ImportCompanyDataError a 422 e il resto del comportamento
+// (successo, conflitto), non la logica di validazione stessa.
+describe('CompanyController.importCompany: rotta pubblica, delega la validazione al service', () => {
   function makeValidExport(overrides: Record<string, unknown> = {}) {
     return {
       company: {
@@ -226,38 +256,14 @@ describe('CompanyController.importCompany: validazione del payload prima di apri
     };
   }
 
-  it('risponde 422 senza aprire la transazione se ownerPassword non rispetta la policy', async () => {
+  it('un ImportCompanyDataError dal service risponde 422, non 500', async () => {
+    vi.mocked(importCompanyData).mockRejectedValue(new ImportCompanyDataError('ownerPassword non valida'));
     const controller = controllerWithStatus();
 
     const result = await controller.importCompany({ export: makeValidExport(), ownerPassword: 'debole' } as never);
 
     expect(controller.setStatus).toHaveBeenCalledWith(422);
     expect(result).toMatchObject({ message: expect.any(String) });
-    expect(importCompanyData).not.toHaveBeenCalled();
-  });
-
-  it("risponde 422 se l'export non contiene esattamente un owner con id uguale a company.ownerId", async () => {
-    const controller = controllerWithStatus();
-    const invalidExport = makeValidExport({
-      users: [
-        {
-          id: 'un-altro-id',
-          username: 'owner',
-          email: 'owner@example.com',
-          companyId: 'old-company',
-          role: 'owner',
-          mustChangePassword: false,
-          createdAt: '2026-01-01T00:00:00.000Z',
-          lastLoginAt: null,
-        },
-      ],
-    });
-
-    const result = await controller.importCompany({ export: invalidExport, ownerPassword: 'Password1' } as never);
-
-    expect(controller.setStatus).toHaveBeenCalledWith(422);
-    expect(result).toMatchObject({ message: expect.any(String) });
-    expect(importCompanyData).not.toHaveBeenCalled();
   });
 
   it('con un payload valido, chiama il service e risponde 201', async () => {

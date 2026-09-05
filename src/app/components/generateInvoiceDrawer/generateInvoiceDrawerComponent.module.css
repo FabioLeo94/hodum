@@ -1,0 +1,130 @@
+/* Backdrop/panel/header/titolo/bottone di chiusura vivono ora in
+   drawerBaseComponent.module.css (drawerBaseComponent): qui solo il layout
+   specifico del contenuto, a vista singola (nessun track/pane, il contenuto
+   scorre direttamente in .content). */
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-lg);
+  overflow-y: auto;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-xs);
+}
+
+.fieldLabel {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.select {
+  padding: var(--p-sm) var(--p-md);
+  border: 1px solid var(--bg-field);
+  border-radius: var(--radious-sm);
+  background-color: var(--bg-field);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.select:hover {
+  border-color: var(--bg-primary);
+}
+
+.select:focus-visible {
+  border-color: var(--bg-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--bg-primary) 25%, transparent);
+}
+
+.tasksSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-md);
+  min-height: 0;
+  /* Rete di sicurezza per un titolo task lungo e senza spazi (es. un
+     riferimento incollato): con table-layout auto (nessuna larghezza di
+     colonna fissa, a differenza di .taskTable in taskList.module.css) potrebbe
+     spingere .tasksTable oltre la larghezza del drawer, che a sua volta non
+     ha overflow-x proprio - stesso pattern di .tableCard in invoices.module.css. */
+  overflow-x: auto;
+}
+
+.hint {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.errorBanner {
+  composes: errorBanner from "../../../shared/styles/errorBanner.module.css";
+}
+
+.tasksTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tasksTable th,
+.tasksTable td {
+  text-align: left;
+  padding: var(--p-sm) var(--p-md);
+  border-bottom: 1px solid var(--bg-field);
+  font-size: 0.85rem;
+}
+
+.tasksTable thead th {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.tasksTable tbody td {
+  color: var(--text-primary);
+}
+
+/* Il reset globale (src/index.css) azzera appearance/border/background su
+   ogni input: la checkbox va ricostruita a mano, stesso pattern già usato da
+   assignProjectsModalComponent tramite `composes`. */
+/* A differenza delle altre checkbox che riusano checkboxBase (authForm,
+   assignProjectsModal, il filtro "mostra fatturati" di taskList), qui non
+   c'è una <label> che le avvolge da cui far scattare l'hover via discendente
+   (sono celle nude di una tabella): l'hover va quindi dichiarato local su
+   .checkbox stessa invece che sul contenitore. */
+.checkbox {
+  composes: checkboxBase from "../../../shared/styles/checkboxBase.module.css";
+}
+
+.checkbox:hover:not(:disabled) {
+  border-color: var(--bg-primary);
+}
+
+.srOnly {
+  composes: srOnly from "../../../shared/styles/fieldBase.module.css";
+}
+
+.footer {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: var(--m-sm);
+  padding-top: var(--m-md);
+  border-top: 1px solid var(--bg-field);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .select {
+    transition: none;
+  }
+}

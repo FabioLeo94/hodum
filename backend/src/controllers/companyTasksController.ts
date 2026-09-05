@@ -1,5 +1,5 @@
 import type { Request as ExRequest } from 'express';
-import { Controller, Get, Request, Route, Security } from 'tsoa';
+import { Controller, Get, Request, Route, Security } from '@tsoa/runtime';
 import { getAuthenticatedUser } from '../middleware/authentication';
 import type { TaskWithProject } from '../models/task';
 import { listTasksByCompany } from '../services/taskService';

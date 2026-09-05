@@ -23,7 +23,9 @@ describe("projectService", () => {
       vi.mocked(fetch).mockImplementation(async (input) => {
         const url = String(input);
         if (url === "http://localhost:3000/projects") {
-          return jsonResponse(200, [{ id: "1", name: "Progetto Demo", isActive: true }]);
+          return jsonResponse(200, [
+            { id: "1", name: "Progetto Demo", isActive: true, customerId: null },
+          ]);
         }
         if (url === "http://localhost:3000/projects/1/tasks") {
           return jsonResponse(200, [
@@ -39,6 +41,7 @@ describe("projectService", () => {
         {
           id: "1",
           name: "Progetto Demo",
+          customerId: null,
           tasks: [
             { id: "t1", title: "Task 1", description: "", status: "progress", dueDate: null },
           ],
@@ -105,7 +108,7 @@ describe("projectService", () => {
       vi.mocked(fetch).mockImplementation(async (input) => {
         const url = String(input);
         if (url === "http://localhost:3000/projects/1") {
-          return jsonResponse(200, { id: "1", name: "Progetto Demo", isActive: true });
+          return jsonResponse(200, { id: "1", name: "Progetto Demo", isActive: true, customerId: null });
         }
         if (url === "http://localhost:3000/projects/1/tasks") {
           return jsonResponse(200, []);
@@ -115,7 +118,7 @@ describe("projectService", () => {
 
       const project = await getProjectById("1");
 
-      expect(project).toEqual({ id: "1", name: "Progetto Demo", tasks: [] });
+      expect(project).toEqual({ id: "1", name: "Progetto Demo", customerId: null, tasks: [] });
     });
 
     it("ritorna undefined per un id inesistente (404)", async () => {
@@ -128,12 +131,12 @@ describe("projectService", () => {
   describe("createProject", () => {
     it("invia una POST JSON a /projects e ritorna il progetto creato", async () => {
       vi.mocked(fetch).mockResolvedValue(
-        jsonResponse(201, { id: "2", name: "Nuovo progetto", isActive: true }),
+        jsonResponse(201, { id: "2", name: "Nuovo progetto", isActive: true, customerId: null }),
       );
 
       const project = await createProject("Nuovo progetto");
 
-      expect(project).toEqual({ id: "2", name: "Nuovo progetto", tasks: [] });
+      expect(project).toEqual({ id: "2", name: "Nuovo progetto", customerId: null, tasks: [] });
       const [url, options] = vi.mocked(fetch).mock.calls[0];
       expect(url).toBe("http://localhost:3000/projects");
       expect(options?.method).toBe("POST");

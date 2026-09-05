@@ -1,11 +1,11 @@
-import { useEffect, useId, useState } from "react";
-import { X } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import InputComponent from "../input/inputComponent";
 import ButtonComponent from "../button/buttonComponent";
 import RateInputComponent from "../rateInput/rateInputComponent";
 import WorkDaysSelectorComponent from "../workDaysSelector/workDaysSelectorComponent";
 import WorkHoursEditorComponent from "../workHoursEditor/workHoursEditorComponent";
+import DrawerBaseComponent from "../drawerBase/drawerBaseComponent";
 import { getCompany, updateCompany } from "../../services/company/companyService";
 import type { RegisteredCompany } from "../../services/company/companyService";
 import { validateEmail } from "../../services/validation/validationService";
@@ -53,7 +53,6 @@ const CODICE_FISCALE_REGEX = /^(\d{11}|[A-Za-z0-9]{16})$/;
 // al chiamante.
 function EditCompanyDrawerComponent({ isOpen, onClose, companyId }: Prop) {
   const { t } = useTranslation();
-  const titleId = useId();
 
   const [company, setCompany] = useState<RegisteredCompany | null>(null);
   const [loadError, setLoadError] = useState("");
@@ -126,17 +125,6 @@ function EditCompanyDrawerComponent({ isOpen, onClose, companyId }: Prop) {
     };
   }, [isOpen, companyId, t]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
-
   const nameError =
     submitAttempted && name.trim() === "" ? t("components.editCompanyDrawer.nameRequired") : "";
 
@@ -197,143 +185,129 @@ function EditCompanyDrawerComponent({ isOpen, onClose, companyId }: Prop) {
   }
 
   return (
-    <>
-      {isOpen && <div className={styles.backdrop} onClick={onClose} aria-hidden="true" />}
-      <div
-        className={styles.panel}
-        data-open={isOpen}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-      >
-        <div className={styles.header}>
-          <h2 id={titleId} className={styles.title}>
-            {t("components.editCompanyDrawer.title")}
-          </h2>
-          <button
-            type="button"
-            className={styles.closeButton}
-            aria-label={t("components.editCompanyDrawer.closeLabel")}
-            onClick={onClose}
-          >
-            <X size={18} aria-hidden="true" />
-          </button>
-        </div>
-
-        {loadError ? (
-          <p role="alert" className={styles.errorBanner}>
-            {loadError}
+    <DrawerBaseComponent
+      isOpen={isOpen}
+      onClose={onClose}
+      title={t("components.editCompanyDrawer.title")}
+      closeLabel={t("components.editCompanyDrawer.closeLabel")}
+      scrollMode="panel"
+    >
+      {loadError ? (
+        <p role="alert" className={styles.errorBanner}>
+          {loadError}
+        </p>
+      ) : company ? (
+        <section className={styles.section}>
+          <h3 className={styles.sectionTitle}>
+            {t("components.editCompanyDrawer.companyDataSectionTitle")}
+          </h3>
+          <p className={styles.hint}>
+            {t("components.editCompanyDrawer.createdOn", { date: formatDate(company.createdAt) })}
           </p>
-        ) : company ? (
-          <section className={styles.section}>
-            <p className={styles.hint}>
-              {t("components.editCompanyDrawer.createdOn", { date: formatDate(company.createdAt) })}
-            </p>
 
-            <div className={styles.fields}>
-              <InputComponent
-                type="text"
-                name="name"
-                label={t("components.editCompanyDrawer.nameLabel")}
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                error={nameError}
-                showLabel
-                required
-              />
-              <InputComponent
-                type="text"
-                name="ragioneSociale"
-                label={t("components.editCompanyDrawer.ragioneSocialeLabel")}
-                value={ragioneSociale}
-                onChange={(event) => setRagioneSociale(event.target.value)}
-                showLabel
-              />
-              <InputComponent
-                type="text"
-                name="piva"
-                label={t("components.editCompanyDrawer.pivaLabel")}
-                value={piva}
-                onChange={(event) => setPiva(event.target.value)}
-                error={pivaError}
-                showLabel
-              />
-              <InputComponent
-                type="text"
-                name="codiceFiscale"
-                label={t("components.editCompanyDrawer.codiceFiscaleLabel")}
-                value={codiceFiscale}
-                onChange={(event) => setCodiceFiscale(event.target.value)}
-                error={codiceFiscaleError}
-                showLabel
-              />
-              <InputComponent
-                type="text"
-                name="indirizzo"
-                label={t("components.editCompanyDrawer.indirizzoLabel")}
-                value={indirizzo}
-                onChange={(event) => setIndirizzo(event.target.value)}
-                showLabel
-              />
-              <InputComponent
-                type="email"
-                name="pec"
-                label={t("components.editCompanyDrawer.pecLabel")}
-                value={pec}
-                onChange={(event) => setPec(event.target.value)}
-                error={pecError}
-                showLabel
-              />
-            </div>
+          <div className={styles.fields}>
+            <InputComponent
+              type="text"
+              name="name"
+              label={t("components.editCompanyDrawer.nameLabel")}
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              error={nameError}
+              showLabel
+              required
+            />
+            <InputComponent
+              type="text"
+              name="ragioneSociale"
+              label={t("components.editCompanyDrawer.ragioneSocialeLabel")}
+              value={ragioneSociale}
+              onChange={(event) => setRagioneSociale(event.target.value)}
+              showLabel
+            />
+            <InputComponent
+              type="text"
+              name="piva"
+              label={t("components.editCompanyDrawer.pivaLabel")}
+              value={piva}
+              onChange={(event) => setPiva(event.target.value)}
+              error={pivaError}
+              showLabel
+            />
+            <InputComponent
+              type="text"
+              name="codiceFiscale"
+              label={t("components.editCompanyDrawer.codiceFiscaleLabel")}
+              value={codiceFiscale}
+              onChange={(event) => setCodiceFiscale(event.target.value)}
+              error={codiceFiscaleError}
+              showLabel
+            />
+            <InputComponent
+              type="text"
+              name="indirizzo"
+              label={t("components.editCompanyDrawer.indirizzoLabel")}
+              value={indirizzo}
+              onChange={(event) => setIndirizzo(event.target.value)}
+              showLabel
+            />
+            <InputComponent
+              type="email"
+              name="pec"
+              label={t("components.editCompanyDrawer.pecLabel")}
+              value={pec}
+              onChange={(event) => setPec(event.target.value)}
+              error={pecError}
+              showLabel
+            />
+          </div>
 
-            <div className={styles.section}>
-              <h3 className={styles.sectionTitle}>
-                {t("components.editCompanyDrawer.rateAndScheduleSectionTitle")}
-              </h3>
-              <RateInputComponent
-                label={t("components.editCompanyDrawer.companyRateLabel")}
-                name="tariffaOraria"
-                value={tariffaOraria}
-                unit={tariffaUnita}
-                workDays={giorniLavorativi}
-                workHours={orarioLavoro}
-                onChange={(newValue, newUnit) => {
-                  setTariffaOraria(newValue);
-                  setTariffaUnita(newUnit);
-                }}
-              />
-              <div>
-                <p className={styles.fieldGroupLabel}>
-                  {t("components.editCompanyDrawer.workDaysLabel")}
-                </p>
-                <WorkDaysSelectorComponent value={giorniLavorativi} onChange={setGiorniLavorativi} />
-              </div>
-              <div>
-                <p className={styles.fieldGroupLabel}>
-                  {t("components.editCompanyDrawer.workHoursLabel")}
-                </p>
-                <WorkHoursEditorComponent value={orarioLavoro} onChange={setOrarioLavoro} />
-              </div>
-            </div>
-
-            <ButtonComponent onClick={handleSave} disabled={isSubmitting}>
-              {isSubmitting
-                ? t("components.editCompanyDrawer.submitting")
-                : t("components.editCompanyDrawer.submit")}
-            </ButtonComponent>
-            {saveError && (
-              <p role="alert" className={styles.errorBanner}>
-                {saveError}
+          <div className={styles.section}>
+            <h3 className={styles.sectionTitle}>
+              {t("components.editCompanyDrawer.rateAndScheduleSectionTitle")}
+            </h3>
+            <RateInputComponent
+              label={t("components.editCompanyDrawer.companyRateLabel")}
+              name="tariffaOraria"
+              value={tariffaOraria}
+              unit={tariffaUnita}
+              workDays={giorniLavorativi}
+              workHours={orarioLavoro}
+              onChange={(newValue, newUnit) => {
+                setTariffaOraria(newValue);
+                setTariffaUnita(newUnit);
+              }}
+            />
+            <div>
+              <p className={styles.fieldGroupLabel}>
+                {t("components.editCompanyDrawer.workDaysLabel")}
               </p>
-            )}
-          </section>
-        ) : (
-          <p className={styles.hint} role="status">
-            {t("components.editCompanyDrawer.loading")}
-          </p>
-        )}
-      </div>
-    </>
+              <WorkDaysSelectorComponent value={giorniLavorativi} onChange={setGiorniLavorativi} />
+            </div>
+            <div>
+              <p className={styles.fieldGroupLabel}>
+                {t("components.editCompanyDrawer.workHoursLabel")}
+              </p>
+              <WorkHoursEditorComponent value={orarioLavoro} onChange={setOrarioLavoro} />
+            </div>
+          </div>
+
+          <ButtonComponent onClick={handleSave} disabled={isSubmitting}>
+            {isSubmitting
+              ? t("components.editCompanyDrawer.submitting")
+              : t("components.editCompanyDrawer.submit")}
+          </ButtonComponent>
+          {saveError && (
+            <p role="alert" className={styles.errorBanner}>
+              {saveError}
+            </p>
+          )}
+        </section>
+      ) : (
+        <p className={styles.hint} role="status">
+          {t("components.editCompanyDrawer.loading")}
+        </p>
+      )}
+    </DrawerBaseComponent>
   );
 }
 

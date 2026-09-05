@@ -1,0 +1,139 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-xl);
+  padding: var(--p-xl);
+  color: var(--text-primary);
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--m-md);
+}
+
+.title {
+  color: var(--text-primary);
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+/* Stesso tono pieno di .buttonBase in buttonComponent.module.css (azione
+   primaria della pagina), qui come button semplice invece di ButtonComponent
+   perché non vive dentro un form/una modale con submit implicito. */
+.generateButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--m-sm);
+  padding: var(--p-sm) var(--p-lg);
+  border-radius: var(--radious-sm);
+  background-color: var(--bg-primary);
+  color: var(--text-on-primary);
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition:
+    opacity 150ms ease,
+    transform 100ms ease;
+}
+
+.generateButton:hover {
+  opacity: 0.9;
+}
+
+.generateButton:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+/* Stesso riscontro tattile al click di .buttonBase:active in
+   buttonComponent.module.css: senza, l'azione primaria della pagina era
+   l'unico bottone pieno dell'app senza feedback alla pressione. */
+.generateButton:active {
+  transform: scale(0.97);
+}
+
+.statusText {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.tableCard {
+  background-color: var(--bg-surface);
+  border-radius: var(--radious-lg);
+  box-shadow: var(--shadow-card);
+  padding: var(--p-lg);
+  overflow-x: auto;
+}
+
+.invoiceTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.invoiceTable th,
+.invoiceTable td {
+  text-align: left;
+  padding: var(--p-md);
+  border-bottom: 1px solid var(--bg-field);
+}
+
+.invoiceTable thead th {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.invoiceRow {
+  transition: background-color 150ms ease;
+}
+
+.invoiceRow:hover {
+  background-color: color-mix(in srgb, var(--bg-field) 60%, transparent);
+}
+
+.invoiceNumberButton {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--bg-primary);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.invoiceNumberButton:hover {
+  text-decoration: underline;
+}
+
+.invoiceNumberButton:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+  border-radius: var(--radious-xs);
+}
+
+.srOnly {
+  composes: srOnly from "../../../shared/styles/fieldBase.module.css";
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .generateButton,
+  .invoiceRow {
+    transition: none;
+  }
+
+  .generateButton:active {
+    transform: none;
+  }
+}
+
+@media (max-width: 400px) {
+  .title {
+    font-size: 1.5rem;
+  }
+}

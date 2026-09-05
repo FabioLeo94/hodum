@@ -1,0 +1,8 @@
+/* Colore neutro (non semantico come le tinte di stato) perché non è uno
+   stato del task, è un vincolo trasversale che si applica a qualunque
+   stato/priorità. */
+.lockedBadge {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}

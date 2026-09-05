@@ -2,6 +2,7 @@ import { pool } from '../db/pool';
 import type { TaskComment } from '../models/taskComment';
 import { getProjectById } from './projectService';
 import { TaskNotFoundError } from './taskService';
+import { assertNonEmpty } from '../utils/validation';
 import { isValidUuid } from '../utils/uuid';
 import { AuthorizationError } from '../middleware/authentication';
 import { emitTaskCommentCreated, emitTaskCommentDeleted, emitTaskCommentUpdated } from '../realtime/io';
@@ -126,6 +127,12 @@ export async function createComment(
   body: string,
   companyId?: string | null,
 ): Promise<TaskComment> {
+  // Punto 2 della code review "niente logica nei controller": tsoa valida
+  // che "body" sia una stringa (campo non opzionale), ma non che non sia
+  // vuota dopo trim, prima un controllo identico in
+  // taskCommentController.createTaskComment.
+  assertNonEmpty(body, 'body', 'il commento non può essere vuoto');
+
   // Stessi controlli di listCommentsByTask: senza, un projectId/taskId
   // inesistente o di un'altra company/progetto inserirebbe comunque la riga
   // (task_id è FK-validato dal DB, ma project_id non lo confermerebbe).
@@ -185,6 +192,9 @@ export async function updateComment(
   body: string,
   companyId?: string | null,
 ): Promise<TaskComment> {
+  // Stesso principio di createComment sopra.
+  assertNonEmpty(body, 'body', 'il commento non può essere vuoto');
+
   await getProjectById(projectId, companyId);
   await assertTaskExistsInProject(projectId, taskId);
   await assertCommentAuthor(taskId, commentId, authorId);

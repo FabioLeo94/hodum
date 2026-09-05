@@ -115,12 +115,15 @@ function AssistantDrawerComponent({ isOpen, hasLocalFab, isHidden, onToggle }: P
   const projectName =
     resolvedProject && resolvedProject.id === contextProjectId ? resolvedProject.name : undefined;
 
-  const contextLabel =
-    pageContext?.page === "dashboard"
-      ? t("components.assistantDrawer.contextDashboard")
-      : pageContext?.page === "task_list"
-        ? (projectName ?? t("components.assistantDrawer.contextProjectFallback"))
-        : null;
+  // if/else invece di un ternario a due livelli: pageContext.page è
+  // un'unione discriminata a due soli membri (vedi PageContext in
+  // assistantService.ts), qui più leggibile come narrowing esplicito.
+  let contextLabel: string | null = null;
+  if (pageContext?.page === "dashboard") {
+    contextLabel = t("components.assistantDrawer.contextDashboard");
+  } else if (pageContext?.page === "task_list") {
+    contextLabel = projectName ?? t("components.assistantDrawer.contextProjectFallback");
+  }
 
   const messageListRef = useRef<HTMLDivElement>(null);
   // Rispecchia se l'utente è già in fondo alla chat: letto (non come dep)

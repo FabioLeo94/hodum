@@ -468,7 +468,9 @@ function TopbarComponent({ onLogout }: Prop) {
         {/* Owner-only (a differenza di "Dipendenti" sopra, visibile anche al
             project manager): backup e le altre voci future di questa pagina
             toccano l'infrastruttura dell'azienda, non la gestione operativa
-            che il manager già presidia (vedi companyManagement.tsx). */}
+            che il manager già presidia (vedi companyManagement.tsx).
+            "Fatture" non è più una voce separata: vive come card dentro
+            questa stessa pagina (vedi companyManagement.tsx). */}
         {isOwner && (
           <>
             {renderNavItem({

@@ -1,5 +1,5 @@
 import type { Request as ExRequest } from 'express';
-import { Body, Controller, Post, Request, Response, Route, Security } from 'tsoa';
+import { Body, Controller, Post, Request, Response, Route, Security } from '@tsoa/runtime';
 import { getAuthenticatedUser } from '../middleware/authentication';
 import { askAssistant } from '../services/assistantService';
 import type { AssistantMessage, PageContext } from '../services/assistantService';

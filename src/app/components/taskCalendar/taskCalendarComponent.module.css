@@ -188,7 +188,7 @@
   background-color: var(--bg-field);
   border-radius: var(--radious-lg);
   overflow: hidden;
-  box-shadow: 0 0 16px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--shadow-card);
 }
 
 .weekLabelHeaderCell,

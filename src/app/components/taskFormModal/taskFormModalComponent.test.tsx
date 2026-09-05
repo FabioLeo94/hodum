@@ -1,10 +1,21 @@
+import type { ReactElement } from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router";
 import TaskFormModalComponent from "./taskFormModalComponent";
+
+// TaskFormModalComponent usa useNavigate (bottone "Visualizza fattura" in
+// modalità readOnly): richiede un Router anche nei test che non toccano
+// quella modalità, dato che l'hook è chiamato incondizionatamente al top del
+// componente (Rules of Hooks). Sostituisce `render` negli stessi identici
+// punti di chiamata (stessa firma), solo avvolto in MemoryRouter.
+function renderModal(ui: ReactElement) {
+  return render(<MemoryRouter>{ui}</MemoryRouter>);
+}
 
 describe("TaskFormModalComponent", () => {
   it("does not open the dialog when isOpen is false", () => {
-    render(
+    renderModal(
       <TaskFormModalComponent
         isOpen={false}
         projectId="project-1"
@@ -20,7 +31,7 @@ describe("TaskFormModalComponent", () => {
   });
 
   it("renders the title and the fields when open", () => {
-    render(
+    renderModal(
       <TaskFormModalComponent
         isOpen
         projectId="project-1"
@@ -41,7 +52,7 @@ describe("TaskFormModalComponent", () => {
 
   it("shows an error and does not call onSubmit when submitting an empty title", async () => {
     const onSubmit = vi.fn();
-    render(
+    renderModal(
       <TaskFormModalComponent
         isOpen
         projectId="project-1"
@@ -61,7 +72,7 @@ describe("TaskFormModalComponent", () => {
 
   it("calls onSubmit with the trimmed title and description when submitting valid values", async () => {
     const onSubmit = vi.fn();
-    render(
+    renderModal(
       <TaskFormModalComponent
         isOpen
         projectId="project-1"
@@ -94,7 +105,7 @@ describe("TaskFormModalComponent", () => {
 
   it("calls onSubmit with an empty description when it is left blank", async () => {
     const onSubmit = vi.fn();
-    render(
+    renderModal(
       <TaskFormModalComponent
         isOpen
         projectId="project-1"
@@ -123,7 +134,7 @@ describe("TaskFormModalComponent", () => {
 
   it("calls onSubmit when the form is submitted (e.g. pressing Enter in the title field), not only on button click", async () => {
     const onSubmit = vi.fn();
-    render(
+    renderModal(
       <TaskFormModalComponent
         isOpen
         projectId="project-1"
@@ -149,7 +160,7 @@ describe("TaskFormModalComponent", () => {
   });
 
   it("renders status and priority selects with their defaults", () => {
-    render(
+    renderModal(
       <TaskFormModalComponent
         isOpen
         projectId="project-1"
@@ -169,7 +180,7 @@ describe("TaskFormModalComponent", () => {
 
   it("calls onSubmit with the status and priority chosen via the selects", async () => {
     const onSubmit = vi.fn();
-    render(
+    renderModal(
       <TaskFormModalComponent
         isOpen
         projectId="project-1"
@@ -199,7 +210,7 @@ describe("TaskFormModalComponent", () => {
 
   it("calls onSubmit with the due date chosen in the date field", async () => {
     const onSubmit = vi.fn();
-    render(
+    renderModal(
       <TaskFormModalComponent
         isOpen
         projectId="project-1"
@@ -231,7 +242,7 @@ describe("TaskFormModalComponent", () => {
 
   it("calls onClose when the cancel button is clicked", () => {
     const onClose = vi.fn();
-    render(
+    renderModal(
       <TaskFormModalComponent
         isOpen
         projectId="project-1"
@@ -253,7 +264,7 @@ describe("TaskFormModalComponent", () => {
           resolveSubmit = resolve;
         }),
     );
-    render(
+    renderModal(
       <TaskFormModalComponent
         isOpen
         projectId="project-1"
@@ -285,7 +296,7 @@ describe("TaskFormModalComponent", () => {
 
   it("re-enables the confirm button after onSubmit rejects so the user can retry", async () => {
     const onSubmit = vi.fn().mockRejectedValue(new Error("boom"));
-    render(
+    renderModal(
       <TaskFormModalComponent
         isOpen
         projectId="project-1"
@@ -310,7 +321,7 @@ describe("TaskFormModalComponent", () => {
 
   describe("edit mode", () => {
     it("renders the edit title, description and pre-filled fields", () => {
-      render(
+      renderModal(
         <TaskFormModalComponent
           isOpen
           mode="edit"
@@ -345,7 +356,7 @@ describe("TaskFormModalComponent", () => {
     });
 
     it("pre-fills the due date field with initialDueDate", () => {
-      render(
+      renderModal(
         <TaskFormModalComponent
           isOpen
           mode="edit"
@@ -365,7 +376,7 @@ describe("TaskFormModalComponent", () => {
 
     it("calls onSubmit with null after clearing a pre-filled due date", async () => {
       const onSubmit = vi.fn();
-      render(
+      renderModal(
         <TaskFormModalComponent
           isOpen
           mode="edit"
@@ -396,7 +407,7 @@ describe("TaskFormModalComponent", () => {
 
     it("calls onSubmit with the edited values, not the initial ones", async () => {
       const onSubmit = vi.fn();
-      render(
+      renderModal(
         <TaskFormModalComponent
           isOpen
           mode="edit"
@@ -440,7 +451,7 @@ describe("TaskFormModalComponent", () => {
             resolveSubmit = resolve;
           }),
       );
-      render(
+      renderModal(
         <TaskFormModalComponent
           isOpen
           mode="edit"

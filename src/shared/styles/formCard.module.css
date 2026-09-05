@@ -10,7 +10,7 @@
   padding: var(--p-xl);
   border-radius: var(--radious-lg);
   background-color: var(--bg-surface);
-  box-shadow: 0 0 16px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--shadow-card);
 }
 
 .formError {

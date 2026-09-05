@@ -46,7 +46,7 @@ function EditEmployeeModalComponent({
   const { t } = useTranslation();
   // Precompilato solo al mount: il chiamante rimonta il componente (via
   // `key`) ogni volta che la modale si riapre, stesso pattern di
-  // RenameProjectModalComponent.
+  // editProjectModalComponent.
   const [username, setUsername] = useState(currentUsername);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");

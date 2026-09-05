@@ -39,7 +39,7 @@
   padding: var(--p-lg);
   border-radius: var(--radious-lg);
   background-color: var(--bg-surface);
-  box-shadow: 0 0 16px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--shadow-card);
 }
 
 .employeeInfo {
@@ -136,18 +136,6 @@
 .iconButtonDanger:hover {
   background-color: var(--color-danger);
   color: var(--text-on-primary);
-}
-
-.emptyState {
-  composes: messageCard from "../../../shared/styles/messageCard.module.css";
-}
-
-.emptyStateTitle {
-  composes: messageCardTitle from "../../../shared/styles/messageCard.module.css";
-}
-
-.emptyStateText {
-  composes: messageCardText from "../../../shared/styles/messageCard.module.css";
 }
 
 /* Stesso FAB "+" di dashboard/taskList: vedi

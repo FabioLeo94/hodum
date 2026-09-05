@@ -312,7 +312,7 @@ function TaskCalendarComponent({
                               }`}
                               data-dimmed={isDimmed}
                               data-dragging={draggedTask?.id === task.id}
-                              draggable={onDueDateChange !== undefined}
+                              draggable={onDueDateChange !== undefined && !task.invoiceId}
                               title={`${task.title} — ${STATUS_LABELS[task.status]}${dueState}`}
                               aria-label={task.title}
                               onClick={() => onOpenTask(task)}

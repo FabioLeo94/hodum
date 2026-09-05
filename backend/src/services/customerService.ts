@@ -1,6 +1,7 @@
 import { pool } from '../db/pool';
 import type { RateUnit } from '../models/company';
 import type { Customer } from '../models/customer';
+import { validateAndNormalizeRate } from '../utils/rateUnit';
 import { isValidUuid } from '../utils/uuid';
 
 // Stesso principio di ProjectNotFoundError/TaskNotFoundError: segnala "0
@@ -12,6 +13,31 @@ export class CustomerNotFoundError extends Error {
     super(`Customer con id ${id} non trovato`);
     this.name = 'CustomerNotFoundError';
   }
+}
+
+// Segnala una coppia tariffaOraria/tariffaUnita non valida al chiamante senza
+// che il service conosca HTTP: il controller la intercetta e decide lo status
+// (422), stesso principio di CustomerNotFoundError sopra per il 404. Prima
+// viveva come funzione validateTariffa in customerController.ts: la regola è
+// di dominio (deriva dal CHECK di migration 0034), non di forma della
+// richiesta, quindi appartiene al service, non al controller.
+export class InvalidTariffaError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'InvalidTariffaError';
+  }
+}
+
+// Validazione e normalizzazione condivisa da createCustomer/updateCustomer:
+// regola comune a Company (vedi utils/rateUnit.ts, punto 3 della code review
+// "niente logica nei controller" — prima duplicata qui e in
+// companyController.ts), con InvalidTariffaError come tipo di errore proprio
+// di questo service.
+function validateAndNormalizeTariffa(
+  tariffaOraria: number | null | undefined,
+  tariffaUnita: RateUnit | null | undefined,
+): { tariffaOraria: number | null; tariffaUnita: RateUnit | null } {
+  return validateAndNormalizeRate(tariffaOraria, tariffaUnita, (message) => new InvalidTariffaError(message));
 }
 
 // Forma della riga così come esce da pg: snake_case, coerente con lo schema
@@ -53,6 +79,24 @@ export async function listCustomersByCompany(companyId: string): Promise<Custome
   return result.rows.map(toCustomer);
 }
 
+// Solo id e nome, senza dati economici (tariffa) né anagrafici: usata dalla
+// dropdown di assegnazione cliente su un progetto (ProjectController.updateProject
+// è @Security('manager'), a differenza delle rotte /customers che sono
+// owner-only), stesso principio di ProjectSummary/listProjectsSummary lato
+// frontend per la checklist di assegnazione progetti.
+export interface CustomerSummary {
+  id: string;
+  name: string;
+}
+
+export async function listCustomerSummariesByCompany(companyId: string): Promise<CustomerSummary[]> {
+  const result = await pool.query<CustomerSummary>(
+    'SELECT id, name FROM customers WHERE company_id = $1 ORDER BY name',
+    [companyId],
+  );
+  return result.rows;
+}
+
 export async function getCustomerById(id: string, companyId: string): Promise<Customer> {
   // Un id sintatticamente non valido non può comunque combaciare con nessuna
   // riga: intercettarlo qui evita che la colonna uuid lo rifiuti con un
@@ -75,19 +119,20 @@ export async function getCustomerById(id: string, companyId: string): Promise<Cu
 export interface CreateCustomerInput {
   name: string;
   description?: string | null;
-  // Accoppiamento tariffaOraria/tariffaUnita già applicato dal controller
-  // (stesso principio di UpdateCompanyInput in companyService.ts): il
-  // service scrive quello che riceve senza rivalidare.
+  // Grezzi come arrivano dal body della richiesta: validateAndNormalizeTariffa
+  // (sopra) applica l'accoppiamento e può lanciare InvalidTariffaError, il
+  // controller la intercetta per rispondere 422.
   tariffaOraria?: number | null;
   tariffaUnita?: RateUnit | null;
 }
 
 export async function createCustomer(companyId: string, input: CreateCustomerInput): Promise<Customer> {
+  const tariffa = validateAndNormalizeTariffa(input.tariffaOraria, input.tariffaUnita);
   const result = await pool.query<CustomerRow>(
     `INSERT INTO customers (company_id, name, description, tariffa_oraria, tariffa_unita)
      VALUES ($1, $2, $3, $4, $5)
      RETURNING ${CUSTOMER_COLUMNS}`,
-    [companyId, input.name, input.description ?? null, input.tariffaOraria ?? null, input.tariffaUnita ?? null],
+    [companyId, input.name, input.description ?? null, tariffa.tariffaOraria, tariffa.tariffaUnita],
   );
   return toCustomer(result.rows[0]);
 }
@@ -105,13 +150,14 @@ export async function updateCustomer(id: string, companyId: string, input: Updat
   if (!isValidUuid(id)) {
     throw new CustomerNotFoundError(id);
   }
+  const tariffa = validateAndNormalizeTariffa(input.tariffaOraria, input.tariffaUnita);
 
   const result = await pool.query<CustomerRow>(
     `UPDATE customers
      SET name = $3, description = $4, tariffa_oraria = $5, tariffa_unita = $6
      WHERE id = $1 AND company_id = $2
      RETURNING ${CUSTOMER_COLUMNS}`,
-    [id, companyId, input.name, input.description ?? null, input.tariffaOraria ?? null, input.tariffaUnita ?? null],
+    [id, companyId, input.name, input.description ?? null, tariffa.tariffaOraria, tariffa.tariffaUnita],
   );
   const row = result.rows[0];
   if (!row) {

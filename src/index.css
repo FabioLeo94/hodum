@@ -42,6 +42,29 @@
     "Lucida Sans", "Lucida Sans Regular", "Lucida Grande",
     "Lucida Sans Unicode", Geneva, Verdana, sans-serif;
 
+  /*SHADOW*/
+  /* Le due ombre erano ripetute, identiche carattere per carattere, in oltre
+     15 moduli: -card per le superfici statiche nel flusso (card task/progetto/
+     dipendente/messaggio), -popover per gli elementi sovrapposti al resto
+     (modali, drawer, menu/pannelli flottanti) che richiedono più profondità
+     per staccarsi visivamente da ciò che coprono. */
+  --shadow-card: 0 0 16px rgba(0, 0, 0, 0.35);
+  --shadow-popover: 0 8px 32px rgba(0, 0, 0, 0.5);
+  /* Bordo sinistro in ombra dei pannelli laterali (drawer/assistente): unica
+     direzione non simmetrica delle tre, riflette che il pannello sporge da
+     destra verso il contenuto a sinistra. */
+  --shadow-panel-edge: -8px 0 24px rgba(0, 0, 0, 0.4);
+
+  /*ICON BUTTON SIZE*/
+  /* Due taglie condivise per i bottoni icona circolari/quadrati dell'app,
+     invece di ripetere px diversi in ogni modulo: -sm per chiudi/indietro nei
+     contesti transitori (modali, drawer) dove l'icona (18px) resta la stessa
+     ovunque, -md per i trigger persistenti nell'header (account, notifiche)
+     che convivono con testo/logo di peso maggiore e restano quindi più
+     grandi di proposito, non per svista. */
+  --icon-button-size-sm: 32px;
+  --icon-button-size-md: 40px;
+
   /*LAYOUT*/
   /* Larghezza del pannello dell'assistente: condivisa tra il layout protetto
      (che restringe l'area principale) e il pannello stesso, così restano

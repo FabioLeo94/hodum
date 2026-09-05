@@ -1,5 +1,5 @@
 import type { Request as ExRequest } from 'express';
-import { Body, Controller, Delete, Get, Path, Post, Put, Request, Response, Route, Security, SuccessResponse } from 'tsoa';
+import { Body, Controller, Delete, Get, Path, Post, Put, Request, Response, Route, Security, SuccessResponse } from '@tsoa/runtime';
 import { getAuthenticatedUser } from '../middleware/authentication';
 import type { Company, RateUnit } from '../models/company';
 import type { User } from '../models/user';
@@ -7,7 +7,9 @@ import {
   createEmployee,
   deleteCompany as deleteCompanyService,
   getCompanyById,
+  ImportCompanyDataError,
   importCompanyData,
+  InvalidCompanyDataError,
   registerCompany,
   updateCompany,
   type TemporaryPasswordEntry,
@@ -15,23 +17,7 @@ import {
 import { type CompanyExportData, exportCompanyData } from '../services/exportService';
 import { signSessionToken } from '../services/tokenService';
 import { UserConflictError } from '../services/userService';
-import { isValidDueDate, isValidPriority, isValidTaskStatus } from '../services/taskService';
 import { isValidEmail, isValidPassword, PASSWORD_POLICY_MESSAGE } from '../utils/validation';
-
-// Campi opzionali, ma quando presenti (stringa non vuota) devono avere un
-// formato plausibile: P.IVA italiana a 11 cifre, codice fiscale a 11 cifre
-// (azienda) o 16 caratteri alfanumerici (persona fisica, es. ditta
-// individuale). Non è una validazione di checksum: come isValidEmail/
-// isValidPassword in utils/validation.ts, scarta solo i casi palesemente
-// sbagliati prima che finiscano su un documento fiscale.
-const PIVA_REGEX = /^\d{11}$/;
-const CODICE_FISCALE_REGEX = /^(\d{11}|[A-Za-z0-9]{16})$/;
-// Formato orario accettato per inizio1/fine1/inizio2/fine2: "HH:mm", stesso
-// formato in cui il service normalizza le colonne time in lettura
-// (companyService.normalizeTime).
-const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
-// Stessi 5 valori del CHECK su companies.tariffa_unita (migration 0033).
-const RATE_UNITS: RateUnit[] = ['oraria', 'giornaliera', 'settimanale', 'mensile', 'annuale'];
 
 // Nome distinto dagli omonimi "ErrorResponse" degli altri controller: tsoa
 // risolve i modelli per nome dell'interfaccia a livello globale (non per
@@ -132,124 +118,6 @@ function companyNotFoundResponse(id: string): CompanyErrorResponse {
   return { message: `Company con id ${id} non trovata` };
 }
 
-// Punto 4 del piano: stessa disciplina di validazione di register()/
-// updateCompany() sotto (isValidEmail/isValidPassword/PIVA_REGEX/
-// CODICE_FISCALE_REGEX riapplicati riga per riga), qui su un intero payload
-// annidato invece che su pochi campi flat. Eseguita PRIMA di aprire la
-// transazione in importCompanyData: un payload malformato deve rispondere 422
-// senza aver toccato il database, non emergere a metà transazione come un
-// errore Postgres generico. Restituisce il primo messaggio di errore trovato,
-// o null se il payload è accettabile.
-function validateImportPayload(body: ImportCompanyRequest): string | null {
-  if (!isValidPassword(body.ownerPassword)) {
-    return PASSWORD_POLICY_MESSAGE;
-  }
-
-  const data = body.export;
-  if (!data || typeof data !== 'object') {
-    return "il campo 'export' è obbligatorio";
-  }
-
-  if (!data.company || data.company.name.trim().length === 0) {
-    return "Il nome dell'azienda non può essere vuoto";
-  }
-  const piva = data.company.piva;
-  if (piva !== null && piva !== undefined && piva !== '' && !PIVA_REGEX.test(piva)) {
-    return 'piva deve essere composta da 11 cifre';
-  }
-  const codiceFiscale = data.company.codiceFiscale;
-  if (codiceFiscale !== null && codiceFiscale !== undefined && codiceFiscale !== '' && !CODICE_FISCALE_REGEX.test(codiceFiscale)) {
-    return 'codiceFiscale deve essere di 11 cifre o 16 caratteri alfanumerici';
-  }
-  const pec = data.company.pec;
-  if (pec !== null && pec !== undefined && pec !== '' && !isValidEmail(pec)) {
-    return 'pec non valida';
-  }
-
-  if (!Array.isArray(data.users) || data.users.length === 0) {
-    return "il campo 'export.users' deve contenere almeno l'owner";
-  }
-  const owners = data.users.filter((u) => u.role === 'owner');
-  if (owners.length !== 1 || owners[0].id !== data.company.ownerId) {
-    return "l'export deve contenere esattamente un utente owner, con id uguale a export.company.ownerId";
-  }
-  for (const user of data.users) {
-    if (user.username.trim().length === 0) {
-      return 'username non può essere vuoto (in export.users)';
-    }
-    if (!isValidEmail(user.email)) {
-      return 'email non valida (in export.users)';
-    }
-    if (user.role !== 'owner' && user.role !== 'manager' && user.role !== 'employee') {
-      return "role deve essere 'owner', 'manager' o 'employee' (in export.users)";
-    }
-  }
-
-  if (!Array.isArray(data.projects)) {
-    return "il campo 'export.projects' deve essere un array";
-  }
-  const projectIds = new Set(data.projects.map((p) => p.id));
-  for (const project of data.projects) {
-    if (project.name.trim().length === 0) {
-      return 'name non può essere vuoto (in export.projects)';
-    }
-  }
-
-  if (!Array.isArray(data.projectAssignments)) {
-    return "il campo 'export.projectAssignments' deve essere un array";
-  }
-  const userIds = new Set(data.users.map((u) => u.id));
-  for (const assignment of data.projectAssignments) {
-    if (!projectIds.has(assignment.projectId) || !userIds.has(assignment.userId)) {
-      return 'export.projectAssignments contiene un riferimento a un progetto o utente non presente nello stesso export';
-    }
-  }
-
-  if (!Array.isArray(data.tasks)) {
-    return "il campo 'export.tasks' deve essere un array";
-  }
-  const taskIds = new Set(data.tasks.map((t) => t.id));
-  for (const task of data.tasks) {
-    if (task.title.trim().length === 0) {
-      return 'title non può essere vuoto (in export.tasks)';
-    }
-    if (!projectIds.has(task.projectId)) {
-      return 'export.tasks contiene un riferimento a un progetto non presente nello stesso export';
-    }
-    if (!isValidTaskStatus(task.status)) {
-      return 'status non valido (in export.tasks)';
-    }
-    if (!isValidPriority(task.priority)) {
-      return 'priority deve essere un intero tra 1 e 10 (in export.tasks)';
-    }
-    if (task.dueDate !== null && !isValidDueDate(task.dueDate)) {
-      return 'dueDate non valida (in export.tasks)';
-    }
-    for (const assignee of task.assignees) {
-      if (!userIds.has(assignee.id)) {
-        return 'export.tasks contiene un assegnatario non presente in export.users';
-      }
-    }
-  }
-
-  if (!Array.isArray(data.comments)) {
-    return "il campo 'export.comments' deve essere un array";
-  }
-  for (const comment of data.comments) {
-    if (comment.body.trim().length === 0) {
-      return 'body non può essere vuoto (in export.comments)';
-    }
-    if (!taskIds.has(comment.taskId)) {
-      return 'export.comments contiene un riferimento a un task non presente nello stesso export';
-    }
-    if (!userIds.has(comment.authorId)) {
-      return 'export.comments contiene un riferimento a un autore non presente in export.users';
-    }
-  }
-
-  return null;
-}
-
 // Il path va scritto come stringa letterale: tsoa lo legge dall'AST prima
 // dell'avvio, una costante importata non verrebbe risolta in generazione.
 @Route('companies')
@@ -265,14 +133,10 @@ export class CompanyController extends Controller {
   public async register(
     @Body() body: RegisterCompanyRequest,
   ): Promise<RegisterCompanyResponse | CompanyErrorResponse> {
-    if (body.companyName.trim().length === 0) {
-      this.setStatus(422);
-      return { message: "Il nome dell'azienda non può essere vuoto" };
-    }
-    if (body.username.trim().length === 0) {
-      this.setStatus(422);
-      return { message: 'username non può essere vuoto' };
-    }
+    // "campo vuoto dopo trim" su companyName/username ora validato in
+    // companyService.registerCompany (punto 2 della code review "niente
+    // logica nei controller"): la ValidationError che lancia è mappata a 422
+    // nell'error handler globale (app.ts), non qui.
     if (!isValidEmail(body.email)) {
       this.setStatus(422);
       return { message: 'email non valida' };
@@ -369,130 +233,20 @@ export class CompanyController extends Controller {
       return companyNotFoundResponse(id);
     }
 
-    if (body.name.trim().length === 0) {
-      this.setStatus(422);
-      return { message: "Il nome dell'azienda non può essere vuoto" };
-    }
-    const piva = body.piva?.trim() || null;
-    if (piva !== null && !PIVA_REGEX.test(piva)) {
-      this.setStatus(422);
-      return { message: 'piva deve essere composta da 11 cifre' };
-    }
-    const codiceFiscale = body.codiceFiscale?.trim() || null;
-    if (codiceFiscale !== null && !CODICE_FISCALE_REGEX.test(codiceFiscale)) {
-      this.setStatus(422);
-      return { message: 'codiceFiscale deve essere di 11 cifre o 16 caratteri alfanumerici' };
-    }
-    const pec = body.pec?.trim() || null;
-    if (pec !== null && !isValidEmail(pec)) {
-      this.setStatus(422);
-      return { message: 'pec non valida' };
-    }
-
-    // Accoppiamento tariffaOraria/tariffaUnita: niente unità senza un valore
-    // (forzata a null), default 'oraria' se il valore c'è ma l'unità manca
-    // (vedi CLAUDE.md/task: la conversione tra unità è calcolo frontend, qui
-    // si valida solo la coppia canonica).
-    if (
-      body.tariffaOraria !== undefined &&
-      body.tariffaOraria !== null &&
-      (typeof body.tariffaOraria !== 'number' || Number.isNaN(body.tariffaOraria) || body.tariffaOraria < 0)
-    ) {
-      this.setStatus(422);
-      return { message: 'tariffaOraria deve essere un numero maggiore o uguale a 0' };
-    }
-    const tariffaOraria = body.tariffaOraria ?? null;
-    let tariffaUnita: RateUnit | null = null;
-    if (tariffaOraria !== null) {
-      tariffaUnita = body.tariffaUnita ?? 'oraria';
-      if (!RATE_UNITS.includes(tariffaUnita)) {
+    // Punto 1 della code review "niente logica nei controller": validazione
+    // di P.IVA/codice fiscale/PEC, accoppiamento tariffa e fasce orarie sono
+    // regole di dominio, spostate in companyService.updateCompany. Il
+    // controller si limita a inoltrare il body e mappare InvalidCompanyDataError
+    // a 422.
+    try {
+      return await updateCompany(id, body);
+    } catch (err) {
+      if (err instanceof InvalidCompanyDataError) {
         this.setStatus(422);
-        return { message: `tariffaUnita deve essere una tra: ${RATE_UNITS.join(', ')}` };
+        return { message: err.message };
       }
+      throw err;
     }
-
-    // Assente = nessun giorno lavorativo impostato, coerente col default
-    // false della migration: un PUT che non lo invia azzera i giorni già
-    // impostati, stesso comportamento "rappresentazione intera" già in uso
-    // per ragioneSociale/piva/ecc. sopra.
-    const giorniLavorativi = body.giorniLavorativi ?? {
-      lunedi: false,
-      martedi: false,
-      mercoledi: false,
-      giovedi: false,
-      venerdi: false,
-      sabato: false,
-      domenica: false,
-    };
-
-    // Assente = fascia unica non impostata, coerente col DEFAULT della
-    // migration (orario_continuativo true, ore tutte NULL).
-    const orarioLavoroInput = body.orarioLavoro ?? {
-      continuativo: true,
-      inizio1: null,
-      fine1: null,
-      inizio2: null,
-      fine2: null,
-    };
-    if (orarioLavoroInput.inizio1 !== null && !TIME_REGEX.test(orarioLavoroInput.inizio1)) {
-      this.setStatus(422);
-      return { message: 'orarioLavoro.inizio1 deve essere nel formato HH:mm' };
-    }
-    if (orarioLavoroInput.fine1 !== null && !TIME_REGEX.test(orarioLavoroInput.fine1)) {
-      this.setStatus(422);
-      return { message: 'orarioLavoro.fine1 deve essere nel formato HH:mm' };
-    }
-    if (
-      orarioLavoroInput.inizio1 !== null &&
-      orarioLavoroInput.fine1 !== null &&
-      orarioLavoroInput.fine1 <= orarioLavoroInput.inizio1
-    ) {
-      this.setStatus(422);
-      return { message: 'orarioLavoro.fine1 deve essere successivo a orarioLavoro.inizio1' };
-    }
-
-    // inizio2/fine2 non sono significative quando continuativo è true: si
-    // azzerano a prescindere da cosa arriva nel body, non si valida un dato
-    // che verrà comunque scartato.
-    let inizio2 = orarioLavoroInput.inizio2;
-    let fine2 = orarioLavoroInput.fine2;
-    if (orarioLavoroInput.continuativo) {
-      inizio2 = null;
-      fine2 = null;
-    } else {
-      if (inizio2 !== null && !TIME_REGEX.test(inizio2)) {
-        this.setStatus(422);
-        return { message: 'orarioLavoro.inizio2 deve essere nel formato HH:mm' };
-      }
-      if (fine2 !== null && !TIME_REGEX.test(fine2)) {
-        this.setStatus(422);
-        return { message: 'orarioLavoro.fine2 deve essere nel formato HH:mm' };
-      }
-      if (inizio2 !== null && fine2 !== null && fine2 <= inizio2) {
-        this.setStatus(422);
-        return { message: 'orarioLavoro.fine2 deve essere successivo a orarioLavoro.inizio2' };
-      }
-    }
-
-    const updated = await updateCompany(id, {
-      name: body.name.trim(),
-      ragioneSociale: body.ragioneSociale?.trim() || null,
-      piva,
-      codiceFiscale,
-      indirizzo: body.indirizzo?.trim() || null,
-      pec,
-      tariffaOraria,
-      tariffaUnita,
-      giorniLavorativi,
-      orarioLavoro: {
-        continuativo: orarioLavoroInput.continuativo,
-        inizio1: orarioLavoroInput.inizio1,
-        fine1: orarioLavoroInput.fine1,
-        inizio2,
-        fine2,
-      },
-    });
-    return updated;
   }
 
   // Punto 3 del piano: elimina l'intera azienda, incluso l'owner stesso
@@ -540,10 +294,11 @@ export class CompanyController extends Controller {
       return companyNotFoundResponse(id);
     }
 
-    if (body.username.trim().length === 0) {
-      this.setStatus(422);
-      return { message: 'username non può essere vuoto' };
-    }
+    // "username non può essere vuoto" ora validato in companyService.createEmployee
+    // (punto 2 della code review "niente logica nei controller"): la
+    // ValidationError che lancia è mappata a 422 nell'error handler globale
+    // (app.ts), non qui. email/password restano validate qui (fuori dallo
+    // scope di quell'intervento).
     if (!isValidEmail(body.email)) {
       this.setStatus(422);
       return { message: 'email non valida' };
@@ -585,12 +340,12 @@ export class CompanyController extends Controller {
   public async importCompany(
     @Body() body: ImportCompanyRequest,
   ): Promise<ImportCompanyResponse | CompanyErrorResponse> {
-    const validationError = validateImportPayload(body);
-    if (validationError) {
-      this.setStatus(422);
-      return { message: validationError };
-    }
-
+    // Punto 1 della code review "niente logica nei controller": la
+    // validazione del payload (~110 righe, ex validateImportPayload qui) è
+    // stata spostata in companyService.importCompanyData, eseguita PRIMA di
+    // aprire la transazione (stesso principio di prima: un payload malformato
+    // risponde 422 senza aver toccato il database). Il controller intercetta
+    // ImportCompanyDataError e risponde 422.
     try {
       const { user, company, recoveryCode, temporaryPasswords } = await importCompanyData({
         data: body.export,
@@ -600,6 +355,10 @@ export class CompanyController extends Controller {
       this.setStatus(201);
       return { user, company, token, recoveryCode, temporaryPasswords };
     } catch (err) {
+      if (err instanceof ImportCompanyDataError) {
+        this.setStatus(422);
+        return { message: err.message };
+      }
       if (err instanceof UserConflictError) {
         this.setStatus(409);
         return { message: err.message };

@@ -13,15 +13,17 @@ import { DatabaseError } from 'pg';
 import { pool } from '../db/pool';
 import type { CompanyExportData } from './exportService';
 import { UserConflictError } from './userService';
-import { deleteCompany, importCompanyData } from './companyService';
+import { deleteCompany, ImportCompanyDataError, importCompanyData, InvalidCompanyDataError, updateCompany } from './companyService';
 
 const poolConnect = vi.mocked(pool.connect);
+const poolQuery = vi.mocked(pool.query);
 
 const COMPANY_ID = 'old-company';
 const OWNER_ID = 'old-owner';
 
 beforeEach(() => {
   poolConnect.mockReset();
+  poolQuery.mockReset();
 });
 
 describe('deleteCompany: ordine dettato dalle FK incrociate companies.owner_id <-> users.company_id (nessuna cascade)', () => {
@@ -276,5 +278,101 @@ describe('importCompanyData: remapping id vecchio->nuovo', () => {
 
     expect(client.query).toHaveBeenCalledWith('ROLLBACK');
     expect(client.release).toHaveBeenCalled();
+  });
+});
+
+// Punto 1 della code review "niente logica nei controller": ex
+// validateImportPayload in companyController.ts, spostata qui dentro
+// importCompanyData. Verificato che rigetti PRIMA di aprire una connessione
+// (poolConnect mai chiamato), stesso principio già garantito quando questo
+// controllo viveva nel controller (un payload malformato non deve toccare il
+// database).
+describe('importCompanyData: validazione del payload prima di aprire la transazione', () => {
+  it('rigetta con ImportCompanyDataError, senza aprire la transazione, se ownerPassword non rispetta la policy', async () => {
+    await expect(
+      importCompanyData({ data: makeExportPayload(), ownerPassword: 'debole' }),
+    ).rejects.toBeInstanceOf(ImportCompanyDataError);
+
+    expect(poolConnect).not.toHaveBeenCalled();
+  });
+
+  it("rigetta con ImportCompanyDataError se l'export non contiene esattamente un owner con id uguale a company.ownerId", async () => {
+    const invalidPayload = makeExportPayload();
+    invalidPayload.users = [{ ...invalidPayload.users[0], id: 'un-altro-id' }, invalidPayload.users[1]];
+
+    await expect(
+      importCompanyData({ data: invalidPayload, ownerPassword: 'Password1' }),
+    ).rejects.toBeInstanceOf(ImportCompanyDataError);
+
+    expect(poolConnect).not.toHaveBeenCalled();
+  });
+});
+
+describe('updateCompany: validazione anagrafica/tariffa/orario (ex companyController.updateCompany)', () => {
+  const VALID_BODY = { name: 'Acme' };
+
+  it('rigetta con InvalidCompanyDataError un name vuoto dopo trim', async () => {
+    await expect(updateCompany(COMPANY_ID, { name: '   ' })).rejects.toBeInstanceOf(InvalidCompanyDataError);
+    expect(poolQuery).not.toHaveBeenCalled();
+  });
+
+  it('rigetta con InvalidCompanyDataError una piva che non è di 11 cifre', async () => {
+    await expect(updateCompany(COMPANY_ID, { ...VALID_BODY, piva: '123' })).rejects.toBeInstanceOf(
+      InvalidCompanyDataError,
+    );
+  });
+
+  it('rigetta con InvalidCompanyDataError tariffaOraria negativa', async () => {
+    await expect(updateCompany(COMPANY_ID, { ...VALID_BODY, tariffaOraria: -5 })).rejects.toBeInstanceOf(
+      InvalidCompanyDataError,
+    );
+  });
+
+  it("rigetta con InvalidCompanyDataError orarioLavoro.fine1 non successivo a orarioLavoro.inizio1", async () => {
+    await expect(
+      updateCompany(COMPANY_ID, {
+        ...VALID_BODY,
+        orarioLavoro: { continuativo: true, inizio1: '09:00', fine1: '08:00', inizio2: null, fine2: null },
+      }),
+    ).rejects.toBeInstanceOf(InvalidCompanyDataError);
+  });
+
+  it('applica il default tariffaUnita = oraria quando tariffaOraria è presente ma tariffaUnita è assente', async () => {
+    poolQuery.mockResolvedValue({
+      rows: [
+        {
+          id: COMPANY_ID,
+          name: 'Acme',
+          owner_id: OWNER_ID,
+          ragione_sociale: null,
+          piva: null,
+          codice_fiscale: null,
+          indirizzo: null,
+          pec: null,
+          tariffa_oraria: '25',
+          tariffa_unita: 'oraria',
+          lavora_lunedi: false,
+          lavora_martedi: false,
+          lavora_mercoledi: false,
+          lavora_giovedi: false,
+          lavora_venerdi: false,
+          lavora_sabato: false,
+          lavora_domenica: false,
+          orario_continuativo: true,
+          ora_inizio_1: null,
+          ora_fine_1: null,
+          ora_inizio_2: null,
+          ora_fine_2: null,
+          created_at: new Date(),
+        },
+      ],
+    } as never);
+
+    await updateCompany(COMPANY_ID, { ...VALID_BODY, tariffaOraria: 25 });
+
+    const params = poolQuery.mock.calls[0][1] as unknown[];
+    // tariffa_oraria = $8, tariffa_unita = $9 (vedi SET clause in updateCompany).
+    expect(params[7]).toBe(25);
+    expect(params[8]).toBe('oraria');
   });
 });

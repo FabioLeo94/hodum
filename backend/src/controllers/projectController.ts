@@ -1,5 +1,5 @@
 import type { Request as ExRequest } from 'express';
-import { Body, Controller, Delete, Get, Path, Post, Put, Request, Response, Route, Security, SuccessResponse } from 'tsoa';
+import { Body, Controller, Delete, Get, Path, Post, Put, Request, Response, Route, Security, SuccessResponse } from '@tsoa/runtime';
 import { getAuthenticatedUser } from '../middleware/authentication';
 import type { Project } from '../models/project';
 import {
@@ -12,6 +12,7 @@ import {
   updateProject,
 } from '../services/projectService';
 import { assertProjectAccessible } from '../services/projectAssignmentService';
+import { CustomerNotFoundError } from '../services/customerService';
 
 // Corpo di risposta per gli esiti di errore documentati via @Response: stessa
 // forma { message } già usata dall'error handler globale in app.ts, per
@@ -28,6 +29,11 @@ export interface CreateProjectRequest {
 export interface UpdateProjectRequest {
   name?: string;
   isActive?: boolean;
+  // customerId passato così com'è al service (non `?? null`): tsoa distingue
+  // il campo assente da null nel body JSON, e questa distinzione va preservata
+  // fino a UpdateProjectInput.customerId (tri-stato, vedi projectService.ts),
+  // stesso principio di dueDate in UpdateTaskRequest (taskController.ts).
+  customerId?: string | null;
 }
 
 // Il path va scritto come stringa letterale: tsoa lo legge dall'AST prima
@@ -76,14 +82,10 @@ export class ProjectController extends Controller {
     @Body() body: CreateProjectRequest,
     @Request() request: ExRequest,
   ): Promise<Project | ErrorResponse> {
-    // tsoa valida che "name" sia una stringa (campo non opzionale), ma non che
-    // non sia vuota: è una regola di dominio, non di forma, quindi resta
-    // responsabilità del controller e non del layer di validazione generato.
-    if (body.name.trim().length === 0) {
-      this.setStatus(422);
-      return { message: 'name non può essere vuoto' };
-    }
-
+    // "name non può essere vuoto" validato in projectService.createProject
+    // (punto 2 della code review "niente logica nei controller"): la
+    // ValidationError che lancia è mappata a 422 nell'error handler globale
+    // (app.ts), non qui.
     const user = getAuthenticatedUser(request);
     try {
       const project = await createProject({ name: body.name, isActive: body.isActive }, user.companyId);
@@ -100,23 +102,20 @@ export class ProjectController extends Controller {
 
   @Put('{id}')
   @Security('manager')
-  @Response<ErrorResponse>(404, 'Project non trovato')
+  @Response<ErrorResponse>(404, 'Project o cliente non trovato')
   @Response<ErrorResponse>(422, 'name presente ma vuoto')
   public async updateProject(
     @Path() id: string,
     @Body() body: UpdateProjectRequest,
     @Request() request: ExRequest,
   ): Promise<Project | ErrorResponse> {
-    if (body.name !== undefined && body.name.trim().length === 0) {
-      this.setStatus(422);
-      return { message: 'name non può essere vuoto' };
-    }
-
+    // Stesso principio di createProject sopra: "name presente ma vuoto"
+    // validato in projectService.updateProject.
     const user = getAuthenticatedUser(request);
     try {
       return await updateProject(id, body, user.companyId);
     } catch (err) {
-      if (err instanceof ProjectNotFoundError) {
+      if (err instanceof ProjectNotFoundError || err instanceof CustomerNotFoundError) {
         this.setStatus(404);
         return { message: err.message };
       }

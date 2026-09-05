@@ -15,6 +15,24 @@ export async function getAllCustomers(): Promise<Customer[]> {
   return (await response.json()) as Customer[];
 }
 
+// Solo id e nome: a differenza di getAllCustomers (owner-only lato backend),
+// GET /customers/summary è @Security('manager'), pensata per la dropdown di
+// assegnazione cliente in EditProjectModalComponent, usata anche dal
+// project manager (stesso principio di ProjectSummary in projectService.ts).
+export interface CustomerSummary {
+  id: string;
+  name: string;
+}
+
+export async function listCustomerSummaries(): Promise<CustomerSummary[]> {
+  const response = await authFetch(`${API_BASE_URL}/customers/summary`, { headers: authHeader() });
+  if (!response.ok) {
+    const message = await readErrorMessage(response);
+    throw new Error(message ?? "Impossibile caricare i clienti.");
+  }
+  return (await response.json()) as CustomerSummary[];
+}
+
 export interface CreateCustomerInput {
   name: string;
   description?: string | null;

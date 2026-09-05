@@ -11,7 +11,7 @@
      (dashboard.module.css) che ha bisogno dello spazio residuo per mostrare
      il mese intero senza scroll interno. */
   padding: var(--p-md) var(--p-lg);
-  box-shadow: 0 0 16px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--shadow-card);
   transition:
     transform 250ms ease,
     box-shadow 250ms ease;
@@ -266,7 +266,7 @@
   padding: var(--p-sm);
   border-radius: var(--radious-md);
   background-color: var(--bg-field);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-popover);
   animation: popoverPopIn 140ms ease both;
 }
 

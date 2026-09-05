@@ -37,6 +37,12 @@ export interface Task {
   workStartedAt: string | null;
   workAccumulatedSeconds: number;
   workEndedAt: string | null;
+  // Pre-fatturazione (migration 0038): non-null significa "lockato per
+  // sempre", scritto una sola volta al momento della generazione di una
+  // pre-fattura e mai più riaggiornato dopo (nessuna "sfattura" in questa
+  // fase). La verifica di lock vive in taskService.assertTaskNotLocked,
+  // richiamata da ogni funzione mutante prima di qualunque UPDATE/DELETE.
+  invoiceId: string | null;
 }
 
 // Usato solo dall'endpoint aggregato GET /tasks (companyTasksController.ts):

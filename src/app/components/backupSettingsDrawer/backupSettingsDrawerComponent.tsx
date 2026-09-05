@@ -1,11 +1,11 @@
-import { useEffect, useId, useRef, useState } from "react";
-import { X } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import InputComponent from "../input/inputComponent";
 import ButtonComponent from "../button/buttonComponent";
 import BackupHistoryItemComponent from "../backupHistoryItem/backupHistoryItemComponent";
 import DeleteBackupModalComponent from "../deleteBackupModal/deleteBackupModalComponent";
 import RestoreBackupModalComponent from "../restoreBackupModal/restoreBackupModalComponent";
+import DrawerBaseComponent from "../drawerBase/drawerBaseComponent";
 import {
   deleteBackup,
   getBackupSettings,
@@ -40,8 +40,6 @@ type BackupActionModal =
 // pattern "key sul mount" non basta da solo, serve un caricamento interno.
 function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
   const { t } = useTranslation();
-  const titleId = useId();
-  const panelRef = useRef<HTMLDivElement>(null);
 
   const [settings, setSettings] = useState<BackupSettings | null>(null);
   const [loadError, setLoadError] = useState("");
@@ -137,23 +135,6 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
       cancelled = true;
     };
   }, [isOpen, companyId, t]);
-
-  // Se una modale di conferma (elimina/applica backup) è aperta SOPRA il
-  // drawer, il suo <dialog> nativo gestisce Escape per conto proprio
-  // (onCancel in ModalBaseComponent, chiude solo la modale): il keydown
-  // however continua a risalire fino a qui, quindi senza questa guardia lo
-  // stesso Escape chiuderebbe anche il drawer sottostante, un effetto a
-  // cascata che l'utente non si aspetta annullando solo la conferma.
-  useEffect(() => {
-    if (!isOpen || actionModal) return;
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose, actionModal]);
 
   const parsedInterval = Number(intervalMinutes);
   const intervalError =
@@ -338,29 +319,20 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
 
   return (
     <>
-      {isOpen && <div className={styles.backdrop} onClick={onClose} aria-hidden="true" />}
-      <div
-        ref={panelRef}
-        className={styles.panel}
-        data-open={isOpen}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
+      <DrawerBaseComponent
+        isOpen={isOpen}
+        onClose={onClose}
+        title={t("components.backupSettingsDrawer.title")}
+        closeLabel={t("components.backupSettingsDrawer.closeLabel")}
+        scrollMode="panel"
+        // Se una modale di conferma (elimina/applica backup) è aperta SOPRA
+        // il drawer, il suo <dialog> nativo gestisce Escape per conto proprio
+        // (onCancel in ModalBaseComponent, chiude solo la modale): senza
+        // questa guardia lo stesso Escape chiuderebbe anche il drawer
+        // sottostante, un effetto a cascata che l'utente non si aspetta
+        // annullando solo la conferma.
+        disableEscape={actionModal !== null}
       >
-        <div className={styles.header}>
-          <h2 id={titleId} className={styles.title}>
-            {t("components.backupSettingsDrawer.title")}
-          </h2>
-          <button
-            type="button"
-            className={styles.closeButton}
-            aria-label={t("components.backupSettingsDrawer.closeLabel")}
-            onClick={onClose}
-          >
-            <X size={18} aria-hidden="true" />
-          </button>
-        </div>
-
         {loadError ? (
           <p role="alert" className={styles.errorBanner}>
             {loadError}
@@ -498,7 +470,7 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
             {t("components.backupSettingsDrawer.loading")}
           </p>
         )}
-      </div>
+      </DrawerBaseComponent>
 
       <DeleteBackupModalComponent
         isOpen={actionModal?.type === "delete" || actionModal?.type === "bulk-delete"}

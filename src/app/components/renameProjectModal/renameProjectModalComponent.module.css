@@ -1,7 +1,0 @@
-.submitError {
-  composes: submitError from "../../../shared/styles/modalForm.module.css";
-}
-
-.cancelButton {
-  composes: cancelButton from "../../../shared/styles/modalForm.module.css";
-}

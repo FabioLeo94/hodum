@@ -1,5 +1,5 @@
 import type { Request as ExRequest } from 'express';
-import { Body, Controller, Delete, Get, Path, Post, Put, Request, Response, Route, Security, SuccessResponse } from 'tsoa';
+import { Body, Controller, Delete, Get, Path, Post, Put, Request, Response, Route, Security, SuccessResponse } from '@tsoa/runtime';
 import { getAuthenticatedUser } from '../middleware/authentication';
 import type { TaskComment } from '../models/taskComment';
 import {
@@ -70,14 +70,10 @@ export class TaskCommentController extends Controller {
     @Body() body: CreateTaskCommentRequest,
     @Request() request: ExRequest,
   ): Promise<TaskComment | TaskCommentErrorResponse> {
-    // Stesso pattern di createTask in taskController.ts: tsoa valida che
-    // "body" sia una stringa (campo non opzionale), ma non che non sia vuota
-    // dopo trim, è una regola di dominio e resta responsabilità del controller.
-    if (body.body.trim().length === 0) {
-      this.setStatus(422);
-      return { message: 'il commento non può essere vuoto' };
-    }
-
+    // "il commento non può essere vuoto" validato in taskCommentService.createComment
+    // (punto 2 della code review "niente logica nei controller"): la
+    // ValidationError che lancia è mappata a 422 nell'error handler globale
+    // (app.ts), non qui.
     const user = getAuthenticatedUser(request);
     try {
       await assertProjectAccessible(projectId, user);
@@ -104,11 +100,8 @@ export class TaskCommentController extends Controller {
     @Body() body: UpdateTaskCommentRequest,
     @Request() request: ExRequest,
   ): Promise<TaskComment | TaskCommentErrorResponse> {
-    if (body.body.trim().length === 0) {
-      this.setStatus(422);
-      return { message: 'il commento non può essere vuoto' };
-    }
-
+    // Stesso principio di createTaskComment sopra: validato in
+    // taskCommentService.updateComment.
     const user = getAuthenticatedUser(request);
     try {
       await assertProjectAccessible(projectId, user);

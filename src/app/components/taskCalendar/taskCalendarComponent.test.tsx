@@ -15,6 +15,7 @@ function buildTask(overrides: Partial<Task>): Task {
     workStartedAt: null,
     workAccumulatedSeconds: 0,
     workEndedAt: null,
+    invoiceId: null,
     ...overrides,
   };
 }

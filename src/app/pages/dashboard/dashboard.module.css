@@ -26,11 +26,6 @@
   font-weight: 700;
 }
 
-.dashboardSubtitle {
-  color: var(--text-muted);
-  font-size: 0.9rem;
-}
-
 /* Riga singola scrollabile orizzontalmente invece di wrap: le card restano a
    dimensione fissa (flex-shrink: 0) durante lo scroll, il contenitore stesso
    non si comprime quando il calendario sotto (flex: 1) reclama lo spazio
@@ -86,18 +81,6 @@
   color: var(--color-danger);
   font-size: 0.85rem;
   font-weight: 600;
-}
-
-.emptyState {
-  composes: messageCard from "../../../shared/styles/messageCard.module.css";
-}
-
-.emptyStateTitle {
-  composes: messageCardTitle from "../../../shared/styles/messageCard.module.css";
-}
-
-.emptyStateText {
-  composes: messageCardText from "../../../shared/styles/messageCard.module.css";
 }
 
 /* Stile condiviso con taskList.module.css (stesso FAB "+" nelle due pagine):

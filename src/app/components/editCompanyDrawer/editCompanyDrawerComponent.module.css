@@ -1,76 +1,6 @@
-/* Stessa struttura overlay modale di backupSettingsDrawerComponent.module.css
-   (backdrop cliccabile + Escape gestito nel componente): non esiste ancora
-   una base condivisa per i drawer, duplicata qui per lo stesso motivo per cui
-   lo era già in quel file. */
-.backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 25;
-  background-color: rgba(0, 0, 0, 0.5);
-  cursor: pointer;
-}
-
-.panel {
-  position: fixed;
-  top: 0;
-  right: 0;
-  z-index: 30;
-  display: flex;
-  flex-direction: column;
-  gap: var(--m-lg);
-  width: min(420px, 100vw);
-  height: 100vh;
-  padding: var(--p-xl);
-  background-color: var(--bg-surface);
-  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.4);
-  overflow-y: auto;
-  transform: translateX(100%);
-  transition: transform 260ms ease;
-}
-
-.panel[data-open="true"] {
-  transform: translateX(0);
-}
-
-.header {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--m-sm);
-}
-
-.title {
-  color: var(--text-primary);
-  font-size: 1.3rem;
-  font-weight: 700;
-}
-
-.closeButton {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radious-sm);
-  color: var(--text-muted);
-  cursor: pointer;
-  transition:
-    background-color 150ms ease,
-    color 150ms ease;
-}
-
-.closeButton:hover {
-  background-color: var(--bg-field);
-  color: var(--text-primary);
-}
-
-.closeButton:focus-visible {
-  outline: 2px solid var(--bg-primary);
-  outline-offset: 2px;
-}
-
+/* Backdrop/panel/header/titolo/bottone di chiusura vivono ora in
+   drawerBaseComponent.module.css (drawerBaseComponent): qui solo il layout
+   specifico del contenuto. */
 .section {
   display: flex;
   flex-direction: column;
@@ -101,19 +31,6 @@
 }
 
 .errorBanner {
-  padding: var(--p-sm) var(--p-md);
-  border-left: 3px solid var(--color-danger);
-  border-radius: var(--radious-sm);
-  background-color: var(--bg-field);
-  /* Stesso schiarimento all'86% verso il bianco già usato in
-     backupSettingsDrawerComponent.module.css per la stessa combinazione di
-     colori, per restare sopra la soglia AA 4.5:1. */
-  color: color-mix(in srgb, var(--color-danger) 86%, white);
-  font-size: 0.8rem;
+  composes: errorBanner from "../../../shared/styles/errorBanner.module.css";
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .panel {
-    transition: none;
-  }
-}

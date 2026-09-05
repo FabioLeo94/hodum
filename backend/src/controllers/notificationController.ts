@@ -1,5 +1,5 @@
 import type { Request as ExRequest } from 'express';
-import { Controller, Get, Patch, Path, Request, Response, Route, Security } from 'tsoa';
+import { Controller, Get, Patch, Path, Request, Response, Route, Security } from '@tsoa/runtime';
 import { getAuthenticatedUser } from '../middleware/authentication';
 import type { Notification } from '../models/notification';
 import { listForUser, markAllAsRead, markAsRead, NotificationNotFoundError } from '../services/notificationService';

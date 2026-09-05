@@ -1,4 +1,4 @@
-import { Controller, Get, Route } from 'tsoa';
+import { Controller, Get, Route } from '@tsoa/runtime';
 
 interface HealthStatus {
   status: 'ok';

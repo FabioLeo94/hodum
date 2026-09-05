@@ -1,5 +1,5 @@
 import type { Request as ExRequest } from 'express';
-import { Body, Controller, Delete, Get, Patch, Path, Post, Put, Request, Response, Route, Security, SuccessResponse } from 'tsoa';
+import { Body, Controller, Delete, Get, Patch, Path, Post, Put, Request, Response, Route, Security, SuccessResponse } from '@tsoa/runtime';
 import { getAuthenticatedUser } from '../middleware/authentication';
 import type { Task, TaskStatus } from '../models/task';
 import {
@@ -12,6 +12,7 @@ import {
   listTasksByProject,
   ProjectNotFoundError,
   setTaskAssignees,
+  TaskLockedError,
   TaskNotFoundError,
   updateTask,
   updateTaskPriority,
@@ -65,6 +66,25 @@ export interface UpdateTaskAssigneesRequest {
 // di primo livello.
 @Route('projects')
 export class TaskController extends Controller {
+  // Punto 4 della code review "niente logica nei controller": lo stesso
+  // blocco `if (err instanceof TaskLockedError) { this.setStatus(409);
+  // return {...}; }` era ripetuto identico in 6 metodi (updateTask,
+  // updateTaskStatus, updateTaskPriority, updateTaskWorkTimer, deleteTask,
+  // updateTaskAssignees). Resta un metodo di classe (non spostato nell'error
+  // handler globale di app.ts come il punto 2): richiede this.setStatus,
+  // specifico di tsoa su QUESTO controller, non una regola trasversale a
+  // qualunque scrittura. Privato e senza decoratori HTTP: tsoa genera le
+  // rotte solo dai metodi con un decoratore (@Get/@Post/...), quindi non
+  // interferisce con tsoa:gen. Restituisce undefined se err non è
+  // TaskLockedError, lasciando al chiamante il compito di rilanciarlo.
+  private mapTaskLockedError(err: unknown): TaskErrorResponse | undefined {
+    if (err instanceof TaskLockedError) {
+      this.setStatus(409);
+      return { message: err.message };
+    }
+    return undefined;
+  }
+
   @Get('{projectId}/tasks')
   @Security('jwt')
   @Response<TaskErrorResponse>(404, 'Project non trovato')
@@ -95,13 +115,12 @@ export class TaskController extends Controller {
     @Body() body: CreateTaskRequest,
     @Request() request: ExRequest,
   ): Promise<Task | TaskErrorResponse> {
-    // Stesso pattern di createProject in projectController.ts: tsoa valida
-    // che "title" sia una stringa (campo non opzionale), ma non che non sia
-    // vuota, è una regola di dominio e resta responsabilità del controller.
-    if (body.title.trim().length === 0) {
-      this.setStatus(422);
-      return { message: 'title non può essere vuoto' };
-    }
+    // "title" vuoto è validato da taskService.createTask (ValidationError,
+    // mappata a 422 dall'error handler globale in app.ts): a differenza di
+    // priority/status/dueDate sotto, non richiede lo stato del progetto per
+    // essere verificato, ma resta nel service insieme all'unica altra regola
+    // di dominio della stessa funzione (project esistente), invece di essere
+    // sparsa tra controller e service.
     // Stessa validazione e stesso messaggio dell'endpoint PATCH priority: la
     // regola di dominio è la stessa, cambia solo il momento in cui si applica.
     if (body.priority !== undefined && !isValidPriority(body.priority)) {
@@ -147,6 +166,7 @@ export class TaskController extends Controller {
   @Put('{projectId}/tasks/{taskId}')
   @Security('jwt')
   @Response<TaskErrorResponse>(404, 'Project o task non trovato')
+  @Response<TaskErrorResponse>(409, 'Task già fatturato: lockato per sempre')
   @Response<TaskErrorResponse>(422, 'title presente ma vuoto, o dueDate non valida')
   public async updateTask(
     @Path() projectId: string,
@@ -154,10 +174,8 @@ export class TaskController extends Controller {
     @Body() body: UpdateTaskRequest,
     @Request() request: ExRequest,
   ): Promise<Task | TaskErrorResponse> {
-    if (body.title !== undefined && body.title.trim().length === 0) {
-      this.setStatus(422);
-      return { message: 'title non può essere vuoto' };
-    }
+    // "title" vuoto (se fornito) è validato da taskService.updateTask, stesso
+    // motivo del commento in createTask sopra.
     if (body.dueDate !== undefined && body.dueDate !== null && !isValidDueDate(body.dueDate)) {
       this.setStatus(422);
       return { message: 'dueDate deve essere una data valida in formato YYYY-MM-DD, oppure null' };
@@ -172,6 +190,10 @@ export class TaskController extends Controller {
         this.setStatus(404);
         return { message: err.message };
       }
+      const lockedResponse = this.mapTaskLockedError(err);
+      if (lockedResponse) {
+        return lockedResponse;
+      }
       throw err;
     }
   }
@@ -179,6 +201,7 @@ export class TaskController extends Controller {
   @Patch('{projectId}/tasks/{taskId}/status')
   @Security('jwt')
   @Response<TaskErrorResponse>(404, 'Project o task non trovato')
+  @Response<TaskErrorResponse>(409, 'Task già fatturato: lockato per sempre')
   public async updateTaskStatus(
     @Path() projectId: string,
     @Path() taskId: string,
@@ -194,6 +217,10 @@ export class TaskController extends Controller {
         this.setStatus(404);
         return { message: err.message };
       }
+      const lockedResponse = this.mapTaskLockedError(err);
+      if (lockedResponse) {
+        return lockedResponse;
+      }
       throw err;
     }
   }
@@ -201,6 +228,7 @@ export class TaskController extends Controller {
   @Patch('{projectId}/tasks/{taskId}/priority')
   @Security('jwt')
   @Response<TaskErrorResponse>(404, 'Project o task non trovato')
+  @Response<TaskErrorResponse>(409, 'Task già fatturato: lockato per sempre')
   @Response<TaskErrorResponse>(422, 'priority non è un intero tra 1 e 10')
   public async updateTaskPriority(
     @Path() projectId: string,
@@ -222,6 +250,10 @@ export class TaskController extends Controller {
         this.setStatus(404);
         return { message: err.message };
       }
+      const lockedResponse = this.mapTaskLockedError(err);
+      if (lockedResponse) {
+        return lockedResponse;
+      }
       throw err;
     }
   }
@@ -229,6 +261,7 @@ export class TaskController extends Controller {
   @Patch('{projectId}/tasks/{taskId}/work-timer')
   @Security('jwt')
   @Response<TaskErrorResponse>(404, 'Project o task non trovato')
+  @Response<TaskErrorResponse>(409, 'Task già fatturato: lockato per sempre')
   @Response<TaskErrorResponse>(422, 'action non valida')
   public async updateTaskWorkTimer(
     @Path() projectId: string,
@@ -250,6 +283,10 @@ export class TaskController extends Controller {
         this.setStatus(404);
         return { message: err.message };
       }
+      const lockedResponse = this.mapTaskLockedError(err);
+      if (lockedResponse) {
+        return lockedResponse;
+      }
       throw err;
     }
   }
@@ -258,11 +295,12 @@ export class TaskController extends Controller {
   @Security('jwt')
   @SuccessResponse(204, 'Task eliminato')
   @Response<TaskErrorResponse>(404, 'Project o task non trovato')
+  @Response<TaskErrorResponse>(409, 'Task già fatturato: lockato per sempre')
   public async deleteTask(
     @Path() projectId: string,
     @Path() taskId: string,
     @Request() request: ExRequest,
-  ): Promise<void> {
+  ): Promise<void | TaskErrorResponse> {
     const user = getAuthenticatedUser(request);
     try {
       await assertProjectAccessible(projectId, user);
@@ -273,6 +311,10 @@ export class TaskController extends Controller {
         this.setStatus(404);
         return;
       }
+      const lockedResponse = this.mapTaskLockedError(err);
+      if (lockedResponse) {
+        return lockedResponse;
+      }
       throw err;
     }
   }
@@ -280,6 +322,7 @@ export class TaskController extends Controller {
   @Put('{projectId}/tasks/{taskId}/assignees')
   @Security('jwt')
   @Response<TaskErrorResponse>(404, 'Project, task o utente non trovato')
+  @Response<TaskErrorResponse>(409, 'Task già fatturato: lockato per sempre')
   public async updateTaskAssignees(
     @Path() projectId: string,
     @Path() taskId: string,
@@ -294,6 +337,10 @@ export class TaskController extends Controller {
       if (err instanceof TaskNotFoundError || err instanceof ProjectNotFoundError || err instanceof UserNotFoundError) {
         this.setStatus(404);
         return { message: err.message };
+      }
+      const lockedResponse = this.mapTaskLockedError(err);
+      if (lockedResponse) {
+        return lockedResponse;
       }
       throw err;
     }

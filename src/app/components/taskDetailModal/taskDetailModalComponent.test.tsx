@@ -1,5 +1,7 @@
+import type { ReactElement } from "react";
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router";
 import TaskDetailModalComponent from "./taskDetailModalComponent";
 import { listTaskComments } from "../../services/project/projectService";
 import type { TaskWithProject } from "../../../shared/types/project";
@@ -23,6 +25,14 @@ vi.mock("../../services/auth/authService", () => ({
 
 const mockedListTaskComments = vi.mocked(listTaskComments);
 
+// TaskDetailModalComponent usa useNavigate (bottone "Visualizza fattura"):
+// richiede un Router anche nei test dove non è owner/il task non è
+// fatturato, dato che l'hook è chiamato incondizionatamente al top del
+// componente (Rules of Hooks).
+function renderModal(ui: ReactElement) {
+  return render(<MemoryRouter>{ui}</MemoryRouter>);
+}
+
 const task: TaskWithProject = {
   id: "task-1",
   projectId: "project-1",
@@ -36,6 +46,7 @@ const task: TaskWithProject = {
   workStartedAt: null,
   workAccumulatedSeconds: 0,
   workEndedAt: null,
+  invoiceId: null,
 };
 
 describe("TaskDetailModalComponent", () => {
@@ -45,7 +56,7 @@ describe("TaskDetailModalComponent", () => {
 
   it("non renderizza nulla quando isOpen è false", () => {
     mockedListTaskComments.mockResolvedValue([]);
-    render(
+    renderModal(
       <TaskDetailModalComponent isOpen={false} task={task} onClose={() => {}} onGoToTask={() => {}} />,
     );
 
@@ -53,7 +64,7 @@ describe("TaskDetailModalComponent", () => {
   });
 
   it("non renderizza nulla quando task è null", () => {
-    render(
+    renderModal(
       <TaskDetailModalComponent isOpen task={null} onClose={() => {}} onGoToTask={() => {}} />,
     );
 
@@ -62,7 +73,7 @@ describe("TaskDetailModalComponent", () => {
 
   it("mostra il titolo col nome del progetto e i campi del task come testo statico", () => {
     mockedListTaskComments.mockResolvedValue([]);
-    render(
+    renderModal(
       <TaskDetailModalComponent isOpen task={task} onClose={() => {}} onGoToTask={() => {}} />,
     );
 
@@ -75,7 +86,7 @@ describe("TaskDetailModalComponent", () => {
 
   it("non renderizza alcun input o textarea editabile", () => {
     mockedListTaskComments.mockResolvedValue([]);
-    render(
+    renderModal(
       <TaskDetailModalComponent isOpen task={task} onClose={() => {}} onGoToTask={() => {}} />,
     );
 
@@ -88,7 +99,7 @@ describe("TaskDetailModalComponent", () => {
   it("chiama onGoToTask con il task quando si clicca 'Vai al task'", () => {
     mockedListTaskComments.mockResolvedValue([]);
     const onGoToTask = vi.fn();
-    render(
+    renderModal(
       <TaskDetailModalComponent isOpen task={task} onClose={() => {}} onGoToTask={onGoToTask} />,
     );
 
@@ -100,7 +111,7 @@ describe("TaskDetailModalComponent", () => {
   it("chiama onClose quando si clicca 'Chiudi'", () => {
     mockedListTaskComments.mockResolvedValue([]);
     const onClose = vi.fn();
-    render(
+    renderModal(
       <TaskDetailModalComponent isOpen task={task} onClose={onClose} onGoToTask={() => {}} />,
     );
 

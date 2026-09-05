@@ -30,6 +30,7 @@ interface Prop {
   /** Classe aggiuntiva sulla textarea nativa, per personalizzazioni puntuali
    * (es. padding extra per lasciare spazio a un pulsante interno). */
   className?: string;
+  disabled?: boolean;
 }
 
 function TextareaComponent({
@@ -47,6 +48,7 @@ function TextareaComponent({
   showLabel = false,
   fillHeight = false,
   className,
+  disabled = false,
 }: Prop) {
   const textareaId = useId();
   const errorId = useId();
@@ -92,6 +94,7 @@ function TextareaComponent({
         required={required}
         autoComplete={autoComplete}
         autoFocus={autoFocus}
+        disabled={disabled}
         rows={rows}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? errorId : undefined}

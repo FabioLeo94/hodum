@@ -1,12 +1,31 @@
 import cors from 'cors';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
 import rateLimit from 'express-rate-limit';
+import helmet from 'helmet';
 import { readFileSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { ValidateError } from 'tsoa';
-import { AuthenticationError, AuthorizationError, PasswordChangeRequiredError } from './middleware/authentication';
+import { ValidateError } from '@tsoa/runtime';
+import {
+  AuthenticationError,
+  AuthorizationError,
+  expressAuthentication,
+  PasswordChangeRequiredError,
+} from './middleware/authentication';
 import { RegisterRoutes } from './routes/routes';
+import { getInvoicePdfPath, InvoiceNotFoundError, regenerateMissingInvoicePdf } from './services/invoiceService';
 import { InvalidSessionTokenError } from './services/tokenService';
+import { ValidationError } from './utils/validation';
+
+// True solo per un errore di filesystem con code 'ENOENT' (readFile su un
+// path che non esiste): stesso pattern già usato altrove nel backend per
+// distinguere un tipo di errore specifico via `instanceof` prima di leggere
+// una proprietà propria del tipo concreto (vedi `err instanceof DatabaseError
+// && err.code === '23505'` in userService.ts/companyService.ts), qui con
+// NodeJS.ErrnoException invece di DatabaseError.
+function isEnoentError(err: unknown): boolean {
+  return err instanceof Error && (err as NodeJS.ErrnoException).code === 'ENOENT';
+}
 
 // `@scalar/express-api-reference` è distribuito come puro ESM ("type": "module",
 // nessuna condizione "require" in "exports"). Node 24 sa caricare ESM da un
@@ -23,6 +42,13 @@ export async function createApp(): Promise<Express> {
   // Senza, ogni risposta espone "X-Powered-By: Express": informazione gratuita
   // per chi fa ricognizione sul framework in uso.
   app.disable('x-powered-by');
+
+  // Header di sicurezza standard (X-Content-Type-Options, X-Frame-Options,
+  // ecc.): difesa in profondità anche dietro VPN, a costo zero. CSP disattivata
+  // perché Scalar (mountDocs sotto) monta CSS/JS che una policy di default
+  // bloccherebbe; da valutare una policy dedicata se /docs resta esposta oltre
+  // il dev.
+  app.use(helmet({ contentSecurityPolicy: false }));
 
   // POST /companies/import (companyController.ts) riceve l'intero export di
   // un'azienda (utenti, progetti, task, commenti): con aziende grandi può
@@ -51,19 +77,31 @@ export async function createApp(): Promise<Express> {
     }),
   );
 
+  // Log di avviso condiviso dai due limiter sotto: senza, un blocco per
+  // brute-force reale passa silenzioso quanto un utente che ha solo sbagliato
+  // la password due volte di troppo — non distinguibili senza un log.
+  const logRateLimitHit =
+    (route: string) =>
+    (req: Request, res: Response): void => {
+      console.warn(`[rate-limit] ${route} bloccato per IP ${req.ip}`);
+      res.status(429).json({ message: 'Troppi tentativi, riprova più tardi' });
+    };
+
   // Limite per IP sul login: senza, niente si oppone a un brute-force sulle
   // credenziali (aggravato dal fatto che GET /users, se mai raggiunto senza
   // auth, enumererebbe email valide da provare). Non applicato ad altre rotte:
   // sono tutte già dietro @Security('jwt'), che richiede un token valido
-  // ottenibile solo passando da qui.
+  // ottenibile solo passando da qui. Soglia a 20 (non 10): un utente che
+  // sbaglia la password 2-3 volte di seguito non deve restare bloccato 15
+  // minuti per un errore di battitura, la difesa reale resta il logging sotto.
   app.use(
     '/auth/login',
     rateLimit({
       windowMs: 15 * 60 * 1000,
-      limit: 10,
+      limit: 20,
       standardHeaders: true,
       legacyHeaders: false,
-      message: { message: 'Troppi tentativi di accesso, riprova più tardi' },
+      handler: logRateLimitHit('/auth/login'),
     }),
   );
 
@@ -76,10 +114,10 @@ export async function createApp(): Promise<Express> {
     '/auth/recover-password',
     rateLimit({
       windowMs: 15 * 60 * 1000,
-      limit: 10,
+      limit: 20,
       standardHeaders: true,
       legacyHeaders: false,
-      message: { message: 'Troppi tentativi di recupero, riprova più tardi' },
+      handler: logRateLimitHit('/auth/recover-password'),
     }),
   );
 
@@ -112,6 +150,79 @@ export async function createApp(): Promise<Express> {
     await mountDocs(app);
   }
 
+  // Streaming binario del PDF di pre-fattura: fuori da tsoa (che serializza i
+  // valori di ritorno dei controller in JSON, scomodo per un Buffer) invece
+  // di dentro un controller, stesso principio già applicato a /swagger.json
+  // sopra. L'auth 'owner' non arriva gratis come nei controller tsoa
+  // (@Security la applica il router generato): va replicata a mano
+  // richiamando expressAuthentication, la stessa funzione che tsoa invoca
+  // internamente per ogni @Security(...) (vedi middleware/authentication.ts).
+  // Montata prima di RegisterRoutes, stesso principio di /swagger.json: se in
+  // futuro un controller tsoa definisse un path in conflitto, l'ordine di
+  // montaggio decide chi risponde per primo (qui non capita: il segmento
+  // finale '/pdf' non esiste nelle rotte generate per 'invoices/{invoiceId}').
+  app.get('/invoices/:invoiceId/pdf', (req: Request, res: Response, next: NextFunction) => {
+    // req.params[...] è tipizzato string | string[] (un param con più
+    // segmenti, es. un futuro '/*splat', può produrre un array): normalizzato
+    // in una variabile locale, stesso principio già richiesto per req.query
+    // (getter, mai riassegnabile) applicato qui ai path param.
+    const invoiceId = req.params.invoiceId;
+    if (typeof invoiceId !== 'string') {
+      res.status(404).json({ message: 'Invoice non trovata' });
+      return;
+    }
+    expressAuthentication(req, 'owner')
+      .then(async (user) => {
+        if (user.companyId === null) {
+          res.status(404).json({ message: `Invoice con id ${invoiceId} non trovata` });
+          return;
+        }
+        const companyId = user.companyId;
+        const pdfPath = await getInvoicePdfPath(invoiceId, companyId);
+        let buffer: Buffer;
+        try {
+          buffer = await readFile(pdfPath);
+        } catch (fsErr) {
+          if (!isEnoentError(fsErr)) {
+            throw fsErr;
+          }
+          // pdf_path risultava valorizzato in DB (getInvoicePdfPath rigenera
+          // già da sé il caso 'pending', quindi qui il path non è quello) ma
+          // il file è comunque assente sul filesystem (rimosso a mano,
+          // cartella backend/invoices/ ripulita): un'unica rigenerazione
+          // on-demand, stessa logica del sentinel 'pending' ma forzata,
+          // invece di arrendersi subito. Se anche questa fallisce, l'errore
+          // risale al .catch sotto, che lo mappa a 404 invece di lasciarlo
+          // cadere nel generico error handler a 500.
+          const regeneratedPath = await regenerateMissingInvoicePdf(invoiceId, companyId);
+          buffer = await readFile(regeneratedPath);
+        }
+        res.type('application/pdf');
+        res.setHeader('Content-Disposition', `inline; filename="fattura-${invoiceId}.pdf"`);
+        res.send(buffer);
+      })
+      .catch((err: unknown) => {
+        if (err instanceof InvoiceNotFoundError) {
+          res.status(404).json({ message: err.message });
+          return;
+        }
+        if (isEnoentError(err)) {
+          // La rigenerazione on-demand sopra è già fallita (il file manca
+          // ANCHE dopo averlo ricreato): 404 esplicito, coerente con "il
+          // documento non è disponibile", invece di finire nel generico error
+          // handler a 500 come prima di questo fix.
+          res.status(404).json({ message: 'PDF non disponibile: rigenerazione fallita, riprovare più tardi.' });
+          return;
+        }
+        // AuthenticationError/AuthorizationError/PasswordChangeRequiredError e
+        // qualunque altro errore imprevisto passano dall'error handler
+        // globale a QUATTRO parametri sotto (401/403/428/500 a seconda del
+        // tipo): stesso ciclo di gestione di ogni rotta tsoa, non un ramo
+        // separato che dovrebbe reimplementarne la logica qui.
+        next(err);
+      });
+  });
+
   RegisterRoutes(app);
 
   // 404 esplicito: senza, una rotta inesistente cade nell'handler di default di
@@ -134,6 +245,16 @@ export async function createApp(): Promise<Express> {
       // err.fields descrive quali campi non hanno passato la validazione tsoa:
       // è informazione di dominio, non uno stack trace o un dettaglio del driver.
       res.status(422).json({ message: 'Validazione della richiesta fallita', details: err.fields });
+      return;
+    }
+
+    if (err instanceof ValidationError) {
+      // Stesso status di ValidateError sopra, ma per le regole di dominio che
+      // tsoa non può validare da solo (campo vuoto dopo trim, range numerici,
+      // formati custom): centralizzato qui invece che ripetuto in ogni
+      // controller (vedi utils/validation.ts), ogni service la lancia
+      // all'inizio delle proprie funzioni di scrittura.
+      res.status(422).json({ message: err.message });
       return;
     }
 

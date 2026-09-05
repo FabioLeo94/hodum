@@ -1,0 +1,34 @@
+.previewArea {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Altezza definita (non solo minima), stesso motivo di .commentsColumn in
+     taskFormModalComponent.module.css: senza, un <iframe> a contenuto
+     variabile non avrebbe un vincolo verticale entro cui stare. */
+  height: min(720px, 75vh);
+}
+
+.pdfFrame {
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: var(--radious-sm);
+  /* Bianco letterale, non un token della palette Ardesia & Menta (pensata
+     per lo sfondo scuro dell'app): è lo sfondo del visualizzatore PDF nativo
+     del browser, che rende sempre la pagina su carta bianca indipendentemente
+     dal tema, quindi qui va abbinato a quello invece che al tema scuro. */
+  background-color: #ffffff;
+}
+
+.statusText {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* font-size più grande dello 0.8rem condiviso: qui il banner non è un
+   avviso accanto a un form ma l'unico contenuto del riquadro di anteprima
+   (vedi .previewArea sopra), a leggibilità serve più corpo. */
+.errorBanner {
+  composes: errorBanner from "../../../shared/styles/errorBanner.module.css";
+  font-size: 0.9rem;
+}

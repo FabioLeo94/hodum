@@ -3,7 +3,9 @@ import { Link, useNavigate } from "react-router";
 import { EllipsisVertical } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Project } from "../../../shared/types/project";
-import RenameProjectModalComponent from "../renameProjectModal/renameProjectModalComponent";
+import EditProjectModalComponent, {
+  type EditProjectFormValues,
+} from "../editProjectModal/editProjectModalComponent";
 import DeleteProjectModalComponent from "../deleteProjectModal/deleteProjectModalComponent";
 import DownloadProjectModalComponent from "../downloadProjectModal/downloadProjectModalComponent";
 import {
@@ -14,15 +16,15 @@ import { useStatusGroupLabels } from "../../../shared/constants/taskStatus";
 import styles from "./projectComponent.module.css";
 
 interface Prop extends Project {
-  onRenameProject: (id: string, name: string) => Promise<void>;
+  onEditProject: (id: string, values: EditProjectFormValues) => Promise<void>;
   onDeleteProject: (id: string) => Promise<void>;
   // Task "Gestione del dipendente": false per un dipendente, che vede il
-  // progetto e ci lavora sui task ma non può rinominarlo né eliminarlo (solo
+  // progetto e ci lavora sui task ma non può modificarlo né eliminarlo (solo
   // l'owner gestisce il progetto in sé).
   canManage: boolean;
 }
 
-type ActiveModal = "rename" | "delete" | "download" | null;
+type ActiveModal = "edit" | "delete" | "download" | null;
 
 // Raggio e spessore del donut in unità di viewBox (0-100): definiscono uno
 // spessore dell'anello proporzionalmente simile alla vecchia barra lineare,
@@ -33,8 +35,9 @@ const DONUT_STROKE_WIDTH = 14;
 function ProjectComponent({
   id,
   name,
+  customerId,
   tasks,
-  onRenameProject,
+  onEditProject,
   onDeleteProject,
   canManage,
 }: Prop) {
@@ -42,7 +45,7 @@ function ProjectComponent({
   const STATUS_GROUP_LABELS = useStatusGroupLabels();
   const navigate = useNavigate();
   const [activeModal, setActiveModal] = useState<ActiveModal>(null);
-  const [renameError, setRenameError] = useState("");
+  const [editError, setEditError] = useState("");
   const [deleteError, setDeleteError] = useState("");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuId = useId();
@@ -148,10 +151,10 @@ function ProjectComponent({
             .join(", "),
         });
 
-  function openRenameModal() {
-    setRenameError("");
+  function openEditModal() {
+    setEditError("");
     setIsMenuOpen(false);
-    setActiveModal("rename");
+    setActiveModal("edit");
   }
 
   function openDeleteModal() {
@@ -170,15 +173,15 @@ function ProjectComponent({
   }
 
   function handleDownload(format: ExportFormat) {
-    downloadProject({ id, name, tasks }, format);
+    downloadProject({ id, name, customerId, tasks }, format);
   }
 
-  async function handleRename(newName: string) {
+  async function handleEdit(values: EditProjectFormValues) {
     try {
-      await onRenameProject(id, newName);
+      await onEditProject(id, values);
       setActiveModal(null);
     } catch (error) {
-      setRenameError(
+      setEditError(
         error instanceof Error
           ? error.message
           : t("components.project.updateError"),
@@ -303,9 +306,9 @@ function ProjectComponent({
                   type="button"
                   role="menuitem"
                   className={styles.popoverItem}
-                  onClick={openRenameModal}
+                  onClick={openEditModal}
                 >
-                  {t("components.project.rename")}
+                  {t("components.project.edit")}
                 </button>
                 <button
                   type="button"
@@ -328,13 +331,14 @@ function ProjectComponent({
             )}
           </div>
 
-          <RenameProjectModalComponent
-            key={activeModal === "rename" ? "rename-open" : "rename-closed"}
-            isOpen={activeModal === "rename"}
+          <EditProjectModalComponent
+            key={activeModal === "edit" ? "edit-open" : "edit-closed"}
+            isOpen={activeModal === "edit"}
             onClose={closeModal}
             currentName={name}
-            onRename={handleRename}
-            submitError={renameError}
+            currentCustomerId={customerId}
+            onSave={handleEdit}
+            submitError={editError}
           />
           <DeleteProjectModalComponent
             isOpen={activeModal === "delete"}

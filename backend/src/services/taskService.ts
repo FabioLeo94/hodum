@@ -6,6 +6,7 @@ import { formatDateOnly } from '../utils/dateOnly';
 import { emitTaskCreated, emitTaskDeleted, emitTaskUpdated } from '../realtime/io';
 import { notifyProjectTeam, notifyUsers } from './notificationService';
 import { UserNotFoundError } from './userService';
+import { assertNonEmpty } from '../utils/validation';
 
 export { ProjectNotFoundError } from './projectService';
 
@@ -16,6 +17,81 @@ export class TaskNotFoundError extends Error {
   constructor(public readonly id: string) {
     super(`Task con id ${id} non trovato`);
     this.name = 'TaskNotFoundError';
+  }
+}
+
+// Pre-fatturazione (migration 0038): un task con invoice_id valorizzato è
+// lockato per sempre (nessuna "sfattura" in questa fase). Distinta da
+// TaskNotFoundError: qui il task esiste ed è nello scope giusto, ma la sua
+// unica proprietà mutabile consentita a questo punto è restare invariato. Il
+// controller intercetta per rispondere 409, non 404 (il task esiste ed è
+// visibile in lettura) né un generico 500.
+export class TaskLockedError extends Error {
+  constructor(public readonly id: string) {
+    super(`Task con id ${id} è lockato: già incluso in una pre-fattura`);
+    this.name = 'TaskLockedError';
+  }
+}
+
+// Richiamata da ogni funzione mutante (updateTask, updateTaskStatus,
+// updateTaskPriority, updateTaskWorkTimer, setTaskAssignees, deleteTask)
+// subito dopo la verifica di esistenza del progetto (getProjectById) e prima
+// di qualunque UPDATE/DELETE: stesso filtro id+project_id già usato altrove
+// in questo file, così un projectId sbagliato nell'URL continua a risultare
+// "non trovato" invece di rivelare lo stato di lock di un task di un altro
+// progetto. NON usata da createTask (un task appena creato non può essere già
+// fatturato) né dalle funzioni di sola lettura.
+async function assertTaskNotLocked(taskId: string, projectId: string): Promise<void> {
+  const result = await pool.query<{ invoice_id: string | null }>(
+    'SELECT invoice_id FROM tasks WHERE id = $1 AND project_id = $2',
+    [taskId, projectId],
+  );
+  const row = result.rows[0];
+  if (!row) {
+    throw new TaskNotFoundError(taskId);
+  }
+  if (row.invoice_id !== null) {
+    throw new TaskLockedError(taskId);
+  }
+}
+
+// Richiamata quando una UPDATE/DELETE la cui WHERE include "AND invoice_id IS
+// NULL" (vedi commento su assertTaskNotLocked sopra: quel controllo da solo è
+// un fast-path, non basta contro una generateInvoice concorrente che lockasse
+// il task DOPO il fast-path ma PRIMA della UPDATE/DELETE) risulta in 0 righe
+// modificate. Non atomica rispetto alla UPDATE/DELETE già eseguita (una
+// query di verifica separata), ma va bene così: l'unica cosa che deve essere
+// atomica è che la UPDATE/DELETE stessa non tocchi mai una riga lockata,
+// garantito dal filtro nella sua WHERE. Riusa la stessa query/logica di
+// assertTaskNotLocked per restare coerente: NotFoundError se il task non
+// esiste (mai esistito in questo progetto, o cancellato nel frattempo),
+// LockedError se esiste ma è stato lockato nella finestra di race.
+async function resolveTaskMutationFailure(taskId: string, projectId: string): Promise<never> {
+  await assertTaskNotLocked(taskId, projectId);
+  // assertTaskNotLocked non ha lanciato: il task esiste e invoice_id è NULL,
+  // quindi la UPDATE/DELETE ha fallito per un motivo diverso dal lock (non
+  // dovrebbe accadere, dato che qui il filtro WHERE è solo id+project_id+lock),
+  // ma TaskNotFoundError resta la risposta più onesta dal punto di vista del
+  // chiamante: il task non risulta mutato.
+  throw new TaskNotFoundError(taskId);
+}
+
+// Variante "morbida" di resolveTaskMutationFailure per updateTaskWorkTimer:
+// lì una UPDATE con 0 righe modificate è spesso un no-op LEGITTIMO (es.
+// "start" su un timer già avviato, filtrato da "AND work_started_at IS
+// NULL"), non un errore. Qui si vuole distinguere solo il caso di race da
+// segnalare (il task è stato lockato tra il fast-path e questa UPDATE): se il
+// task non esiste più, o esiste ma non è lockato, non si lancia nulla — un
+// task davvero cancellato nel frattempo emerge comunque dalla getTaskById
+// finale della funzione chiamante, invariata rispetto a prima di questo fix.
+async function throwIfLockedByRace(taskId: string, projectId: string): Promise<void> {
+  const result = await pool.query<{ invoice_id: string | null }>(
+    'SELECT invoice_id FROM tasks WHERE id = $1 AND project_id = $2',
+    [taskId, projectId],
+  );
+  const row = result.rows[0];
+  if (row && row.invoice_id !== null) {
+    throw new TaskLockedError(taskId);
   }
 }
 
@@ -38,6 +114,8 @@ interface TaskRow {
   work_started_at: Date | null;
   work_accumulated_seconds: number;
   work_ended_at: Date | null;
+  // Pre-fatturazione (migration 0038): vedi Task.invoiceId in models/task.ts.
+  invoice_id: string | null;
 }
 
 // task_status.name (seed in migrations/0004_task_status_smallint_identity_e_seed_stati_assegnabili.sql)
@@ -66,7 +144,7 @@ export const SLUG_TO_STATUS_NAME: Record<TaskStatus, string> = {
 
 // Select condivisa da getTaskById e listTasksByProject: stessa forma di riga
 // (TaskRow) per entrambe, cambia solo il filtro WHERE.
-const TASK_SELECT = `SELECT t.id, t.project_id, t.title, t.description, t.priority, t.due_date, t.work_started_at, t.work_accumulated_seconds, t.work_ended_at, ts.name AS status_name
+const TASK_SELECT = `SELECT t.id, t.project_id, t.title, t.description, t.priority, t.due_date, t.work_started_at, t.work_accumulated_seconds, t.work_ended_at, t.invoice_id, ts.name AS status_name
      FROM tasks t
      JOIN task_status ts ON ts.id = t.status`;
 
@@ -74,7 +152,7 @@ const TASK_SELECT = `SELECT t.id, t.project_id, t.title, t.description, t.priori
 // che a differenza di TASK_SELECT deve comunque sapere a quale progetto
 // appartiene ogni riga (qui i task di più progetti convivono nello stesso
 // risultato).
-const TASK_WITH_PROJECT_SELECT = `SELECT t.id, t.project_id, t.title, t.description, t.priority, t.due_date, t.work_started_at, t.work_accumulated_seconds, t.work_ended_at, ts.name AS status_name, p.name AS project_name
+const TASK_WITH_PROJECT_SELECT = `SELECT t.id, t.project_id, t.title, t.description, t.priority, t.due_date, t.work_started_at, t.work_accumulated_seconds, t.work_ended_at, t.invoice_id, ts.name AS status_name, p.name AS project_name
      FROM tasks t
      JOIN task_status ts ON ts.id = t.status
      JOIN projects p ON p.id = t.project_id`;
@@ -83,7 +161,7 @@ const TASK_WITH_PROJECT_SELECT = `SELECT t.id, t.project_id, t.title, t.descript
 // solo da listStaleTasks, l'unica query che deve sapere da quanto tempo un
 // task è fermo nello stato attuale (le altre non ne hanno bisogno, quindi non
 // è nella select condivisa).
-const STALE_TASK_SELECT = `SELECT t.id, t.project_id, t.title, t.description, t.priority, t.due_date, t.work_started_at, t.work_accumulated_seconds, t.work_ended_at, ts.name AS status_name, p.name AS project_name, t.status_changed_at
+const STALE_TASK_SELECT = `SELECT t.id, t.project_id, t.title, t.description, t.priority, t.due_date, t.work_started_at, t.work_accumulated_seconds, t.work_ended_at, t.invoice_id, ts.name AS status_name, p.name AS project_name, t.status_changed_at
      FROM tasks t
      JOIN task_status ts ON ts.id = t.status
      JOIN projects p ON p.id = t.project_id`;
@@ -156,6 +234,7 @@ function toTask(row: TaskRow, assignees: TaskAssignee[]): Task {
     workStartedAt: row.work_started_at ? row.work_started_at.toISOString() : null,
     workAccumulatedSeconds: row.work_accumulated_seconds,
     workEndedAt: row.work_ended_at ? row.work_ended_at.toISOString() : null,
+    invoiceId: row.invoice_id,
   };
 }
 
@@ -203,7 +282,12 @@ async function loadAssigneesByTaskIds(taskIds: string[]): Promise<Map<string, Ta
   return result;
 }
 
-async function getTaskById(id: string): Promise<Task> {
+// Esportata perché usata anche da invoiceService.test.ts per verificare in
+// isolamento la logica di generateInvoice (mock di questo modulo): la
+// notifica realtime post-commit di generateInvoice usa invece getTasksByIds
+// sotto (batch, non N+1) per ri-notificare in blocco tutti i task appena
+// fatturati.
+export async function getTaskById(id: string): Promise<Task> {
   const result = await pool.query<TaskRow>(`${TASK_SELECT} WHERE t.id = $1`, [id]);
   const row = result.rows[0];
   if (!row) {
@@ -211,6 +295,23 @@ async function getTaskById(id: string): Promise<Task> {
   }
   const assigneesByTaskId = await loadAssigneesByTaskIds([id]);
   return toTask(row, assigneesByTaskId.get(id) ?? []);
+}
+
+// Bulk, non N+1: usata da invoiceService.generateInvoice per ri-notificare via
+// socket TUTTI i task appena fatturati con una sola query invece di N
+// chiamate sequenziali a getTaskById (che da sola ne fa già 2, quindi 2N
+// round-trip prima di questo fix). Stesso principio di loadAssigneesByTaskIds
+// sopra: un solo ANY($1) invece di un giro per id. L'ordine delle righe
+// restituite non è garantito coincidere con l'ordine di ids in ingresso: chi
+// chiama itera sul risultato (qui serve solo per gli emit socket), non ha
+// bisogno di un mapping posizionale.
+export async function getTasksByIds(ids: string[]): Promise<Task[]> {
+  if (ids.length === 0) {
+    return [];
+  }
+  const result = await pool.query<TaskRow>(`${TASK_SELECT} WHERE t.id = ANY($1::uuid[])`, [ids]);
+  const assigneesByTaskId = await loadAssigneesByTaskIds(result.rows.map((row) => row.id));
+  return result.rows.map((row) => toTask(row, assigneesByTaskId.get(row.id) ?? []));
 }
 
 export async function listTasksByProject(projectId: string, companyId?: string | null): Promise<Task[]> {
@@ -288,6 +389,7 @@ export async function createTask(
   // (o di un'altra azienda) inserirebbe comunque la riga (project_id è NOT
   // NULL ma non FK-validato qui) invece di rispondere 404.
   await getProjectById(projectId, companyId);
+  assertNonEmpty(input.title, 'title');
 
   // Stesso pattern COALESCE di updateTask: status/priority sono opzionali in
   // ingresso, quando non forniti l'INSERT deve comunque produrre lo stesso
@@ -367,6 +469,10 @@ export async function updateTask(
   if (!isValidUuid(taskId)) {
     throw new TaskNotFoundError(taskId);
   }
+  if (input.title !== undefined) {
+    assertNonEmpty(input.title, 'title');
+  }
+  await assertTaskNotLocked(taskId, projectId);
 
   // Stesso pattern COALESCE di updateProject in projectService.ts per
   // title/description: applica solo i campi effettivamente forniti
@@ -389,14 +495,19 @@ export async function updateTask(
     setClauses.push(`due_date = $${values.length}`);
   }
 
+  // "AND invoice_id IS NULL" nella WHERE, non solo nel fast-path
+  // assertTaskNotLocked sopra: senza, una generateInvoice concorrente che
+  // lockasse il task DOPO il fast-path ma PRIMA di questa UPDATE la
+  // lascerebbe comunque passare, mutando silenziosamente un task che dovrebbe
+  // restare immutabile una volta fatturato.
   const result = await pool.query(
     `UPDATE tasks
      SET ${setClauses.join(', ')}
-     WHERE id = $1 AND project_id = $2`,
+     WHERE id = $1 AND project_id = $2 AND invoice_id IS NULL`,
     values,
   );
   if (result.rowCount === 0) {
-    throw new TaskNotFoundError(taskId);
+    await resolveTaskMutationFailure(taskId, projectId);
   }
   const task = await getTaskById(taskId);
   emitTaskUpdated(task);
@@ -415,6 +526,7 @@ export async function updateTaskStatus(
   if (!isValidUuid(taskId)) {
     throw new TaskNotFoundError(taskId);
   }
+  await assertTaskNotLocked(taskId, projectId);
 
   const statusName = SLUG_TO_STATUS_NAME[status];
 
@@ -469,14 +581,16 @@ export async function updateTaskStatus(
   // Il filtro su project_id impedisce di spostare un task passando l'id del
   // progetto sbagliato nell'URL (project_id non combacia -> 0 righe -> 404,
   // non un aggiornamento silenzioso su un task di un altro progetto).
+  // invoice_id IS NULL stesso motivo di updateTask sopra: chiude la finestra
+  // di race tra il fast-path assertTaskNotLocked e questa UPDATE.
   const result = await pool.query(
     `UPDATE tasks
      SET ${setClauses.join(', ')}
-     WHERE id = $1 AND project_id = $2`,
+     WHERE id = $1 AND project_id = $2 AND invoice_id IS NULL`,
     [taskId, projectId, statusName],
   );
   if (result.rowCount === 0) {
-    throw new TaskNotFoundError(taskId);
+    await resolveTaskMutationFailure(taskId, projectId);
   }
   const task = await getTaskById(taskId);
   emitTaskUpdated(task);
@@ -500,14 +614,9 @@ export async function updateTaskWorkTimer(
   if (!isValidUuid(taskId)) {
     throw new TaskNotFoundError(taskId);
   }
-
-  const existsResult = await pool.query('SELECT 1 FROM tasks WHERE id = $1 AND project_id = $2', [
-    taskId,
-    projectId,
-  ]);
-  if (existsResult.rowCount === 0) {
-    throw new TaskNotFoundError(taskId);
-  }
+  // Sostituisce la precedente SELECT 1 di sola esistenza: assertTaskNotLocked
+  // copre lo stesso controllo (0 righe -> TaskNotFoundError) più il lock.
+  await assertTaskNotLocked(taskId, projectId);
 
   // Stessa espressione CASE già usata in updateTaskStatus per il fermo
   // automatico su completed/rejected: accumula il segmento in corso solo se
@@ -516,45 +625,69 @@ export async function updateTaskWorkTimer(
   const ACCUMULATE_RUNNING_SEGMENT =
     'work_accumulated_seconds + CASE WHEN work_started_at IS NOT NULL THEN GREATEST(0, EXTRACT(EPOCH FROM (now() - work_started_at))::int) ELSE 0 END';
 
+  // invoice_id IS NULL aggiunto a ogni UPDATE sotto, stesso motivo di
+  // updateTask/updateTaskStatus: chiude la finestra di race tra il fast-path
+  // assertTaskNotLocked sopra e queste query. A differenza di quelle due
+  // funzioni, però, 0 righe modificate qui NON è di per sé un errore: ogni
+  // azione ha già una propria condizione di no-op legittimo (es. "start" su
+  // un timer già avviato). throwIfLockedByRace distingue quel caso, silenzioso
+  // come prima di questo fix, dalla race vera e propria (il task è stato
+  // lockato nel frattempo), che deve invece propagarsi come TaskLockedError.
   switch (action) {
-    case 'start':
-      await pool.query(
-        `UPDATE tasks SET work_started_at = now() WHERE id = $1 AND project_id = $2 AND work_started_at IS NULL`,
+    case 'start': {
+      const result = await pool.query(
+        `UPDATE tasks SET work_started_at = now() WHERE id = $1 AND project_id = $2 AND work_started_at IS NULL AND invoice_id IS NULL`,
         [taskId, projectId],
       );
+      if (result.rowCount === 0) {
+        await throwIfLockedByRace(taskId, projectId);
+      }
       break;
-    case 'pause':
-      await pool.query(
+    }
+    case 'pause': {
+      const result = await pool.query(
         `UPDATE tasks
          SET work_accumulated_seconds = ${ACCUMULATE_RUNNING_SEGMENT},
              work_started_at = NULL
-         WHERE id = $1 AND project_id = $2 AND work_started_at IS NOT NULL`,
+         WHERE id = $1 AND project_id = $2 AND work_started_at IS NOT NULL AND invoice_id IS NULL`,
         [taskId, projectId],
       );
+      if (result.rowCount === 0) {
+        await throwIfLockedByRace(taskId, projectId);
+      }
       break;
-    case 'stop':
+    }
+    case 'stop': {
       // A differenza di pause, non condizionato a work_started_at IS NOT
       // NULL: "termina lavorazione" deve poter finalizzare (valorizzare
       // work_ended_at) anche da una pausa già in corso, non solo da in
       // esecuzione. ACCUMULATE_RUNNING_SEGMENT resta comunque un no-op sulla
       // parte di accumulo se il timer non stava girando.
-      await pool.query(
+      const result = await pool.query(
         `UPDATE tasks
          SET work_accumulated_seconds = ${ACCUMULATE_RUNNING_SEGMENT},
              work_started_at = NULL,
              work_ended_at = now()
-         WHERE id = $1 AND project_id = $2`,
+         WHERE id = $1 AND project_id = $2 AND invoice_id IS NULL`,
         [taskId, projectId],
       );
+      if (result.rowCount === 0) {
+        await throwIfLockedByRace(taskId, projectId);
+      }
       break;
-    case 'reset':
-      await pool.query(
+    }
+    case 'reset': {
+      const result = await pool.query(
         `UPDATE tasks
          SET work_started_at = NULL, work_accumulated_seconds = 0, work_ended_at = NULL
-         WHERE id = $1 AND project_id = $2`,
+         WHERE id = $1 AND project_id = $2 AND invoice_id IS NULL`,
         [taskId, projectId],
       );
+      if (result.rowCount === 0) {
+        await throwIfLockedByRace(taskId, projectId);
+      }
       break;
+    }
   }
 
   const task = await getTaskById(taskId);
@@ -574,15 +707,18 @@ export async function updateTaskPriority(
   if (!isValidUuid(taskId)) {
     throw new TaskNotFoundError(taskId);
   }
+  await assertTaskNotLocked(taskId, projectId);
 
+  // invoice_id IS NULL: stesso motivo di updateTask/updateTaskStatus, chiude
+  // la finestra di race tra il fast-path sopra e questa UPDATE.
   const result = await pool.query(
     `UPDATE tasks
      SET priority = $3
-     WHERE id = $1 AND project_id = $2`,
+     WHERE id = $1 AND project_id = $2 AND invoice_id IS NULL`,
     [taskId, projectId, priority],
   );
   if (result.rowCount === 0) {
-    throw new TaskNotFoundError(taskId);
+    await resolveTaskMutationFailure(taskId, projectId);
   }
   const task = await getTaskById(taskId);
   emitTaskUpdated(task);
@@ -605,6 +741,7 @@ export async function setTaskAssignees(
   if (!isValidUuid(taskId)) {
     throw new TaskNotFoundError(taskId);
   }
+  await assertTaskNotLocked(taskId, projectId);
 
   const uniqueIds = [...new Set(userIds)];
   const invalidId = uniqueIds.find((id) => !isValidUuid(id));
@@ -621,14 +758,39 @@ export async function setTaskAssignees(
   try {
     await client.query('BEGIN');
 
-    // Verifica che il task esista e appartenga al progetto: dentro la
-    // transazione, così un id inesistente fa fallire (e fare ROLLBACK) tutto
-    // il resto invece di lasciare una DELETE/INSERT orfana.
-    const taskResult = await client.query('SELECT 1 FROM tasks WHERE id = $1 AND project_id = $2', [
-      taskId,
-      projectId,
-    ]);
+    // Verifica che il task esista, appartenga al progetto e non sia lockato
+    // (invoice_id IS NULL, stesso motivo delle altre funzioni mutanti sopra:
+    // il fast-path assertTaskNotLocked non basta contro una generateInvoice
+    // concorrente che lockasse il task dopo il fast-path ma prima di qui):
+    // tutto dentro la transazione, così un id inesistente o lockato fa
+    // fallire (e fare ROLLBACK) tutto il resto invece di lasciare una
+    // DELETE/INSERT orfana. FOR UPDATE prende il lock di riga per la durata
+    // della transazione: a differenza delle altre funzioni mutanti (una sola
+    // UPDATE/DELETE che si affida al filtro nella propria WHERE),
+    // setTaskAssignees fa DELETE/INSERT su task_assignments, che non ha una
+    // colonna invoice_id propria da poter filtrare — senza questo lock di
+    // riga sulla tasks referenziata, una generateInvoice concorrente potrebbe
+    // ancora lockare il task PROPRIO tra questa SELECT e la DELETE/INSERT
+    // sotto. FOR UPDATE si serializza con la stessa "FOR UPDATE OF t" usata
+    // da generateInvoice sulle righe che rivalida, chiudendo la finestra.
+    const taskResult = await client.query(
+      'SELECT id FROM tasks WHERE id = $1 AND project_id = $2 AND invoice_id IS NULL FOR UPDATE',
+      [taskId, projectId],
+    );
     if (taskResult.rowCount === 0) {
+      // Distingue "non trovato" da "lockato nel frattempo" senza uscire dalla
+      // transazione: una SELECT senza il filtro invoice_id IS NULL vede il
+      // task anche se è stato appena lockato da un'altra sessione (la riga
+      // non è più contesa: quella transazione ha già fatto COMMIT, altrimenti
+      // il FOR UPDATE sopra sarebbe rimasto in attesa invece di tornare 0 righe).
+      const lockCheck = await client.query<{ invoice_id: string | null }>(
+        'SELECT invoice_id FROM tasks WHERE id = $1 AND project_id = $2',
+        [taskId, projectId],
+      );
+      const lockRow = lockCheck.rows[0];
+      if (lockRow && lockRow.invoice_id !== null) {
+        throw new TaskLockedError(taskId);
+      }
       throw new TaskNotFoundError(taskId);
     }
 
@@ -712,13 +874,19 @@ export async function deleteTask(projectId: string, taskId: string, companyId?: 
   if (!isValidUuid(taskId)) {
     throw new TaskNotFoundError(taskId);
   }
+  await assertTaskNotLocked(taskId, projectId);
 
   // Stesso filtro su project_id di updateTaskStatus: evita che un id di
   // progetto sbagliato nell'URL elimini un task che appartiene a un altro
-  // progetto.
-  const result = await pool.query('DELETE FROM tasks WHERE id = $1 AND project_id = $2', [taskId, projectId]);
+  // progetto. invoice_id IS NULL: stesso motivo delle altre funzioni mutanti
+  // sopra, chiude la finestra di race tra il fast-path assertTaskNotLocked e
+  // questa DELETE.
+  const result = await pool.query(
+    'DELETE FROM tasks WHERE id = $1 AND project_id = $2 AND invoice_id IS NULL',
+    [taskId, projectId],
+  );
   if (result.rowCount === 0) {
-    throw new TaskNotFoundError(taskId);
+    await resolveTaskMutationFailure(taskId, projectId);
   }
   emitTaskDeleted(projectId, taskId);
 }

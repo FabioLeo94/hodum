@@ -37,6 +37,17 @@
   outline-offset: 2px;
 }
 
+/* Nessuno dei chiamanti trattava finora lo stato disabled (es. la colonna
+   "non fatturabile" di generateInvoiceDrawerComponent, disabilitata finché il
+   task non è incluso): senza, una checkbox disabilitata restava visivamente
+   identica a una attiva, col solo cursore a cambiare, il canale meno
+   percepibile. L'opacità la allinea al trattamento di .buttonBase:disabled in
+   buttonComponent.module.css. */
+.checkboxBase:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .checkboxBase {
     transition: none;

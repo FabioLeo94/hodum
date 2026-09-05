@@ -1,13 +1,16 @@
 import type { Request as ExRequest } from 'express';
-import { Body, Controller, Delete, Get, Path, Post, Put, Request, Response, Route, Security, SuccessResponse } from 'tsoa';
+import { Body, Controller, Delete, Get, Path, Post, Put, Request, Response, Route, Security, SuccessResponse } from '@tsoa/runtime';
 import { getAuthenticatedUser } from '../middleware/authentication';
 import type { RateUnit } from '../models/company';
 import type { Customer } from '../models/customer';
 import {
   createCustomer,
   CustomerNotFoundError,
+  type CustomerSummary,
   deleteCustomer,
   getCustomerById,
+  InvalidTariffaError,
+  listCustomerSummariesByCompany,
   listCustomersByCompany,
   updateCustomer,
 } from '../services/customerService';
@@ -18,12 +21,6 @@ import {
 interface CustomerErrorResponse {
   message: string;
 }
-
-// Stessi 5 valori del CHECK su customers.tariffa_unita (migration 0034),
-// stessa costante di companyController.ts (non condivisa: ogni controller
-// valida il proprio body in autonomia, stesso principio di
-// PIVA_REGEX/CODICE_FISCALE_REGEX non condivise tra i due file).
-const RATE_UNITS: RateUnit[] = ['oraria', 'giornaliera', 'settimanale', 'mensile', 'annuale'];
 
 export interface CreateCustomerRequest {
   name: string;
@@ -41,32 +38,6 @@ export interface UpdateCustomerRequest {
   description?: string | null;
   tariffaOraria?: number | null;
   tariffaUnita?: RateUnit | null;
-}
-
-// Validazione condivisa tra createCustomer/updateCustomer: numero >= 0 se
-// presente, accoppiamento con tariffaUnita (null se tariffaOraria è null,
-// default 'oraria' altrimenti). Restituisce il messaggio di errore o, se
-// valido, la coppia normalizzata da passare al service.
-function validateTariffa(
-  tariffaOraria: number | null | undefined,
-  tariffaUnita: RateUnit | null | undefined,
-): { error: string } | { tariffaOraria: number | null; tariffaUnita: RateUnit | null } {
-  if (
-    tariffaOraria !== undefined &&
-    tariffaOraria !== null &&
-    (typeof tariffaOraria !== 'number' || Number.isNaN(tariffaOraria) || tariffaOraria < 0)
-  ) {
-    return { error: 'tariffaOraria deve essere un numero maggiore o uguale a 0' };
-  }
-  const normalizedTariffaOraria = tariffaOraria ?? null;
-  if (normalizedTariffaOraria === null) {
-    return { tariffaOraria: null, tariffaUnita: null };
-  }
-  const normalizedTariffaUnita = tariffaUnita ?? 'oraria';
-  if (!RATE_UNITS.includes(normalizedTariffaUnita)) {
-    return { error: `tariffaUnita deve essere una tra: ${RATE_UNITS.join(', ')}` };
-  }
-  return { tariffaOraria: normalizedTariffaOraria, tariffaUnita: normalizedTariffaUnita };
 }
 
 // Un id nel path che non combacia con la company del richiedente (o un
@@ -93,6 +64,23 @@ export class CustomerController extends Controller {
     return listCustomersByCompany(requester.companyId);
   }
 
+  // Dichiarata prima di @Get('{id}') sotto: tsoa registra le rotte Express
+  // nell'ordine di dichiarazione dei metodi, quindi 'summary' deve precedere
+  // '{id}' per non essere interpretato come un valore di quel path param.
+  // @Security('manager') (non 'owner' come le altre rotte di questo
+  // controller): la dropdown di assegnazione cliente in
+  // RenameProjectModalComponent la usa anche il project manager, che non
+  // ha accesso alle altre rotte /customers (gestione clienti owner-only).
+  @Get('summary')
+  @Security('manager')
+  public async listCustomerSummaries(@Request() request: ExRequest): Promise<CustomerSummary[]> {
+    const requester = getAuthenticatedUser(request);
+    if (requester.companyId === null) {
+      return [];
+    }
+    return listCustomerSummariesByCompany(requester.companyId);
+  }
+
   @Post()
   @Security('owner')
   @SuccessResponse(201, 'Cliente creato')
@@ -111,20 +99,26 @@ export class CustomerController extends Controller {
       this.setStatus(422);
       return { message: 'name non può essere vuoto' };
     }
-    const tariffa = validateTariffa(body.tariffaOraria, body.tariffaUnita);
-    if ('error' in tariffa) {
-      this.setStatus(422);
-      return { message: tariffa.error };
-    }
 
-    const customer = await createCustomer(requester.companyId, {
-      name: body.name.trim(),
-      description: body.description?.trim() || null,
-      tariffaOraria: tariffa.tariffaOraria,
-      tariffaUnita: tariffa.tariffaUnita,
-    });
-    this.setStatus(201);
-    return customer;
+    try {
+      // L'accoppiamento tariffaOraria/tariffaUnita è validato e normalizzato
+      // dentro createCustomer (customerService.ts): il controller inoltra i
+      // valori grezzi e intercetta solo InvalidTariffaError per il 422.
+      const customer = await createCustomer(requester.companyId, {
+        name: body.name.trim(),
+        description: body.description?.trim() || null,
+        tariffaOraria: body.tariffaOraria,
+        tariffaUnita: body.tariffaUnita,
+      });
+      this.setStatus(201);
+      return customer;
+    } catch (err) {
+      if (err instanceof InvalidTariffaError) {
+        this.setStatus(422);
+        return { message: err.message };
+      }
+      throw err;
+    }
   }
 
   @Get('{id}')
@@ -168,23 +162,24 @@ export class CustomerController extends Controller {
       this.setStatus(422);
       return { message: 'name non può essere vuoto' };
     }
-    const tariffa = validateTariffa(body.tariffaOraria, body.tariffaUnita);
-    if ('error' in tariffa) {
-      this.setStatus(422);
-      return { message: tariffa.error };
-    }
 
     try {
+      // Stesso principio di createCustomer sopra: l'accoppiamento
+      // tariffaOraria/tariffaUnita è validato dentro updateCustomer.
       return await updateCustomer(id, requester.companyId, {
         name: body.name.trim(),
         description: body.description?.trim() || null,
-        tariffaOraria: tariffa.tariffaOraria,
-        tariffaUnita: tariffa.tariffaUnita,
+        tariffaOraria: body.tariffaOraria,
+        tariffaUnita: body.tariffaUnita,
       });
     } catch (err) {
       if (err instanceof CustomerNotFoundError) {
         this.setStatus(404);
         return customerNotFoundResponse(id);
+      }
+      if (err instanceof InvalidTariffaError) {
+        this.setStatus(422);
+        return { message: err.message };
       }
       throw err;
     }

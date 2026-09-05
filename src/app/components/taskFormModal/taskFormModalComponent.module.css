@@ -58,6 +58,21 @@
   line-height: 1.5;
 }
 
+/* Task fatturato (Task.invoiceId non-null, vedi taskFormModalComponent.tsx):
+   stesso trattamento "banner" a bordo sinistro di .errorBanner in
+   customersDrawerComponent.module.css, ma neutro (non --color-danger): non è
+   un errore, è uno stato informativo permanente del task. */
+.readOnlyNotice {
+  margin-bottom: var(--m-lg);
+  padding: var(--p-sm) var(--p-md);
+  border-left: 3px solid var(--text-muted);
+  border-radius: var(--radious-sm);
+  background-color: var(--bg-field);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
 .fieldSpacing {
   margin-top: var(--m-lg);
 }

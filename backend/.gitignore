@@ -16,3 +16,7 @@ build
 # Dump prodotti da backupService.ts (pg_dump): dati, non codice, e già
 # tracciati come metadata nella tabella company_backups.
 backups
+
+# PDF di pre-fattura generati lato server: dati, non codice, e già tracciati
+# come metadata nella tabella invoices (pdf_path, 0036).
+invoices

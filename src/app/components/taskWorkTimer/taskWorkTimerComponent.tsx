@@ -12,6 +12,11 @@ interface Prop {
   workAccumulatedSeconds: number;
   workEndedAt: string | null;
   onAction: (action: WorkTimerAction) => void;
+  /** Nasconde i controlli (play/pausa/stop/reset), lasciando solo il tempo
+   * accumulato in sola lettura: usato per un task fatturato (vedi
+   * Task.invoiceId), che il backend rifiuta comunque di modificare con 409,
+   * quindi qui si previene l'azione invece di limitarsi a gestirne l'errore. */
+  disabled?: boolean;
 }
 
 // I bottoni compaiono solo su un task ancora aperto (progress/review): su
@@ -25,6 +30,7 @@ function TaskWorkTimerComponent({
   workAccumulatedSeconds,
   workEndedAt,
   onAction,
+  disabled = false,
 }: Prop) {
   const { t } = useTranslation();
   const isRunning = workStartedAt !== null;
@@ -60,17 +66,17 @@ function TaskWorkTimerComponent({
 
   const displaySeconds = workAccumulatedSeconds + (isRunning ? runningElapsedSeconds : 0);
 
-  const showPlay = isActiveStatus && !isRunning;
-  const showPause = isActiveStatus && isRunning;
-  const showStop = isActiveStatus && (isRunning || (hasProgress && workEndedAt === null));
-  const showReset = isActiveStatus && hasProgress;
+  const showPlay = !disabled && isActiveStatus && !isRunning;
+  const showPause = !disabled && isActiveStatus && isRunning;
+  const showStop = !disabled && isActiveStatus && (isRunning || (hasProgress && workEndedAt === null));
+  const showReset = !disabled && isActiveStatus && hasProgress;
 
   return (
     <div className={styles.timer}>
       <span className={styles.time} aria-live={isRunning ? "polite" : undefined}>
         {formatElapsedDuration(displaySeconds)}
       </span>
-      {isActiveStatus && (
+      {!disabled && isActiveStatus && (
         <span className={styles.actions}>
           {showPlay && (
             <button

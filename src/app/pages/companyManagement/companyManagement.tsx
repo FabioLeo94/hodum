@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
-import { Building2, DatabaseBackup, Download, TriangleAlert, Users } from "lucide-react";
+import { Building2, DatabaseBackup, Download, FileText, TriangleAlert, Users } from "lucide-react";
 import TopbarComponent from "../../components/topbar/topbarComponent";
 import ManagementCardComponent from "../../components/managementCard/managementCardComponent";
 import BackupSettingsDrawerComponent from "../../components/backupSettingsDrawer/backupSettingsDrawerComponent";
@@ -137,6 +137,12 @@ function CompanyManagement() {
               title={t("pages.companyManagement.cards.customers.title")}
               description={t("pages.companyManagement.cards.customers.description")}
               onClick={() => setIsCustomersDrawerOpen(true)}
+            />
+            <ManagementCardComponent
+              icon={<FileText size={26} strokeWidth={2} aria-hidden="true" />}
+              title={t("pages.companyManagement.cards.invoices.title")}
+              description={t("pages.companyManagement.cards.invoices.description")}
+              onClick={() => navigate("/invoices")}
             />
             <ManagementCardComponent
               icon={<DatabaseBackup size={26} strokeWidth={2} aria-hidden="true" />}

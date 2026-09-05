@@ -1,7 +1,9 @@
 import { pool } from '../db/pool';
 import type { Project } from '../models/project';
+import { assertNonEmpty } from '../utils/validation';
 import { isValidUuid } from '../utils/uuid';
 import { emitProjectCreated, emitProjectDeleted, emitProjectUpdated } from '../realtime/io';
+import { CustomerNotFoundError } from './customerService';
 
 // Segnala "0 righe trovate/modificate" al chiamante senza che il service
 // conosca HTTP: il controller la intercetta e decide lo status (404). Stessa
@@ -38,10 +40,11 @@ export interface ProjectRow {
   id: string;
   name: string;
   is_active: boolean;
+  customer_id: string | null;
 }
 
 export function toProject(row: ProjectRow): Project {
-  return { id: row.id, name: row.name, isActive: row.is_active };
+  return { id: row.id, name: row.name, isActive: row.is_active, customerId: row.customer_id };
 }
 
 // company_id dell'utente autenticato (getAuthenticatedUser(request).companyId
@@ -64,7 +67,7 @@ export function toProject(row: ProjectRow): Project {
 export async function listProjects(companyId?: string | null, assignedToUserId?: string): Promise<Project[]> {
   if (assignedToUserId !== undefined) {
     const result = await pool.query<ProjectRow>(
-      `SELECT p.id, p.name, p.is_active FROM projects p
+      `SELECT p.id, p.name, p.is_active, p.customer_id FROM projects p
        JOIN project_assignments pa ON pa.project_id = p.id
        WHERE p.company_id = $1 AND pa.user_id = $2
        ORDER BY p.name`,
@@ -73,11 +76,11 @@ export async function listProjects(companyId?: string | null, assignedToUserId?:
     return result.rows.map(toProject);
   }
   if (companyId === undefined) {
-    const result = await pool.query<ProjectRow>('SELECT id, name, is_active FROM projects ORDER BY name');
+    const result = await pool.query<ProjectRow>('SELECT id, name, is_active, customer_id FROM projects ORDER BY name');
     return result.rows.map(toProject);
   }
   const result = await pool.query<ProjectRow>(
-    'SELECT id, name, is_active FROM projects WHERE company_id = $1 ORDER BY name',
+    'SELECT id, name, is_active, customer_id FROM projects WHERE company_id = $1 ORDER BY name',
     [companyId],
   );
   return result.rows.map(toProject);
@@ -97,11 +100,11 @@ export async function getProjectById(id: string, companyId?: string | null): Pro
   // Stesso companyId opzionale di listProjects: vedi il commento lì sopra.
   const result =
     companyId === undefined
-      ? await pool.query<ProjectRow>('SELECT id, name, is_active FROM projects WHERE id = $1', [id])
-      : await pool.query<ProjectRow>('SELECT id, name, is_active FROM projects WHERE id = $1 AND company_id = $2', [
-          id,
-          companyId,
-        ]);
+      ? await pool.query<ProjectRow>('SELECT id, name, is_active, customer_id FROM projects WHERE id = $1', [id])
+      : await pool.query<ProjectRow>(
+          'SELECT id, name, is_active, customer_id FROM projects WHERE id = $1 AND company_id = $2',
+          [id, companyId],
+        );
   const row = result.rows[0];
   if (!row) {
     throw new ProjectNotFoundError(id);
@@ -115,6 +118,10 @@ export interface CreateProjectInput {
 }
 
 export async function createProject(input: CreateProjectInput, companyId: string | null): Promise<Project> {
+  // Punto 2 della code review "niente logica nei controller": tsoa valida che
+  // "name" sia una stringa (campo non opzionale sul body), ma non che non sia
+  // vuota dopo trim, prima un controllo identico in projectController.createProject.
+  assertNonEmpty(input.name, 'name');
   if (companyId === null) {
     throw new MissingCompanyError();
   }
@@ -123,7 +130,7 @@ export async function createProject(input: CreateProjectInput, companyId: string
   // migration 0005_projects_id_default_gen_random_uuid.sql.
   const isActive = input.isActive ?? true;
   const result = await pool.query<ProjectRow>(
-    'INSERT INTO projects (name, is_active, company_id) VALUES ($1, $2, $3) RETURNING id, name, is_active',
+    'INSERT INTO projects (name, is_active, company_id) VALUES ($1, $2, $3) RETURNING id, name, is_active, customer_id',
     [input.name, isActive, companyId],
   );
   const project = toProject(result.rows[0]);
@@ -137,6 +144,10 @@ export async function createProject(input: CreateProjectInput, companyId: string
 export interface UpdateProjectInput {
   name?: string;
   isActive?: boolean;
+  // Tri-stato come UpdateTaskInput.dueDate in taskService.ts: assente (non
+  // toccare), null (scollega il cliente), stringa (assegnalo) — per questo
+  // non può seguire il pattern COALESCE di name/isActive sotto.
+  customerId?: string | null;
 }
 
 export async function updateProject(
@@ -149,16 +160,50 @@ export async function updateProject(
   if (!isValidUuid(id)) {
     throw new ProjectNotFoundError(id);
   }
+  // Stesso principio di createProject sopra: solo se il chiamante ha
+  // effettivamente toccato il campo (un PUT parziale può ometterlo).
+  if (input.name !== undefined) {
+    assertNonEmpty(input.name, 'name');
+  }
+
+  // Verifica che il cliente scelto appartenga davvero alla company del
+  // richiedente: senza questo, un id di un cliente di un'altra azienda
+  // (indovinato o riusato da un'altra sessione) verrebbe accettato silenziosamente
+  // dalla sola FK, che non conosce il concetto di company_id del progetto
+  // (stesso principio della verifica "ownedIds" in setProjectAssignments,
+  // projectAssignmentService.ts).
+  if (input.customerId !== undefined && input.customerId !== null) {
+    if (!isValidUuid(input.customerId)) {
+      throw new CustomerNotFoundError(input.customerId);
+    }
+    const customerCheck = await pool.query(
+      'SELECT 1 FROM customers WHERE id = $1 AND company_id = $2',
+      [input.customerId, companyId],
+    );
+    if (customerCheck.rowCount === 0) {
+      throw new CustomerNotFoundError(input.customerId);
+    }
+  }
 
   // COALESCE applica solo i campi effettivamente forniti (undefined -> null
-  // -> valore colonna invariato), senza costruire la SET clause a mano
-  // concatenando stringhe in base ai campi presenti.
+  // -> valore colonna invariato) per name/isActive, senza costruire la SET
+  // clause a mano concatenando stringhe in base ai campi presenti. customerId
+  // va invece nella SET clause solo se il chiamante l'ha toccato (stesso
+  // pattern di dueDate in taskService.updateTask), per poter davvero scrivere
+  // null e scollegare il cliente.
+  const setClauses = ['name = COALESCE($3, name)', 'is_active = COALESCE($4, is_active)'];
+  const values: unknown[] = [id, companyId, input.name ?? null, input.isActive ?? null];
+  if (input.customerId !== undefined) {
+    values.push(input.customerId);
+    setClauses.push(`customer_id = $${values.length}`);
+  }
+
   const result = await pool.query<ProjectRow>(
     `UPDATE projects
-     SET name = COALESCE($3, name), is_active = COALESCE($4, is_active)
+     SET ${setClauses.join(', ')}
      WHERE id = $1 AND company_id = $2
-     RETURNING id, name, is_active`,
-    [id, companyId, input.name ?? null, input.isActive ?? null],
+     RETURNING id, name, is_active, customer_id`,
+    values,
   );
   const row = result.rows[0];
   if (!row) {

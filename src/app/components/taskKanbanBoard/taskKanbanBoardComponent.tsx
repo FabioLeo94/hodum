@@ -9,6 +9,7 @@ import TaskStatusSelectComponent from "../taskStatusSelect/taskStatusSelectCompo
 import PrioritySelectComponent from "../prioritySelect/prioritySelectComponent";
 import TaskAssigneesComponent from "../taskAssignees/taskAssigneesComponent";
 import TaskWorkTimerComponent from "../taskWorkTimer/taskWorkTimerComponent";
+import TaskLockedBadgeComponent from "../taskLockedBadge/taskLockedBadgeComponent";
 import styles from "./taskKanbanBoardComponent.module.css";
 
 const COLUMN_STYLES: Record<TaskStatus, string> = {
@@ -128,21 +129,25 @@ function TaskKanbanBoardComponent({
               ) : (
                 tasks.map((task) => {
                   const urgency = getDueUrgency(task, t);
+                  const isLocked = Boolean(task.invoiceId);
                   return (
                   <div
                     key={task.id}
                     className={styles.card}
-                    draggable
+                    draggable={!isLocked}
                     onDragStart={(event) => handleCardDragStart(event, task.id, task.status)}
                     onDragEnd={handleCardDragEnd}
                   >
-                    <button
-                      type="button"
-                      className={styles.cardTitle}
-                      onClick={() => onOpenTask(task)}
-                    >
-                      {task.title}
-                    </button>
+                    <div className={styles.cardTitleRow}>
+                      <button
+                        type="button"
+                        className={styles.cardTitle}
+                        onClick={() => onOpenTask(task)}
+                      >
+                        {task.title}
+                      </button>
+                      {isLocked && <TaskLockedBadgeComponent />}
+                    </div>
                     {urgency && (
                       <span
                         className={`${styles.urgencyTag} ${
@@ -164,17 +169,20 @@ function TaskKanbanBoardComponent({
                         status={task.status}
                         taskTitle={task.title}
                         onChange={(newStatus) => onStatusChange(task.id, newStatus)}
+                        disabled={isLocked}
                       />
                       <PrioritySelectComponent
                         priority={task.priority}
                         taskTitle={task.title}
                         onChange={(newPriority) => onPriorityChange(task.id, newPriority)}
+                        disabled={isLocked}
                       />
                       <TaskAssigneesComponent
                         employees={employees}
                         selectedIds={task.assignees.map((assignee) => assignee.id)}
                         taskTitle={task.title}
                         onChange={(userIds) => onAssigneesChange(task.id, userIds)}
+                        disabled={isLocked}
                       />
                     </div>
                     <div className={styles.cardWorkTimer}>
@@ -185,6 +193,7 @@ function TaskKanbanBoardComponent({
                         workAccumulatedSeconds={task.workAccumulatedSeconds}
                         workEndedAt={task.workEndedAt}
                         onAction={(action) => onWorkTimerAction(task.id, action)}
+                        disabled={isLocked}
                       />
                     </div>
                   </div>

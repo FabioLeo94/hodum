@@ -107,11 +107,15 @@ describe('CustomerController.createCustomer: validazione', () => {
       makeRequest(makeUser()),
     );
 
+    // tariffaOraria/tariffaUnita non normalizzati qui: da questa correzione la
+    // normalizzazione/validazione dell'accoppiamento vive in
+    // customerService.createCustomer (validateAndNormalizeTariffa), non più
+    // nel controller, che inoltra i valori grezzi ricevuti dal body.
     expect(createCustomer).toHaveBeenCalledWith('company-1', {
       name: 'Cliente Uno',
       description: 'Nota',
-      tariffaOraria: null,
-      tariffaUnita: null,
+      tariffaOraria: undefined,
+      tariffaUnita: undefined,
     });
     expect(controller.setStatus).toHaveBeenCalledWith(201);
     expect(result).toEqual(makeCustomer());

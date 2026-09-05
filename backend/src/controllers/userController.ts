@@ -1,5 +1,5 @@
 import type { Request as ExRequest } from 'express';
-import { Body, Controller, Delete, Get, Path, Put, Request, Response, Route, Security, SuccessResponse } from 'tsoa';
+import { Body, Controller, Delete, Get, Path, Put, Request, Response, Route, Security, SuccessResponse } from '@tsoa/runtime';
 import { getAuthenticatedUser } from '../middleware/authentication';
 import type { Project } from '../models/project';
 import type { User } from '../models/user';
@@ -165,10 +165,11 @@ export class UserController extends Controller {
       isOwnerEditingEmployee = true;
     }
 
-    if (body.username !== undefined && body.username.trim().length === 0) {
-      this.setStatus(422);
-      return { message: 'username non può essere vuoto' };
-    }
+    // "username non può essere vuoto" validato in userService.updateUser
+    // (punto 2 della code review "niente logica nei controller"): la
+    // ValidationError che lancia è mappata a 422 nell'error handler globale
+    // (app.ts), non qui. email/password restano validate qui (fuori dallo
+    // scope di quell'intervento).
     if (body.email !== undefined && !isValidEmail(body.email)) {
       this.setStatus(422);
       return { message: 'email non valida' };

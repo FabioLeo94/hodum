@@ -1,5 +1,5 @@
 import type { Request as ExRequest } from 'express';
-import { Body, Controller, Get, Post, Request, Response, Route, Security } from 'tsoa';
+import { Body, Controller, Get, Post, Request, Response, Route, Security } from '@tsoa/runtime';
 import { getAuthenticatedUser } from '../middleware/authentication';
 import type { User } from '../models/user';
 import { InvalidCredentialsError, InvalidRecoveryCodeError, login, recoverPassword } from '../services/authService';

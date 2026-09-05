@@ -75,7 +75,7 @@
   border-radius: 50%;
   background-color: var(--bg-primary);
   color: var(--text-on-primary);
-  padding: 2px;
+  padding: var(--p-xs);
 }
 
 .formatName {
@@ -98,10 +98,6 @@
   .formatGrid {
     grid-template-columns: 1fr;
   }
-}
-
-.submitError {
-  composes: submitError from "../../../shared/styles/modalForm.module.css";
 }
 
 .cancelButton {

@@ -1,0 +1,18 @@
+/* Banner d'errore inline con bordo sinistro d'accento, riusato dai drawer del
+   pannello impostazioni (clienti, azienda, backup, fatturazione) e
+   dall'assistente AI per segnalare un errore di submit/caricamento senza
+   sostituire il contenuto circostante — a differenza di messageCard.module.css,
+   pensato per interi stati vuoti/di errore che rimpiazzano la sezione. Era
+   duplicato identico in 5 moduli prima di questa estrazione. */
+.errorBanner {
+  padding: var(--p-sm) var(--p-md);
+  border-left: 3px solid var(--color-danger);
+  border-radius: var(--radious-sm);
+  background-color: var(--bg-field);
+  /* --color-danger puro su --bg-field solido da' un contrasto di ~4.02:1,
+     sotto la soglia AA 4.5:1 per testo 0.8rem: schiarito all'86% verso il
+     bianco per raggiungere ~4.71:1 (stesso schiarimento gia' usato per lo
+     stesso sfondo altrove, es. .groupHeaderRejected in taskList.module.css). */
+  color: color-mix(in srgb, var(--color-danger) 86%, white);
+  font-size: 0.8rem;
+}

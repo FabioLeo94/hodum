@@ -4,9 +4,18 @@ import { join } from 'node:path';
 import { promisify } from 'node:util';
 import type { PoolClient } from 'pg';
 import type { BackupRecord, BackupSettings, BackupTrigger } from '../models/backup';
-import { renderBackupFilename } from '../utils/backupFilename';
+import { isValidFilenameFormat, renderBackupFilename } from '../utils/backupFilename';
+import { assertValid } from '../utils/validation';
 import { pool } from '../db/pool';
 import { getCompanyById } from './companyService';
+
+// Punto 2 della code review "niente logica nei controller": prima vivevano in
+// backupController.ts, ripetuti a mano per ogni campo invece che validati qui
+// una sola volta.
+const MIN_INTERVAL_MINUTES = 1;
+const MAX_INTERVAL_MINUTES = 10_080; // 7 giorni: oltre non ha senso chiamarlo backup "periodico".
+const MIN_MAX_BACKUPS = 1;
+const MAX_MAX_BACKUPS = 500; // Limite di buon senso: oltre, la rotazione perde significato pratico per una PMI.
 
 const execFileAsync = promisify(execFile);
 
@@ -128,10 +137,33 @@ export interface UpdateBackupSettingsInput {
   filenameFormat: string;
 }
 
-// Validazione dei range (interval/max >= 1, formato non vuoto) resta al
-// chiamante (backupController), stesso pattern di companyController.register:
-// il service riceve input già verificato e si concentra sulla scrittura.
+// Validazione dei range (interval/max, formato filename) prima duplicata a
+// mano in backupController.putSettings (punto 2 della code review "niente
+// logica nei controller"): ora un assertValid per campo, con la stessa
+// ValidationError mappata a 422 nell'error handler globale (app.ts) invece
+// che qui.
+function validateBackupSettingsInput(input: UpdateBackupSettingsInput): void {
+  assertValid(
+    Number.isInteger(input.intervalMinutes) &&
+      input.intervalMinutes >= MIN_INTERVAL_MINUTES &&
+      input.intervalMinutes <= MAX_INTERVAL_MINUTES,
+    'intervalMinutes',
+    `intervalMinutes deve essere un intero tra ${MIN_INTERVAL_MINUTES} e ${MAX_INTERVAL_MINUTES}`,
+  );
+  assertValid(
+    Number.isInteger(input.maxBackups) && input.maxBackups >= MIN_MAX_BACKUPS && input.maxBackups <= MAX_MAX_BACKUPS,
+    'maxBackups',
+    `maxBackups deve essere un intero tra ${MIN_MAX_BACKUPS} e ${MAX_MAX_BACKUPS}`,
+  );
+  assertValid(
+    isValidFilenameFormat(input.filenameFormat),
+    'filenameFormat',
+    'filenameFormat non valido: sono ammessi solo lettere, numeri, spazi, "_", "-", "." e i placeholder {company} {date} {time} {index}',
+  );
+}
+
 export async function updateBackupSettings(companyId: string, input: UpdateBackupSettingsInput): Promise<BackupSettings> {
+  validateBackupSettingsInput(input);
   await getOrCreateSettingsRow(companyId);
   const result = await pool.query<BackupSettingsRow>(
     `UPDATE company_backup_settings

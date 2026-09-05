@@ -1,0 +1,11 @@
+.messageCard {
+  composes: messageCard from "../../../shared/styles/messageCard.module.css";
+}
+
+.messageCardTitle {
+  composes: messageCardTitle from "../../../shared/styles/messageCard.module.css";
+}
+
+.messageCardText {
+  composes: messageCardText from "../../../shared/styles/messageCard.module.css";
+}

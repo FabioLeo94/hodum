@@ -1,10 +1,11 @@
-import { useEffect, useId, useState } from "react";
-import { ArrowLeft, Plus, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowLeft, Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import InputComponent from "../input/inputComponent";
 import TextareaComponent from "../textarea/textareaComponent";
 import ButtonComponent from "../button/buttonComponent";
 import RateInputComponent from "../rateInput/rateInputComponent";
+import DrawerBaseComponent from "../drawerBase/drawerBaseComponent";
 import DeleteCustomerModalComponent from "../deleteCustomerModal/deleteCustomerModalComponent";
 import {
   createCustomer,
@@ -67,7 +68,6 @@ function viewKey(view: View): string {
 // diverse da quella oraria (il cliente non ha un proprio orario di lavoro).
 function CustomersDrawerComponent({ isOpen, onClose, companyId }: Prop) {
   const { t } = useTranslation();
-  const titleId = useId();
 
   const [view, setView] = useState<View>({ mode: "list" });
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -159,27 +159,6 @@ function CustomersDrawerComponent({ isOpen, onClose, companyId }: Prop) {
     };
   }, [isOpen, companyId]);
 
-  // Escape torna alla lista quando si è nel form (stesso principio di
-  // "Indietro"), chiude l'intero drawer solo dalla vista lista. Disattivato
-  // mentre la modale di eliminazione è aperta sopra il drawer, stesso motivo
-  // di BackupSettingsDrawerComponent: il <dialog> nativo della modale gestisce
-  // Escape per conto proprio.
-  useEffect(() => {
-    if (!isOpen || deleteTarget) return;
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key !== "Escape") return;
-      if (view.mode === "form") {
-        setView({ mode: "list" });
-      } else {
-        onClose();
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose, view, deleteTarget]);
-
   function openCreateForm() {
     setView({ mode: "form", customer: null });
   }
@@ -190,6 +169,16 @@ function CustomersDrawerComponent({ isOpen, onClose, companyId }: Prop) {
 
   function goBackToList() {
     setView({ mode: "list" });
+  }
+
+  // Escape torna alla lista quando si è nel form (stesso principio del
+  // bottone "Indietro"), chiude l'intero drawer solo dalla vista lista.
+  function handleEscape() {
+    if (view.mode === "form") {
+      goBackToList();
+    } else {
+      onClose();
+    }
   }
 
   const editingCustomer = view.mode === "form" ? view.customer : null;
@@ -249,28 +238,14 @@ function CustomersDrawerComponent({ isOpen, onClose, companyId }: Prop) {
 
   return (
     <>
-      {isOpen && <div className={styles.backdrop} onClick={onClose} aria-hidden="true" />}
-      <div
-        className={styles.panel}
-        data-open={isOpen}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
+      <DrawerBaseComponent
+        isOpen={isOpen}
+        onClose={onClose}
+        title={t("components.customersDrawer.title")}
+        closeLabel={t("components.customersDrawer.closeLabel")}
+        onEscape={handleEscape}
+        disableEscape={deleteTarget !== null}
       >
-        <div className={styles.header}>
-          <h2 id={titleId} className={styles.title}>
-            {t("components.customersDrawer.title")}
-          </h2>
-          <button
-            type="button"
-            className={styles.closeButton}
-            aria-label={t("components.customersDrawer.closeLabel")}
-            onClick={onClose}
-          >
-            <X size={18} aria-hidden="true" />
-          </button>
-        </div>
-
         <div className={styles.viewport}>
           <div className={styles.track} data-view={view.mode}>
             <div className={styles.pane}>
@@ -405,7 +380,7 @@ function CustomersDrawerComponent({ isOpen, onClose, companyId }: Prop) {
             </div>
           </div>
         </div>
-      </div>
+      </DrawerBaseComponent>
 
       <DeleteCustomerModalComponent
         isOpen={deleteTarget !== null}

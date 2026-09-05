@@ -26,6 +26,8 @@ import TaskKanbanBoardComponent from "../../components/taskKanbanBoard/taskKanba
 import TaskWorkTimerComponent from "../../components/taskWorkTimer/taskWorkTimerComponent";
 import TaskCalendarComponent from "../../components/taskCalendar/taskCalendarComponent";
 import ExpandableContainerComponent from "../../components/expandableContainer/expandableContainerComponent";
+import TaskLockedBadgeComponent from "../../components/taskLockedBadge/taskLockedBadgeComponent";
+import MessageCardComponent from "../../components/messageCard/messageCardComponent";
 import type { AssistantLayoutContext } from "../../components/protectedLayout/protectedLayoutComponent";
 import { usePageMeta } from "../../../shared/hooks/usePageMeta";
 import {
@@ -185,6 +187,12 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [priorityTierFilter, setPriorityTierFilter] = useState<PriorityTierFilter>("all");
   const [assigneeFilter, setAssigneeFilter] = useState("all");
+  // I task fatturati (invoiceId valorizzato) restano nascosti in tutte le
+  // viste finché l'utente non li richiede esplicitamente: di default false,
+  // a differenza degli altri filtri non è un "restringimento" ma l'inverso
+  // (attivarlo mostra più task, non meno), quindi vive come dimensione a
+  // parte invece che dentro taskMatchesFilters.
+  const [showInvoiced, setShowInvoiced] = useState(false);
   // Elenco dei dipendenti della company, per il picker degli assegnatari
   // (card lista/kanban + modale di creazione). Un fallimento qui non deve
   // impedire di vedere i task: resta semplicemente [], il picker degraderà
@@ -456,13 +464,15 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
     searchQuery.trim() !== "" ||
     statusFilter !== "all" ||
     priorityTierFilter !== "all" ||
-    assigneeFilter !== "all";
+    assigneeFilter !== "all" ||
+    showInvoiced;
 
   function resetFilters() {
     setSearchQuery("");
     setStatusFilter("all");
     setPriorityTierFilter("all");
     setAssigneeFilter("all");
+    setShowInvoiced(false);
   }
 
   if (isLoading) {
@@ -483,10 +493,12 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
       <Fragment>
         <TopbarComponent onLogout={handleLogout} />
         <div className={styles.taskListContainer}>
-          <div className={styles.notFoundState} data-variant="error" role="alert">
-            <p className={styles.errorMessage}>{t("pages.taskList.loadErrorTitle")}</p>
-            <p className={styles.notFoundText}>{loadError}</p>
-          </div>
+          <MessageCardComponent
+            variant="error"
+            role="alert"
+            title={t("pages.taskList.loadErrorTitle")}
+            text={loadError}
+          />
         </div>
       </Fragment>
     );
@@ -497,10 +509,11 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
       <Fragment>
         <TopbarComponent onLogout={handleLogout} />
         <div className={styles.taskListContainer}>
-          <div className={styles.notFoundState} role="alert">
-            <p className={styles.errorMessage}>{t("pages.taskList.notFoundTitle")}</p>
-            <p className={styles.notFoundText}>{t("pages.taskList.notFoundText")}</p>
-          </div>
+          <MessageCardComponent
+            role="alert"
+            title={t("pages.taskList.notFoundTitle")}
+            text={t("pages.taskList.notFoundText")}
+          />
         </div>
       </Fragment>
     );
@@ -511,17 +524,26 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
   // del flusso, quindi TS non propaga al loro interno il narrowing di `if (!project) return`.
   const currentProject = project;
   const normalizedQuery = searchQuery.trim().toLowerCase();
-  const filteredTasks = currentProject.tasks.filter((task) =>
+  // I task fatturati sono esclusi a monte (nascosti, non attenuati) da tutte
+  // le viste finché showInvoiced è false: a differenza degli altri filtri
+  // sotto, qui non ha senso "attenuare" nel Calendario, perché il default è
+  // nasconderli del tutto, non solo segnalarli come non corrispondenti.
+  const visibleTasks = showInvoiced
+    ? currentProject.tasks
+    : currentProject.tasks.filter((task) => !task.invoiceId);
+  const filteredTasks = visibleTasks.filter((task) =>
     taskMatchesFilters(task, normalizedQuery, statusFilter, priorityTierFilter, assigneeFilter),
   );
   const groupedTasks = groupTasksByStatus(filteredTasks);
-  // Il Calendario riceve sempre l'elenco completo (vedi TaskCalendarComponent):
-  // a differenza di Lista/Kanban non nasconde i task filtrati, li attenua, per
-  // non lasciare celle vuote indistinguibili da giorni davvero senza task.
+  // Il Calendario riceve sempre l'elenco visibile (vedi TaskCalendarComponent):
+  // a differenza di Lista/Kanban non nasconde i task filtrati dagli altri
+  // criteri, li attenua, per non lasciare celle vuote indistinguibili da
+  // giorni davvero senza task. I task fatturati restano invece fuori da
+  // visibleTasks, quindi il Calendario non li mostra nemmeno attenuati.
   const filteredTaskIds = new Set(filteredTasks.map((task) => task.id));
   const dimmedTaskIds = hasActiveFilters
     ? new Set(
-        currentProject.tasks
+        visibleTasks
           .filter((task) => !filteredTaskIds.has(task.id))
           .map((task) => task.id),
       )
@@ -679,6 +701,16 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
             </select>
           </label>
 
+          <label className={styles.invoicedToggle}>
+            <input
+              className={styles.invoicedCheckbox}
+              type="checkbox"
+              checked={showInvoiced}
+              onChange={(event) => setShowInvoiced(event.target.checked)}
+            />
+            {t("pages.taskList.showInvoicedLabel")}
+          </label>
+
           {viewMode === "list" && (
             <label className={styles.toolbarField}>
               <span className={styles.toolbarFieldLabel}>{t("pages.taskList.sortByPriorityLabel")}</span>
@@ -716,7 +748,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
           />
         ) : viewMode === "calendar" ? (
           <TaskCalendarComponent
-            tasks={currentProject.tasks}
+            tasks={visibleTasks}
             onOpenTask={openEditModal}
             dimmedTaskIds={dimmedTaskIds}
             onDueDateChange={handleDueDateChange}
@@ -823,11 +855,12 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
                                 )
                               : tasks.map((task) => {
                                   const urgency = getDueUrgency(task, t);
+                                  const isLocked = Boolean(task.invoiceId);
                                   return (
                                   <tr
                                     key={task.id}
                                     className={styles.taskRow}
-                                    draggable
+                                    draggable={!isLocked}
                                     onDragStart={(event) => handleDragStart(event, task.id)}
                                     onDragEnd={handleGroupDragLeave}
                                   >
@@ -864,6 +897,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
                                         >
                                           {task.title}
                                         </button>
+                                        {isLocked && <TaskLockedBadgeComponent />}
                                       </div>
                                     </td>
                                     <td className={styles.descriptionCell} title={task.description}>
@@ -876,6 +910,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
                                         onChange={(newStatus) =>
                                           handleStatusChange(task.id, newStatus)
                                         }
+                                        disabled={isLocked}
                                       />
                                     </td>
                                     <td>
@@ -885,6 +920,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
                                         onChange={(newPriority) =>
                                           handlePriorityChange(task.id, newPriority)
                                         }
+                                        disabled={isLocked}
                                       />
                                     </td>
                                     <td>
@@ -895,6 +931,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
                                         workAccumulatedSeconds={task.workAccumulatedSeconds}
                                         workEndedAt={task.workEndedAt}
                                         onAction={(action) => handleWorkTimerAction(task.id, action)}
+                                        disabled={isLocked}
                                       />
                                     </td>
                                     <td>
@@ -903,6 +940,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
                                         selectedIds={task.assignees.map((assignee) => assignee.id)}
                                         taskTitle={task.title}
                                         onChange={(userIds) => handleAssigneesChange(task.id, userIds)}
+                                        disabled={isLocked}
                                       />
                                     </td>
                                   </tr>
@@ -952,6 +990,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
           onSubmit={handleTaskFormSubmit}
           submitError={taskModalError}
           employees={employees}
+          invoiceId={editingTask?.invoiceId ?? null}
         />
       </div>
     </Fragment>
@@ -971,10 +1010,11 @@ function TaskListMissingProject() {
     <Fragment>
       <TopbarComponent onLogout={handleLogout} />
       <div className={styles.taskListContainer}>
-        <div className={styles.notFoundState} role="alert">
-          <p className={styles.errorMessage}>{t("pages.taskList.notFoundTitle")}</p>
-          <p className={styles.notFoundText}>{t("pages.taskList.notFoundText")}</p>
-        </div>
+        <MessageCardComponent
+          role="alert"
+          title={t("pages.taskList.notFoundTitle")}
+          text={t("pages.taskList.notFoundText")}
+        />
       </div>
     </Fragment>
   );

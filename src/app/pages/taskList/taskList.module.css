@@ -9,15 +9,7 @@
 }
 
 .srOnly {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
+  composes: srOnly from "../../../shared/styles/fieldBase.module.css";
 }
 
 /* Riga anziché colonna: il titolo resta l'ancora a sinistra, il cambio vista
@@ -45,7 +37,7 @@
    vista non è un filtro sul contenuto, è un modo diverso di guardarlo. */
 .viewSwitch {
   display: inline-flex;
-  padding: 2px;
+  padding: var(--p-xs);
   background-color: var(--bg-field);
   border-radius: var(--radious-xl);
 }
@@ -237,6 +229,23 @@
   color: var(--text-primary);
 }
 
+/* Stesso pattern di .authRememberMe/.authCheckbox in authFormComponent: un
+   controllo a parte rispetto ai select della toolbar, perché non restringe
+   un valore chiuso ma inverte un default (nascondi/mostra i fatturati). */
+.invoicedToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--m-sm);
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.invoicedCheckbox {
+  composes: checkboxBase from "../../../shared/styles/checkboxBase.module.css";
+}
+
 /* Compare solo quando almeno un filtro è attivo (vedi hasActiveFilters in
    taskList.tsx): un pulsante sempre presente inviterebbe a cliccarlo anche a
    vuoto. Tono neutro (non --color-danger): resetta una preferenza di vista,
@@ -266,7 +275,7 @@
 .taskTableCard {
   background-color: var(--bg-surface);
   border-radius: var(--radious-lg);
-  box-shadow: 0 0 16px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--shadow-card);
   padding: var(--p-lg);
   overflow-x: auto;
 }
@@ -489,6 +498,7 @@
   border-radius: var(--radious-xs);
 }
 
+
 .descriptionCell {
   overflow: hidden;
   color: var(--text-muted);
@@ -536,14 +546,6 @@
   color: var(--color-danger);
   font-size: 0.85rem;
   font-weight: 600;
-}
-
-.notFoundState {
-  composes: messageCard from "../../../shared/styles/messageCard.module.css";
-}
-
-.errorMessage {
-  composes: messageCardTitle from "../../../shared/styles/messageCard.module.css";
 }
 
 .notFoundText {

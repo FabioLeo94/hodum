@@ -114,3 +114,7 @@
 .closeButton {
   composes: cancelButton from "../../../shared/styles/modalForm.module.css";
 }
+
+.viewInvoiceButton {
+  composes: cancelButton from "../../../shared/styles/modalForm.module.css";
+}

@@ -27,10 +27,13 @@ function ProtectedLayoutComponent() {
   // sempre un FAB locale e non ha bisogno di dichiararlo esplicitamente.
   const [hasLocalFab, setHasLocalFab] = useState(true);
 
-  // Nella gestione aziendale non ha senso parlare di progetti/task: l'assistente
-  // resta montato (la conversazione sulle altre pagine non va persa) ma non si
-  // mostra, vedi isHidden in AssistantDrawerComponent.
-  const isAssistantHidden = location.pathname.startsWith("/company-management");
+  // Nella gestione aziendale e nelle fatture non ha senso parlare di
+  // progetti/task: l'assistente resta montato (la conversazione sulle altre
+  // pagine non va persa) ma non si mostra, vedi isHidden in
+  // AssistantDrawerComponent.
+  const isAssistantHidden =
+    location.pathname.startsWith("/company-management") ||
+    location.pathname.startsWith("/invoices");
   const isAssistantOpenAndVisible = isAssistantOpen && !isAssistantHidden;
 
   // Sottoscritto una sola volta per l'intera sessione protetta (questo

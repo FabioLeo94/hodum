@@ -6,6 +6,7 @@ interface ProjectDto {
   id: string;
   name: string;
   isActive: boolean;
+  customerId: string | null;
 }
 
 interface TaskDto {
@@ -20,6 +21,7 @@ interface TaskDto {
   workStartedAt: string | null;
   workAccumulatedSeconds: number;
   workEndedAt: string | null;
+  invoiceId: string | null;
 }
 
 function toTask(dto: TaskDto): Task {
@@ -34,6 +36,7 @@ function toTask(dto: TaskDto): Task {
     workStartedAt: dto.workStartedAt,
     workAccumulatedSeconds: dto.workAccumulatedSeconds,
     workEndedAt: dto.workEndedAt,
+    invoiceId: dto.invoiceId,
   };
 }
 
@@ -59,6 +62,7 @@ export async function getAllProjects(): Promise<Project[]> {
     projects.map(async (project) => ({
       id: project.id,
       name: project.name,
+      customerId: project.customerId,
       tasks: await fetchProjectTasks(project.id),
     })),
   );
@@ -136,7 +140,7 @@ export async function getProjectById(id: string): Promise<Project | undefined> {
   }
   const project = (await response.json()) as ProjectDto;
   const tasks = await fetchProjectTasks(id);
-  return { id: project.id, name: project.name, tasks };
+  return { id: project.id, name: project.name, customerId: project.customerId, tasks };
 }
 
 export async function createProject(name: string): Promise<Project> {
@@ -150,24 +154,31 @@ export async function createProject(name: string): Promise<Project> {
     throw new Error(message ?? "Impossibile creare il progetto.");
   }
   const project = (await response.json()) as ProjectDto;
-  return { id: project.id, name: project.name, tasks: [] };
+  return { id: project.id, name: project.name, customerId: project.customerId, tasks: [] };
+}
+
+export interface UpdateProjectInput {
+  name: string;
+  // null scollega il progetto dal cliente assegnato in precedenza (vedi
+  // UpdateProjectInput.customerId lato backend, projectService.ts).
+  customerId: string | null;
 }
 
 export async function updateProject(
   id: string,
-  name: string,
-): Promise<Pick<Project, "id" | "name">> {
+  input: UpdateProjectInput,
+): Promise<Pick<Project, "id" | "name" | "customerId">> {
   const response = await authFetch(`${API_BASE_URL}/projects/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json", ...authHeader() },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify(input),
   });
   if (!response.ok) {
     const message = await readErrorMessage(response);
     throw new Error(message ?? "Impossibile aggiornare il progetto.");
   }
   const project = (await response.json()) as ProjectDto;
-  return { id: project.id, name: project.name };
+  return { id: project.id, name: project.name, customerId: project.customerId };
 }
 
 export async function deleteProject(id: string): Promise<void> {

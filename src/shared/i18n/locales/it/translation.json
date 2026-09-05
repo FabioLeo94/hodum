@@ -200,14 +200,18 @@
       "namePlaceholder": "Es. Redesign sito web",
       "nameRequired": "Inserisci un nome per il progetto."
     },
-    "renameProjectModal": {
-      "title": "Rinomina progetto",
+    "editProjectModal": {
+      "title": "Modifica progetto",
       "submitting": "Salvataggio in corso...",
       "submit": "Salva",
       "cancel": "Annulla",
       "nameLabel": "Nome del progetto",
       "namePlaceholder": "Es. Redesign sito web",
-      "nameRequired": "Inserisci un nome per il progetto."
+      "nameRequired": "Inserisci un nome per il progetto.",
+      "customerLabel": "Cliente",
+      "noCustomerOption": "Nessun cliente",
+      "noCustomers": "Aggiungi i tuoi clienti nella pagina gestione aziendale per assegnare questo progetto.",
+      "customersLoadError": "Impossibile caricare i clienti."
     },
     "deleteProjectModal": {
       "title": "Elimina progetto",
@@ -293,6 +297,7 @@
       "pecInvalid": "Inserire una PEC valida.",
       "loadError": "Impossibile caricare i dati aziendali.",
       "saveError": "Impossibile salvare i dati aziendali.",
+      "companyDataSectionTitle": "Dati aziendali",
       "rateAndScheduleSectionTitle": "Tariffa e orari di lavoro",
       "companyRateLabel": "Tariffa aziendale",
       "workDaysLabel": "Giorni lavorativi",
@@ -334,6 +339,34 @@
       "confirm": "Elimina",
       "cancel": "Annulla",
       "warning": "Stai per eliminare definitivamente il cliente «{{customerName}}». L'operazione non è reversibile."
+    },
+    "generateInvoiceDrawer": {
+      "title": "Genera pre-fattura",
+      "closeLabel": "Chiudi",
+      "customerLabel": "Cliente",
+      "selectCustomerPlaceholder": "Seleziona un cliente",
+      "loadCustomersError": "Impossibile caricare i clienti.",
+      "loadingTasks": "Caricamento dei task fatturabili...",
+      "loadTasksError": "Impossibile caricare i task fatturabili.",
+      "noBillableTasks": "Nessun task fatturabile per questo cliente.",
+      "tableCaption": "Task fatturabili del cliente selezionato",
+      "columnInclude": "Includi",
+      "columnTask": "Task",
+      "columnProject": "Progetto",
+      "columnHours": "Ore",
+      "columnNonBillable": "Non fatturabile",
+      "includeLabel": "Includi {{title}} nella pre-fattura",
+      "nonBillableLabel": "Segna {{title}} come non fatturabile",
+      "generate": "Genera pre-fattura",
+      "generating": "Generazione in corso...",
+      "generateError": "Impossibile generare la pre-fattura."
+    },
+    "invoicePreview": {
+      "title": "Anteprima pre-fattura",
+      "loading": "Caricamento del PDF...",
+      "loadError": "Impossibile caricare il PDF della pre-fattura.",
+      "frameTitle": "PDF della pre-fattura",
+      "close": "Chiudi"
     },
     "backupHistoryItem": {
       "triggerLabels": {
@@ -438,7 +471,8 @@
       "dueDateLabel": "Scadenza",
       "noDueDate": "Nessuna",
       "assigneesLabel": "Assegnatari",
-      "noAssignees": "Nessun assegnatario."
+      "noAssignees": "Nessun assegnatario.",
+      "viewInvoiceButton": "Visualizza fattura"
     },
     "taskFormModal": {
       "create": {
@@ -463,13 +497,18 @@
       "statusLabel": "Stato",
       "priorityLabel": "Priorità",
       "untitledTaskFallback": "nuovo task",
-      "cancel": "Annulla"
+      "cancel": "Annulla",
+      "readOnlyNotice": "Questo task è stato fatturato: i suoi dati sono di sola visualizzazione e non possono più essere modificati.",
+      "viewInvoiceButton": "Visualizza fattura"
     },
     "taskKanbanBoard": {
       "ariaLabel": "Task raggruppati per stato, vista Kanban",
       "dropHere": "Rilascia qui",
       "noMatchingTasks": "Nessun task corrisponde ai filtri",
       "noTasks": "Nessun task"
+    },
+    "taskLockedBadge": {
+      "label": "Task fatturato, di sola visualizzazione"
     },
     "taskCalendar": {
       "weekdays": ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"],
@@ -560,7 +599,7 @@
       "noTasks": "Nessun task",
       "totalTasks": "task totali",
       "otherActionsLabel": "Altre azioni per {{name}}",
-      "rename": "Rinomina",
+      "edit": "Modifica",
       "delete": "Elimina",
       "download": "Scarica..."
     },
@@ -732,6 +771,10 @@
           "title": "Clienti",
           "description": "Gestisci l'anagrafica dei clienti: nome, descrizione e stato della fatturazione."
         },
+        "invoices": {
+          "title": "Fatture",
+          "description": "Genera pre-fatture dai task completati e consulta lo storico delle fatture emesse."
+        },
         "backup": {
           "title": "Backup",
           "description": "Gestisci i backup del database della tua azienda: frequenza, quanti conservarne e come nominarli."
@@ -789,6 +832,7 @@
       },
       "assigneeFilterLabel": "Assegnatario",
       "allAssignees": "Tutti gli assegnatari",
+      "showInvoicedLabel": "Mostra fatturati",
       "sortByPriorityLabel": "Ordina per priorità",
       "sortNone": "Nessun ordinamento",
       "sortUrgentFirst": "Più urgenti prima",
@@ -806,6 +850,25 @@
       "dragHandleTitle": "Trascina per cambiare stato",
       "urgencyAriaLabel": "{{title}} — {{urgency}}",
       "createTaskLabel": "Crea nuovo task"
+    },
+    "invoices": {
+      "title": "Fatture",
+      "generateButton": "Genera pre-fattura",
+      "loading": "Caricamento delle pre-fatture...",
+      "loadErrorTitle": "Errore di caricamento",
+      "loadError": "Impossibile caricare le pre-fatture.",
+      "emptyTitle": "Nessuna pre-fattura ancora",
+      "emptyText": "Le pre-fatture che generi compariranno qui.",
+      "tableCaption": "Pre-fatture dell'azienda",
+      "columnNumber": "Numero",
+      "columnDate": "Data",
+      "columnCustomer": "Cliente",
+      "columnHours": "Ore",
+      "columnAmount": "Importo",
+      "numberPrefix": "#{{number}}",
+      "meta": {
+        "title": "Fatture"
+      }
     }
   }
 }

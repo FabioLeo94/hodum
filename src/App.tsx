@@ -6,6 +6,7 @@ import RecoverPassword from "./app/pages/recoverPassword/recoverPassword";
 import Dashboard from "./app/pages/dashboard/dashboard";
 import Employees from "./app/pages/employees/employees";
 import CompanyManagement from "./app/pages/companyManagement/companyManagement";
+import Invoices from "./app/pages/invoices/invoices";
 import TaskList from "./app/pages/taskList/taskList";
 import ProtectedRouteComponent from "./app/components/protectedRoute/protectedRouteComponent";
 import ProtectedLayoutComponent from "./app/components/protectedLayout/protectedLayoutComponent";
@@ -50,6 +51,9 @@ function App() {
               voci future toccano l'infrastruttura, non la gestione operativa
               che il manager già presidia altrove. */}
           <Route path="company-management" element={<CompanyManagement />} />
+          {/* Stessa guardia owner-only di company-management (nessuna rotta
+              protetta filtra già per ruolo): vedi invoices.tsx. */}
+          <Route path="invoices" element={<Invoices />} />
         </Route>
         <Route path="*" element={<Navigate to={"/auth"} />} />
       </Routes>
