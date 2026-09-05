@@ -50,10 +50,7 @@ function BackupHistoryItemComponent({ backup, selected, onToggleSelect, onReques
   // useLayoutEffect (non useEffect) per misurare e decidere la direzione
   // prima del paint, evitando un flash del menu nella posizione sbagliata.
   useLayoutEffect(() => {
-    if (!isMenuOpen) {
-      setOpenUpward(false);
-      return;
-    }
+    if (!isMenuOpen) return;
 
     const buttonRect = kebabButtonRef.current?.getBoundingClientRect();
     const menuHeight = popoverRef.current?.offsetHeight ?? 0;
