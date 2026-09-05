@@ -1,6 +1,21 @@
+.languageSwitcherWrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.languageFlag {
+  position: absolute;
+  left: var(--p-md);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
 .languageSwitcher {
   height: 32px;
-  padding: 0 var(--p-sm);
+  padding: 0 var(--p-md) 0 calc(16px + var(--p-md) * 2);
   border: 1px solid var(--bg-field);
   border-radius: var(--radious-sm);
   background-color: var(--bg-field);
