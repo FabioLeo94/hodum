@@ -154,6 +154,12 @@ npm run migrate:create   # crea una nuova migration
 npm run db:check         # verifica la connessione al database
 ```
 
+Il backend non ha uno script `lint`: `typescript-eslint` non supporta ancora
+TypeScript 7 (usato qui per `tsc -b`/`tsoa:gen`), limite tracciato in
+[typescript-eslint/typescript-eslint#10940](https://github.com/typescript-eslint/typescript-eslint/issues/10940).
+Un override npm mirato a isolare solo ESLint da questo vincolo è stato
+tentato e si è rivelato inaffidabile (vedi `CLAUDE.md`, sezione Linting).
+
 ## Struttura
 
 - `src/app/components/<nome>/` — componenti, un folder ciascuno con CSS co-locato
