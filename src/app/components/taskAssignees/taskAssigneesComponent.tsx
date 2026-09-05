@@ -45,6 +45,10 @@ function TaskAssigneesComponent({
 
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  // Letto solo in un effect (mai durante il render, vietato per i ref): vedi
+  // il commento sul portal più sotto per il perché di document.body vs
+  // dialog[open].
+  const [portalContainer, setPortalContainer] = useState<Element | null>(null);
 
   // useCallback (non una function declaration semplice) perché è una
   // dipendenza dell'effect di dismiss sotto: identità stabile finché
@@ -107,6 +111,15 @@ function TaskAssigneesComponent({
     };
   }, [isOpen, pendingIds, commitAndClose]);
 
+  // Calcola il contenitore del portal in un effect, non durante il render:
+  // leggere triggerRef.current nel corpo del JSX è vietato dalle regole di
+  // React sui ref. Vedi il commento sul portal più sotto per il perché
+  // di document.body vs dialog[open].
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+    setPortalContainer(triggerRef.current?.closest("dialog[open]") ?? document.body);
+  }, [isOpen]);
+
   // Riposizionamento ancorato al trigger, stesso motivo di panelRef in
   // NotificationBellComponent: il pannello vive fuori dal flusso del suo
   // trigger (portal su document.body).
@@ -155,6 +168,7 @@ function TaskAssigneesComponent({
       </button>
 
       {isOpen &&
+        portalContainer &&
         createPortal(
           <div
             ref={panelRef}
@@ -194,8 +208,10 @@ function TaskAssigneesComponent({
           // da z-index. Se il trigger è dentro un <dialog> aperto, il portal
           // va dentro quello stesso <dialog> (stesso top layer, quindi sopra
           // il suo contenuto); altrimenti (card in lista/kanban, nessun
-          // <dialog> antenato) resta su document.body come prima.
-          triggerRef.current?.closest("dialog[open]") ?? document.body,
+          // <dialog> antenato) resta su document.body come prima. Calcolato
+          // nell'effect sopra (portalContainer), non qui, perché leggere
+          // triggerRef.current durante il render è vietato per i ref.
+          portalContainer,
         )}
     </div>
   );
