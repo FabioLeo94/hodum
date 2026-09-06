@@ -12,7 +12,13 @@ import { useAsyncSubmit } from "../../../shared/hooks/useAsyncSubmit";
 import styles from "./createEmployeeModalComponent.module.css";
 
 export interface CreateEmployeeFormValues {
-  username: string;
+  // Assente quando l'owner lascia il campo vuoto (opzionale): il backend
+  // applica il fallback su firstName/lastName, vedi getDisplayName
+  // (shared/utils/displayName.ts).
+  username?: string;
+  firstName: string;
+  lastName: string;
+  pronoun?: string;
   email: string;
   password: string;
   role: EmployeeRole;
@@ -32,7 +38,10 @@ function CreateEmployeeModalComponent({
   submitError,
 }: Prop) {
   const { t } = useTranslation();
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [username, setUsername] = useState("");
+  const [pronoun, setPronoun] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -41,9 +50,14 @@ function CreateEmployeeModalComponent({
   const { isSubmitting, submit } = useAsyncSubmit();
   const roleFieldId = useId();
 
-  const usernameError =
-    submitAttempted && username.trim() === ""
-      ? t("components.createEmployeeModal.usernameRequired")
+  const firstNameError =
+    submitAttempted && firstName.trim() === ""
+      ? t("components.createEmployeeModal.firstNameRequired")
+      : "";
+
+  const lastNameError =
+    submitAttempted && lastName.trim() === ""
+      ? t("components.createEmployeeModal.lastNameRequired")
       : "";
 
   const emailError =
@@ -63,7 +77,10 @@ function CreateEmployeeModalComponent({
       : "";
 
   function resetForm() {
+    setFirstName("");
+    setLastName("");
     setUsername("");
+    setPronoun("");
     setEmail("");
     setPassword("");
     setConfirmPassword("");
@@ -80,7 +97,8 @@ function CreateEmployeeModalComponent({
     setSubmitAttempted(true);
 
     const isValid =
-      username.trim() !== "" &&
+      firstName.trim() !== "" &&
+      lastName.trim() !== "" &&
       validateEmail(email) &&
       validatePassword(password) &&
       password === confirmPassword;
@@ -88,7 +106,15 @@ function CreateEmployeeModalComponent({
     if (!isValid) return;
 
     await submit(async () => {
-      await onCreate({ username: username.trim(), email, password, role });
+      await onCreate({
+        username: username.trim() === "" ? undefined : username.trim(),
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        pronoun: pronoun.trim() === "" ? undefined : pronoun,
+        email,
+        password,
+        role,
+      });
       resetForm();
     });
   }
@@ -126,15 +152,47 @@ function CreateEmployeeModalComponent({
       <div className={styles.fields}>
         <InputComponent
           type="text"
+          name="firstName"
+          label={t("components.createEmployeeModal.firstNameLabel")}
+          placeholder={t("components.createEmployeeModal.firstNamePlaceholder")}
+          value={firstName}
+          onChange={(event) => setFirstName(event.target.value)}
+          autoComplete="off"
+          autoFocus
+          required
+          error={firstNameError}
+          showLabel
+        />
+        <InputComponent
+          type="text"
+          name="lastName"
+          label={t("components.createEmployeeModal.lastNameLabel")}
+          placeholder={t("components.createEmployeeModal.lastNamePlaceholder")}
+          value={lastName}
+          onChange={(event) => setLastName(event.target.value)}
+          autoComplete="off"
+          required
+          error={lastNameError}
+          showLabel
+        />
+        <InputComponent
+          type="text"
           name="username"
           label={t("components.createEmployeeModal.usernameLabel")}
           placeholder={t("components.createEmployeeModal.usernamePlaceholder")}
           value={username}
           onChange={(event) => setUsername(event.target.value)}
           autoComplete="off"
-          autoFocus
-          required
-          error={usernameError}
+          showLabel
+        />
+        <InputComponent
+          type="text"
+          name="pronoun"
+          label={t("components.createEmployeeModal.pronounLabel")}
+          placeholder={t("components.createEmployeeModal.pronounPlaceholder")}
+          value={pronoun}
+          onChange={(event) => setPronoun(event.target.value)}
+          autoComplete="off"
           showLabel
         />
         <InputComponent

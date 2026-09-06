@@ -28,7 +28,7 @@ describe("AssignProjectsModalComponent", () => {
         isOpen
         onClose={() => {}}
         employeeId="u1"
-        employeeUsername="dipendente1"
+        employeeDisplayName="dipendente1"
         onSave={() => {}}
       />,
     );
@@ -48,7 +48,7 @@ describe("AssignProjectsModalComponent", () => {
         isOpen
         onClose={() => {}}
         employeeId="u1"
-        employeeUsername="dipendente1"
+        employeeDisplayName="dipendente1"
         onSave={() => {}}
       />,
     );
@@ -72,7 +72,7 @@ describe("AssignProjectsModalComponent", () => {
         isOpen
         onClose={() => {}}
         employeeId="u1"
-        employeeUsername="dipendente1"
+        employeeDisplayName="dipendente1"
         onSave={onSave}
       />,
     );
@@ -94,7 +94,7 @@ describe("AssignProjectsModalComponent", () => {
         isOpen
         onClose={() => {}}
         employeeId="u1"
-        employeeUsername="dipendente1"
+        employeeDisplayName="dipendente1"
         onSave={() => {}}
       />,
     );
@@ -113,7 +113,7 @@ describe("AssignProjectsModalComponent", () => {
         isOpen
         onClose={() => {}}
         employeeId="u1"
-        employeeUsername="dipendente1"
+        employeeDisplayName="dipendente1"
         onSave={() => {}}
         submitError="Impossibile aggiornare i progetti assegnati."
       />,
@@ -134,7 +134,7 @@ describe("AssignProjectsModalComponent", () => {
         isOpen
         onClose={onClose}
         employeeId="u1"
-        employeeUsername="dipendente1"
+        employeeDisplayName="dipendente1"
         onSave={() => {}}
       />,
     );

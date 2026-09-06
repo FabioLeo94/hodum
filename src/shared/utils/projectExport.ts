@@ -50,7 +50,7 @@ function taskToRow(task: Task): string[] {
     task.status,
     String(task.priority),
     task.dueDate ?? "",
-    task.assignees.map((assignee) => assignee.username).join(", "),
+    task.assignees.map((assignee) => assignee.displayName).join(", "),
   ];
 }
 
@@ -68,7 +68,7 @@ function buildXml(project: Project): string {
       <stato>${escapeXml(task.status)}</stato>
       <priorita>${task.priority}</priorita>
       <scadenza>${task.dueDate ? escapeXml(task.dueDate) : ""}</scadenza>
-      <assegnatari>${task.assignees.map((assignee) => escapeXml(assignee.username)).join(", ")}</assegnatari>
+      <assegnatari>${task.assignees.map((assignee) => escapeXml(assignee.displayName)).join(", ")}</assegnatari>
     </task>`,
     )
     .join("\n");

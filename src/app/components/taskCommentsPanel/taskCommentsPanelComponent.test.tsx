@@ -25,7 +25,7 @@ const ownComment: TaskComment = {
   id: "comment-1",
   taskId: "task-1",
   authorId: "user-1",
-  authorUsername: "mario",
+  authorDisplayName: "mario",
   body: "Un commento",
   createdAt: "2026-09-01T10:00:00.000Z",
   edited: false,

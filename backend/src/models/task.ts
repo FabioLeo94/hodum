@@ -4,11 +4,12 @@
 export type TaskStatus = 'progress' | 'review' | 'completed' | 'rejected';
 
 // Riga minima del team many-to-many task_assignments JOIN users: stesso
-// principio di denormalizzazione di actorUsername in models/notification.ts,
-// il frontend mostra lo username senza una query aggiuntiva per assegnatario.
+// principio di denormalizzazione di actorDisplayName in models/notification.ts,
+// il frontend mostra il display name (username, o "nome cognome" se assente,
+// migrations/0041) senza una query aggiuntiva per assegnatario.
 export interface TaskAssignee {
   id: string;
-  username: string;
+  displayName: string;
 }
 
 // Numerico invece di uno slug come TaskStatus: 1 = priorità più alta, 10 = più
@@ -25,7 +26,7 @@ export interface Task {
   // colonna è `date` (tasks.due_date): la conversione da/verso il tipo Date
   // che il driver pg restituisce a runtime avviene in taskService.ts.
   dueDate: string | null;
-  // Assegnazione many-to-many (task_assignments): ordinati per username,
+  // Assegnazione many-to-many (task_assignments): ordinati per display name,
   // stesso ordine della query bulk in taskService.ts.
   assignees: TaskAssignee[];
   // Timer di lavorazione (migration 0031): tre campi derivati, non uno stato

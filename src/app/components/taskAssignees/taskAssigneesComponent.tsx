@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import type { User } from "../../services/auth/authService";
+import { getDisplayName } from "../../../shared/utils/displayName";
 import AvatarComponent from "../avatar/avatarComponent";
 import styles from "./taskAssigneesComponent.module.css";
 
@@ -149,7 +150,7 @@ function TaskAssigneesComponent({
   return (
     <div className={styles.taskAssignees}>
       {shownAssignees.map((employee) => (
-        <AvatarComponent key={employee.id} username={employee.username} size="sm" />
+        <AvatarComponent key={employee.id} displayName={getDisplayName(employee)} size="sm" />
       ))}
       {overflowCount > 0 && (
         <span className={styles.overflowBadge}>{`+${overflowCount}`}</span>
@@ -182,6 +183,10 @@ function TaskAssigneesComponent({
             ) : (
               employees.map((employee) => {
                 const isSelected = pendingIds.includes(employee.id);
+                // Calcolato una sola volta per employee (invece che ad ogni
+                // punto in cui serve, sotto): getDisplayName è pura ma non
+                // c'è motivo di richiamarla tre volte sullo stesso employee.
+                const employeeDisplayName = getDisplayName(employee);
                 return (
                   <button
                     key={employee.id}
@@ -192,9 +197,9 @@ function TaskAssigneesComponent({
                     className={styles.option}
                     onClick={(event) => handleOptionClick(employee.id, event)}
                   >
-                    <AvatarComponent username={employee.username} size="sm" />
-                    <span className={styles.optionLabel} title={employee.username}>
-                      {employee.username}
+                    <AvatarComponent displayName={employeeDisplayName} size="sm" />
+                    <span className={styles.optionLabel} title={employeeDisplayName}>
+                      {employeeDisplayName}
                     </span>
                   </button>
                 );

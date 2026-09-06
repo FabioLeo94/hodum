@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
-import { Building2, DatabaseBackup, Download, FileText, TriangleAlert, Users } from "lucide-react";
+import { Building2, DatabaseBackup, Download, FileText, TriangleAlert, UserRoundCog, Users } from "lucide-react";
 import TopbarComponent from "../../components/topbar/topbarComponent";
 import ManagementCardComponent from "../../components/managementCard/managementCardComponent";
 import BackupSettingsDrawerComponent from "../../components/backupSettingsDrawer/backupSettingsDrawerComponent";
@@ -12,19 +12,23 @@ import { getUser, isAuthenticated, logout, useAuthUser } from "../../services/au
 import {
   deleteCompany,
   exportCompanyData,
-  getCompanyName,
+  useCompanyName,
 } from "../../services/company/companyService";
+import { notifySuccess } from "../../services/notify/notifyService";
 import { downloadJsonFile } from "../../../shared/utils/downloadJsonFile";
 import { usePageMeta } from "../../../shared/hooks/usePageMeta";
 import styles from "./companyManagement.module.css";
 
-// Pannello riservato al solo owner (a differenza di employees.tsx, che
-// ammette anche il project manager): la revoca dell'accesso VPN, i backup e
-// le altre voci future di questa pagina toccano l'infrastruttura
-// dell'azienda, non la gestione operativa dei progetti/dipendenti che il
-// manager già presidia altrove. Stesso pattern di guardia di
+// Pannello aperto a owner e project manager (a differenza di prima, quando
+// era owner-only): "Dipendenti" ora vive qui come card (spostata dalla
+// topbar, che aveva un link separato per lo stesso pubblico, vedi
+// topbarComponent.tsx), e il manager già presidia quella gestione operativa
+// altrove (assegnazione progetti in employees.tsx). Le altre card restano
+// owner-only più sotto (isOwner): toccano l'infrastruttura/i dati
+// dell'azienda (backup, fatture, export, cancellazione), non la gestione
+// operativa dei dipendenti. Stesso pattern di guardia di
 // changePassword.tsx/employees.tsx: nessuna rotta protetta filtra già per
-// ruolo, quindi il controllo vive qui e reindirizza chi non è owner.
+// ruolo, quindi il controllo vive qui e reindirizza chi non è autorizzato.
 function CompanyManagement() {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -36,12 +40,6 @@ function CompanyManagement() {
   const [exportError, setExportError] = useState("");
   const [isDeleteCompanyModalOpen, setIsDeleteCompanyModalOpen] = useState(false);
   const [deleteCompanyError, setDeleteCompanyError] = useState("");
-  // undefined finché non risolto: la card "Elimina azienda" resta cliccabile
-  // comunque, ma la modale di conferma (che confronta il testo digitato con
-  // questo nome) non va montata finché non lo conosciamo davvero, stesso
-  // motivo di companyName in topbarComponent.
-  const [companyName, setCompanyName] = useState<string | undefined>(undefined);
-
   // Solo il redirect qui dentro: niente setState nell'effect (stesso motivo
   // già commentato in topbarComponent.tsx per isLoadingProjects, evita
   // render a cascata). companyId è derivato sotto da useAuthUser, che
@@ -51,31 +49,26 @@ function CompanyManagement() {
       navigate("/auth", { replace: true });
       return;
     }
-    if (getUser()?.role !== "owner") {
+    const role = getUser()?.role;
+    if (role !== "owner" && role !== "manager") {
       navigate("/dashboard", { replace: true });
     }
   }, [navigate]);
 
-  const companyId = useAuthUser()?.companyId ?? null;
+  // useAuthUser (invece di getUser diretto) fa ri-renderizzare la pagina
+  // quando arriva 'user:updated', stesso motivo di employees.tsx: una
+  // promozione a manager sblocca subito questa pagina senza dover
+  // disconnettere e riconnettere.
+  const authUser = useAuthUser();
+  const isOwner = authUser?.role === "owner";
+  const companyId = authUser?.companyId ?? null;
 
   // Serve solo alla modale di cancellazione (l'owner deve ridigitare questo
-  // nome per confermare): stesso identico pattern di getCompanyName in
-  // topbarComponent, qui però a livello di pagina invece che di ogni
-  // pagina montante la topbar.
-  useEffect(() => {
-    if (!companyId) return;
-    let cancelled = false;
-    getCompanyName(companyId)
-      .then((name) => {
-        if (!cancelled) setCompanyName(name);
-      })
-      .catch(() => {
-        if (!cancelled) setCompanyName(undefined);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [companyId]);
+  // nome per confermare): useCompanyName (cache condivisa, vedi
+  // companyService.ts) tiene questo valore aggiornato anche dopo un rename
+  // fatto da EditCompanyDrawerComponent, cosa che un fetch-una-volta-sola
+  // legato a companyId non poteva fare.
+  const companyName = useCompanyName(companyId ?? undefined);
 
   function handleLogout() {
     logout();
@@ -88,6 +81,7 @@ function CompanyManagement() {
     try {
       const data = await exportCompanyData(companyId);
       downloadJsonFile(data, "hodum-export-azienda.json");
+      notifySuccess(t("pages.companyManagement.exportSuccess"));
     } catch (error) {
       setExportError(
         error instanceof Error ? error.message : t("pages.companyManagement.exportError"),
@@ -107,6 +101,7 @@ function CompanyManagement() {
     if (!companyId) return;
     try {
       await deleteCompany(companyId);
+      notifySuccess(t("pages.companyManagement.deleteSuccess"));
       handleLogout();
     } catch (error) {
       setDeleteCompanyError(
@@ -127,35 +122,48 @@ function CompanyManagement() {
         {companyId && (
           <div className={styles.cardsGrid}>
             <ManagementCardComponent
-              icon={<Building2 size={26} strokeWidth={2} aria-hidden="true" />}
-              title={t("pages.companyManagement.cards.editCompany.title")}
-              description={t("pages.companyManagement.cards.editCompany.description")}
-              onClick={() => setIsEditCompanyDrawerOpen(true)}
+              icon={<UserRoundCog size={26} strokeWidth={2} aria-hidden="true" />}
+              title={t("pages.companyManagement.cards.employees.title")}
+              description={t("pages.companyManagement.cards.employees.description")}
+              onClick={() => navigate("/employees")}
             />
-            <ManagementCardComponent
-              icon={<Users size={26} strokeWidth={2} aria-hidden="true" />}
-              title={t("pages.companyManagement.cards.customers.title")}
-              description={t("pages.companyManagement.cards.customers.description")}
-              onClick={() => setIsCustomersDrawerOpen(true)}
-            />
-            <ManagementCardComponent
-              icon={<FileText size={26} strokeWidth={2} aria-hidden="true" />}
-              title={t("pages.companyManagement.cards.invoices.title")}
-              description={t("pages.companyManagement.cards.invoices.description")}
-              onClick={() => navigate("/invoices")}
-            />
-            <ManagementCardComponent
-              icon={<DatabaseBackup size={26} strokeWidth={2} aria-hidden="true" />}
-              title={t("pages.companyManagement.cards.backup.title")}
-              description={t("pages.companyManagement.cards.backup.description")}
-              onClick={() => setIsBackupDrawerOpen(true)}
-            />
-            <ManagementCardComponent
-              icon={<Download size={26} strokeWidth={2} aria-hidden="true" />}
-              title={t("pages.companyManagement.cards.exportCompany.title")}
-              description={t("pages.companyManagement.cards.exportCompany.description")}
-              onClick={handleExportCompany}
-            />
+            {/* Le card sotto toccano l'infrastruttura/i dati dell'azienda
+                (identità legale, fatturazione, backup, export, cancellazione):
+                restano owner-only, a differenza di "Dipendenti" sopra. */}
+            {isOwner && (
+              <>
+                <ManagementCardComponent
+                  icon={<Building2 size={26} strokeWidth={2} aria-hidden="true" />}
+                  title={t("pages.companyManagement.cards.editCompany.title")}
+                  description={t("pages.companyManagement.cards.editCompany.description")}
+                  onClick={() => setIsEditCompanyDrawerOpen(true)}
+                />
+                <ManagementCardComponent
+                  icon={<Users size={26} strokeWidth={2} aria-hidden="true" />}
+                  title={t("pages.companyManagement.cards.customers.title")}
+                  description={t("pages.companyManagement.cards.customers.description")}
+                  onClick={() => setIsCustomersDrawerOpen(true)}
+                />
+                <ManagementCardComponent
+                  icon={<FileText size={26} strokeWidth={2} aria-hidden="true" />}
+                  title={t("pages.companyManagement.cards.invoices.title")}
+                  description={t("pages.companyManagement.cards.invoices.description")}
+                  onClick={() => navigate("/invoices")}
+                />
+                <ManagementCardComponent
+                  icon={<DatabaseBackup size={26} strokeWidth={2} aria-hidden="true" />}
+                  title={t("pages.companyManagement.cards.backup.title")}
+                  description={t("pages.companyManagement.cards.backup.description")}
+                  onClick={() => setIsBackupDrawerOpen(true)}
+                />
+                <ManagementCardComponent
+                  icon={<Download size={26} strokeWidth={2} aria-hidden="true" />}
+                  title={t("pages.companyManagement.cards.exportCompany.title")}
+                  description={t("pages.companyManagement.cards.exportCompany.description")}
+                  onClick={handleExportCompany}
+                />
+              </>
+            )}
           </div>
         )}
 
@@ -167,8 +175,9 @@ function CompanyManagement() {
 
         {/* Separata visivamente dalla griglia sopra (non un'altra card nella
             stessa riga): un'azione irreversibile su tutta l'azienda merita un
-            proprio spazio, non la stessa disinvoltura di aprire un drawer. */}
-        {companyId && (
+            proprio spazio, non la stessa disinvoltura di aprire un drawer.
+            Owner-only come le altre card infrastrutturali sopra. */}
+        {companyId && isOwner && (
           <div className={styles.dangerZone}>
             <h2 className={styles.dangerZoneTitle}>
               {t("pages.companyManagement.dangerZone.title")}
@@ -184,28 +193,28 @@ function CompanyManagement() {
         )}
       </div>
 
-      {companyId && (
+      {companyId && isOwner && (
         <EditCompanyDrawerComponent
           isOpen={isEditCompanyDrawerOpen}
           onClose={() => setIsEditCompanyDrawerOpen(false)}
           companyId={companyId}
         />
       )}
-      {companyId && (
+      {companyId && isOwner && (
         <CustomersDrawerComponent
           isOpen={isCustomersDrawerOpen}
           onClose={() => setIsCustomersDrawerOpen(false)}
           companyId={companyId}
         />
       )}
-      {companyId && (
+      {companyId && isOwner && (
         <BackupSettingsDrawerComponent
           isOpen={isBackupDrawerOpen}
           onClose={() => setIsBackupDrawerOpen(false)}
           companyId={companyId}
         />
       )}
-      {companyId && companyName !== undefined && (
+      {companyId && isOwner && companyName !== undefined && (
         <DeleteCompanyModalComponent
           isOpen={isDeleteCompanyModalOpen}
           onClose={closeDeleteCompanyModal}

@@ -14,7 +14,7 @@ interface Prop {
   isOpen: boolean;
   onClose: () => void;
   employeeId: string;
-  employeeUsername: string;
+  employeeDisplayName: string;
   onSave: (projectIds: string[]) => void | Promise<void>;
   submitError?: string;
 }
@@ -23,7 +23,7 @@ function AssignProjectsModalComponent({
   isOpen,
   onClose,
   employeeId,
-  employeeUsername,
+  employeeDisplayName,
   onSave,
   submitError,
 }: Prop) {
@@ -86,7 +86,7 @@ function AssignProjectsModalComponent({
     <ModalBaseComponent
       isOpen={isOpen}
       onClose={handleClose}
-      title={t("components.assignProjectsModal.title", { username: employeeUsername })}
+      title={t("components.assignProjectsModal.title", { employeeDisplayName })}
       onSubmit={handleSave}
       primaryAction={
         <ButtonComponent onClick={() => {}} disabled={isSubmitting || isLoading}>

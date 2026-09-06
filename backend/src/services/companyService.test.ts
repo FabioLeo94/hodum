@@ -88,9 +88,13 @@ function makeExportPayload(): CompanyExportData {
         email: 'owner@example.com',
         companyId: COMPANY_ID,
         role: 'owner',
+        firstName: 'Mario',
+        lastName: 'Rossi',
+        pronoun: null,
         mustChangePassword: false,
         createdAt: '2026-01-01T00:00:00.000Z',
         lastLoginAt: null,
+        disabledAt: null,
       },
       {
         id: 'old-employee',
@@ -98,9 +102,13 @@ function makeExportPayload(): CompanyExportData {
         email: 'dip@example.com',
         companyId: COMPANY_ID,
         role: 'employee',
+        firstName: 'Dipendente',
+        lastName: 'Test',
+        pronoun: null,
         mustChangePassword: false,
         createdAt: '2026-01-01T00:00:00.000Z',
         lastLoginAt: null,
+        disabledAt: null,
       },
     ],
     projects: [{ id: 'old-project', name: 'Progetto 1', isActive: true }],
@@ -114,7 +122,7 @@ function makeExportPayload(): CompanyExportData {
         status: 'progress',
         priority: 5,
         dueDate: null,
-        assignees: [{ id: 'old-employee', username: 'dipendente' }],
+        assignees: [{ id: 'old-employee', displayName: 'dipendente' }],
         workStartedAt: null,
         workAccumulatedSeconds: 0,
         workEndedAt: null,
@@ -127,7 +135,7 @@ function makeExportPayload(): CompanyExportData {
         taskId: 'old-task',
         projectId: 'old-project',
         authorId: 'old-employee',
-        authorUsername: 'dipendente',
+        authorDisplayName: 'dipendente',
         body: 'ciao a tutti',
         createdAt: '2026-01-02T00:00:00.000Z',
         edited: false,
@@ -145,7 +153,7 @@ function mockClientForSuccessfulImport() {
   const client = { query: vi.fn(), release: vi.fn() };
   client.query.mockImplementation(async (sql: string, params: unknown[] = []) => {
     if (sql === 'BEGIN' || sql === 'COMMIT') return {};
-    if (sql.includes('INSERT INTO users (id, username, email, password, recovery_code_hash)')) {
+    if (sql.includes('INSERT INTO users (id, username, email, password, recovery_code_hash, first_name, last_name, pronoun)')) {
       return {};
     }
     if (sql.includes('INSERT INTO companies')) {
@@ -196,7 +204,11 @@ function mockClientForSuccessfulImport() {
         ],
       };
     }
-    if (sql.includes('INSERT INTO users (id, username, email, password, company_id, role, must_change_password)')) {
+    if (
+      sql.includes(
+        'INSERT INTO users (id, username, email, password, company_id, role, must_change_password, first_name, last_name, pronoun)',
+      )
+    ) {
       return {};
     }
     if (sql.includes('INSERT INTO projects')) {
@@ -229,7 +241,7 @@ describe('importCompanyData: remapping id vecchio->nuovo', () => {
     expect(result.user.role).toBe('owner');
     expect(result.company.id).toBe('new-company');
     expect(result.temporaryPasswords).toEqual([
-      { username: 'dipendente', role: 'employee', password: expect.any(String) },
+      { username: 'dipendente', firstName: 'Dipendente', lastName: 'Test', role: 'employee', password: expect.any(String) },
     ]);
     // Mai la password originale (mai esistita in chiaro lato server): una
     // nuova generata qui, diversa a ogni chiamata.
@@ -237,7 +249,9 @@ describe('importCompanyData: remapping id vecchio->nuovo', () => {
 
     const calls = client.query.mock.calls;
     const employeeInsert = calls.find(([sql]) =>
-      (sql as string).includes('INSERT INTO users (id, username, email, password, company_id, role, must_change_password)'),
+      (sql as string).includes(
+        'INSERT INTO users (id, username, email, password, company_id, role, must_change_password, first_name, last_name, pronoun)',
+      ),
     );
     const newEmployeeId = (employeeInsert?.[1] as unknown[])[0] as string;
     expect(newEmployeeId).not.toBe('old-employee');
@@ -262,7 +276,7 @@ describe('importCompanyData: remapping id vecchio->nuovo', () => {
     client.query.mockImplementation(async (sql: string) => {
       if (sql === 'BEGIN') return {};
       if (sql === 'ROLLBACK') return {};
-      if (sql.includes('INSERT INTO users (id, username, email, password, recovery_code_hash)')) {
+      if (sql.includes('INSERT INTO users (id, username, email, password, recovery_code_hash, first_name, last_name, pronoun)')) {
         const err = new DatabaseError('duplicate key value violates unique constraint', 0, 'error');
         err.code = '23505';
         err.constraint = 'users_unique_1';

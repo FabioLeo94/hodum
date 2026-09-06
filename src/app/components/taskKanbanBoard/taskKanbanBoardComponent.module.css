@@ -149,7 +149,7 @@
 .card {
   display: flex;
   flex-direction: column;
-  gap: var(--m-xs);
+  gap: var(--m-sm);
   padding: var(--p-md);
   background-color: var(--bg-field);
   border-radius: var(--radious-md);
@@ -232,8 +232,8 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--m-xs);
-  margin-top: var(--m-xs);
+  gap: var(--m-sm);
+  margin-top: var(--m-sm);
 }
 
 /* "Al fondo della card" (richiesta esplicita): riga propria sotto
@@ -241,9 +241,9 @@
    assegnatari. */
 .cardWorkTimer {
   display: flex;
-  padding-top: var(--m-xs);
+  padding-top: var(--m-md);
   border-top: 1px solid var(--bg-field);
-  margin-top: var(--m-xs);
+  margin-top: var(--m-md);
 }
 
 @media (prefers-reduced-motion: reduce) {

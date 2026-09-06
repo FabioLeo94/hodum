@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useState } from "react";
 import { useNavigate, useOutletContext } from "react-router";
 import { useTranslation } from "react-i18next";
-import { Pencil, Plus, SquareCheck, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus } from "lucide-react";
 import TopbarComponent from "../../components/topbar/topbarComponent";
 import CreateEmployeeModalComponent from "../../components/createEmployeeModal/createEmployeeModalComponent";
 import type { CreateEmployeeFormValues } from "../../components/createEmployeeModal/createEmployeeModalComponent";
@@ -9,19 +9,24 @@ import EditEmployeeModalComponent from "../../components/editEmployeeModal/editE
 import type { EditEmployeeFormValues } from "../../components/editEmployeeModal/editEmployeeModalComponent";
 import AssignProjectsModalComponent from "../../components/assignProjectsModal/assignProjectsModalComponent";
 import DeleteEmployeeModalComponent from "../../components/deleteEmployeeModal/deleteEmployeeModalComponent";
+import DisableEmployeeModalComponent from "../../components/disableEmployeeModal/disableEmployeeModalComponent";
 import type { AssistantLayoutContext } from "../../components/protectedLayout/protectedLayoutComponent";
-import AvatarComponent from "../../components/avatar/avatarComponent";
+import EmployeeCardComponent from "../../components/employeeCard/employeeCardComponent";
 import MessageCardComponent from "../../components/messageCard/messageCardComponent";
 import {
   listUsers,
   updateEmployee,
   setAssignedProjects,
   deleteEmployee,
+  disableEmployee,
+  enableEmployee,
 } from "../../services/user/userService";
 import { createEmployee } from "../../services/company/companyService";
+import { notifySuccess } from "../../services/notify/notifyService";
 import { getUser, isAuthenticated, logout, useAuthUser } from "../../services/auth/authService";
 import type { User } from "../../services/auth/authService";
 import { usePageMeta } from "../../../shared/hooks/usePageMeta";
+import { getDisplayName } from "../../../shared/utils/displayName";
 import styles from "./employees.module.css";
 
 function Employees() {
@@ -44,6 +49,8 @@ function Employees() {
   const [assignError, setAssignError] = useState("");
   const [deletingEmployee, setDeletingEmployee] = useState<User | null>(null);
   const [deleteError, setDeleteError] = useState("");
+  const [disablingEmployee, setDisablingEmployee] = useState<User | null>(null);
+  const [disableError, setDisableError] = useState("");
 
   // Pannello riservato a owner e project manager: nessuna rotta protetta
   // filtra già per ruolo (ProtectedRouteComponent controlla solo
@@ -135,6 +142,7 @@ function Employees() {
     try {
       const employee = await createEmployee(owner.companyId, values);
       setEmployees((current) => [...current, employee]);
+      notifySuccess(t("pages.employees.createSuccess"));
       closeCreateModal();
     } catch (error) {
       setCreateError(
@@ -162,6 +170,7 @@ function Employees() {
           employee.id === updated.id ? updated : employee,
         ),
       );
+      notifySuccess(t("pages.employees.editSuccess"));
       closeEditModal();
     } catch (error) {
       setEditError(
@@ -187,10 +196,46 @@ function Employees() {
       setEmployees((current) =>
         current.filter((employee) => employee.id !== deletingEmployee.id),
       );
+      notifySuccess(t("pages.employees.deleteSuccess"));
       closeDeleteModal();
     } catch (error) {
       setDeleteError(
         error instanceof Error ? error.message : t("pages.employees.deleteError"),
+      );
+    }
+  }
+
+  function openDisableModal(employee: User) {
+    setDisableError("");
+    setDisablingEmployee(employee);
+  }
+
+  function closeDisableModal() {
+    setDisableError("");
+    setDisablingEmployee(null);
+  }
+
+  async function handleToggleDisable() {
+    if (!disablingEmployee) return;
+    const isCurrentlyDisabled = disablingEmployee.disabledAt !== null;
+    try {
+      const updated = isCurrentlyDisabled
+        ? await enableEmployee(disablingEmployee.id)
+        : await disableEmployee(disablingEmployee.id);
+      setEmployees((current) =>
+        current.map((employee) =>
+          employee.id === updated.id ? updated : employee,
+        ),
+      );
+      notifySuccess(
+        t(isCurrentlyDisabled ? "pages.employees.enableSuccess" : "pages.employees.disableSuccess"),
+      );
+      closeDisableModal();
+    } catch (error) {
+      setDisableError(
+        error instanceof Error
+          ? error.message
+          : t(isCurrentlyDisabled ? "pages.employees.enableError" : "pages.employees.disableError"),
       );
     }
   }
@@ -209,6 +254,7 @@ function Employees() {
     if (!assigningEmployee) return;
     try {
       await setAssignedProjects(assigningEmployee.id, projectIds);
+      notifySuccess(t("pages.employees.assignSuccess"));
       closeAssignModal();
     } catch (error) {
       setAssignError(
@@ -222,7 +268,21 @@ function Employees() {
       <TopbarComponent onLogout={handleLogout} />
       <div className={styles.employeesContainer}>
         <header className={styles.employeesHeader}>
-          <h1 className={styles.employeesTitle}>{t("pages.employees.title")}</h1>
+          {/* Stesso pattern icon-button di invoices.tsx: questa pagina non ha
+              più un link diretto nella topbar (spostato come card dentro
+              "Gestione aziendale", vedi companyManagement.tsx), quindi serve
+              un modo per tornare indietro senza passare dalla dashboard. */}
+          <div className={styles.titleGroup}>
+            <button
+              type="button"
+              className={styles.backButton}
+              aria-label={t("pages.employees.backLabel")}
+              onClick={() => navigate("/company-management")}
+            >
+              <ArrowLeft size={18} aria-hidden="true" />
+            </button>
+            <h1 className={styles.employeesTitle}>{t("pages.employees.title")}</h1>
+          </div>
           <p className={styles.employeesSubtitle} role="status">
             {isLoading
               ? t("pages.employees.subtitleLoading")
@@ -247,67 +307,16 @@ function Employees() {
         ) : !isLoading ? (
           <ul className={styles.employeesList}>
             {employees.map((employee) => (
-              <li key={employee.id} className={styles.employeeCard}>
-                <AvatarComponent username={employee.username} size="lg" />
-                <div className={styles.employeeInfo}>
-                  <span className={styles.employeeUsername}>
-                    {employee.username}
-                  </span>
-                  <span className={styles.employeeEmail}>{employee.email}</span>
-                </div>
-                <span
-                  className={styles.employeeRoleBadge}
-                  data-role={employee.role}
-                >
-                  {employee.role === "manager"
-                    ? t("pages.employees.roleBadge.manager")
-                    : t("pages.employees.roleBadge.employee")}
-                </span>
-                <span
-                  className={styles.employeeStatus}
-                  data-pending={employee.mustChangePassword}
-                >
-                  {employee.mustChangePassword
-                    ? t("pages.employees.status.pending")
-                    : t("pages.employees.status.active")}
-                </span>
-                <div className={styles.employeeActions}>
-                  {canManageEmployees && (
-                    <button
-                      type="button"
-                      className={styles.iconButton}
-                      aria-label={t("pages.employees.actions.edit", { username: employee.username })}
-                      onClick={() => openEditModal(employee)}
-                    >
-                      <Pencil size={16} aria-hidden="true" />
-                    </button>
-                  )}
-                  {/* Assegnare progetti a un project manager non ha senso: ha
-                      già accesso a tutti i progetti della company (vedi
-                      @Security('manager') lato backend), non serve
-                      un'assegnazione esplicita come per un dipendente. */}
-                  {canAssignProjects && employee.role === "employee" && (
-                    <button
-                      type="button"
-                      className={styles.iconButton}
-                      aria-label={t("pages.employees.actions.assign", { username: employee.username })}
-                      onClick={() => openAssignModal(employee)}
-                    >
-                      <SquareCheck size={16} aria-hidden="true" />
-                    </button>
-                  )}
-                  {canManageEmployees && (
-                    <button
-                      type="button"
-                      className={`${styles.iconButton} ${styles.iconButtonDanger}`}
-                      aria-label={t("pages.employees.actions.delete", { username: employee.username })}
-                      onClick={() => openDeleteModal(employee)}
-                    >
-                      <Trash2 size={16} aria-hidden="true" />
-                    </button>
-                  )}
-                </div>
-              </li>
+              <EmployeeCardComponent
+                key={employee.id}
+                employee={employee}
+                canManageEmployees={canManageEmployees}
+                canAssignProjects={canAssignProjects}
+                onEdit={openEditModal}
+                onToggleDisable={openDisableModal}
+                onAssign={openAssignModal}
+                onDelete={openDeleteModal}
+              />
             ))}
           </ul>
         ) : null}
@@ -337,6 +346,9 @@ function Employees() {
                 isOpen={editingEmployee !== null}
                 onClose={closeEditModal}
                 currentUsername={editingEmployee.username}
+                currentFirstName={editingEmployee.firstName}
+                currentLastName={editingEmployee.lastName}
+                currentPronoun={editingEmployee.pronoun}
                 currentRole={editingEmployee.role === "manager" ? "manager" : "employee"}
                 currentCreatedAt={editingEmployee.createdAt}
                 currentLastLoginAt={editingEmployee.lastLoginAt}
@@ -350,9 +362,21 @@ function Employees() {
                 key={deletingEmployee.id}
                 isOpen={deletingEmployee !== null}
                 onClose={closeDeleteModal}
-                employeeUsername={deletingEmployee.username}
+                employeeDisplayName={getDisplayName(deletingEmployee)}
                 onConfirm={handleDeleteEmployee}
                 submitError={deleteError}
+              />
+            )}
+
+            {disablingEmployee && (
+              <DisableEmployeeModalComponent
+                key={disablingEmployee.id}
+                isOpen={disablingEmployee !== null}
+                onClose={closeDisableModal}
+                employeeDisplayName={getDisplayName(disablingEmployee)}
+                onConfirm={handleToggleDisable}
+                submitError={disableError}
+                mode={disablingEmployee.disabledAt !== null ? "enable" : "disable"}
               />
             )}
           </Fragment>
@@ -364,7 +388,7 @@ function Employees() {
             isOpen={assigningEmployee !== null}
             onClose={closeAssignModal}
             employeeId={assigningEmployee.id}
-            employeeUsername={assigningEmployee.username}
+            employeeDisplayName={getDisplayName(assigningEmployee)}
             onSave={handleAssignProjects}
             submitError={assignError}
           />

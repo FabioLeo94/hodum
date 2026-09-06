@@ -8,7 +8,7 @@ describe("DeleteEmployeeModalComponent", () => {
       <DeleteEmployeeModalComponent
         isOpen
         onClose={() => {}}
-        employeeUsername="mario.rossi"
+        employeeDisplayName="mario.rossi"
         onConfirm={() => {}}
       />,
     );
@@ -22,7 +22,7 @@ describe("DeleteEmployeeModalComponent", () => {
       <DeleteEmployeeModalComponent
         isOpen
         onClose={() => {}}
-        employeeUsername="mario.rossi"
+        employeeDisplayName="mario.rossi"
         onConfirm={onConfirm}
       />,
     );
@@ -44,7 +44,7 @@ describe("DeleteEmployeeModalComponent", () => {
       <DeleteEmployeeModalComponent
         isOpen
         onClose={() => {}}
-        employeeUsername="mario.rossi"
+        employeeDisplayName="mario.rossi"
         onConfirm={onConfirm}
       />,
     );
@@ -69,7 +69,7 @@ describe("DeleteEmployeeModalComponent", () => {
       <DeleteEmployeeModalComponent
         isOpen
         onClose={() => {}}
-        employeeUsername="mario.rossi"
+        employeeDisplayName="mario.rossi"
         onConfirm={() => {}}
         submitError="Impossibile eliminare il dipendente."
       />,
@@ -86,7 +86,7 @@ describe("DeleteEmployeeModalComponent", () => {
       <DeleteEmployeeModalComponent
         isOpen
         onClose={onClose}
-        employeeUsername="mario.rossi"
+        employeeDisplayName="mario.rossi"
         onConfirm={() => {}}
       />,
     );

@@ -203,6 +203,9 @@ function TaskCalendarComponent({
   const weeks = buildMonthGrid(viewedMonth);
   const tasksByDueDate = groupTasksByDueDate(tasks);
   const todayKey = formatDateOnly(new Date());
+  const isViewingCurrentMonth =
+    viewedMonth.getFullYear() === new Date().getFullYear() &&
+    viewedMonth.getMonth() === new Date().getMonth();
 
   return (
     <div className={styles.calendar}>
@@ -218,7 +221,13 @@ function TaskCalendarComponent({
             >
               ‹
             </button>
-            <button type="button" className={styles.todayButton} onClick={goToToday}>
+            <button
+              type="button"
+              className={styles.todayButton}
+              data-active={isViewingCurrentMonth}
+              disabled={isViewingCurrentMonth}
+              onClick={goToToday}
+            >
               {t("components.taskCalendar.today")}
             </button>
             <button

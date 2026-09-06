@@ -1,7 +1,3 @@
-.description {
-  composes: description from "../../../shared/styles/employeeForm.module.css";
-}
-
 .fields {
   composes: fields from "../../../shared/styles/employeeForm.module.css";
 }

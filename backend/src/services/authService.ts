@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { pool } from '../db/pool';
 import type { User } from '../models/user';
+import { UserDisabledError } from '../middleware/authentication';
 import { generateRecoveryCode, normalizeRecoveryCode } from '../utils/recoveryCode';
 import { hashPassword, toUser, USER_COLUMNS, type UserRow } from './userService';
 
@@ -37,6 +38,13 @@ export async function login(email: string, password: string): Promise<User> {
   const passwordMatches = await bcrypt.compare(password, row.password);
   if (!passwordMatches) {
     throw new InvalidCredentialsError();
+  }
+
+  // A differenza di email/password sbagliate, qui l'identità è già accertata:
+  // rivelare "account bloccato" non è user enumeration, è normale UX (task
+  // "blocco utente").
+  if (row.disabled_at !== null) {
+    throw new UserDisabledError();
   }
 
   // "Ping" di ultimo accesso (task "Modifica account"): un solo UPDATE per

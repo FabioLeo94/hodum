@@ -86,7 +86,16 @@ export async function changePassword(userId: string, password: string): Promise<
 // email presente solo nel self-service (l'owner non la cambia da qui).
 export async function updateEmployee(
   id: string,
-  values: { username?: string; email?: string; password?: string; role?: EmployeeRole },
+  values: {
+    username?: string;
+    firstName?: string;
+    lastName?: string;
+    pronoun?: string;
+    email?: string;
+    password?: string;
+    role?: EmployeeRole;
+    disabled?: boolean;
+  },
 ): Promise<User> {
   const response = await authFetch(`${API_BASE_URL}/users/${id}`, {
     method: "PUT",
@@ -106,6 +115,17 @@ export async function updateEmployee(
   }
 
   return (await response.json()) as User;
+}
+
+// Task "blocco utente": wrapper espliciti su updateEmployee, per non
+// costringere ogni chiamante a ricordare che "disabled: true/false" è il modo
+// di bloccare/riabilitare un dipendente via PUT /users/{id}.
+export function disableEmployee(id: string): Promise<User> {
+  return updateEmployee(id, { disabled: true });
+}
+
+export function enableEmployee(id: string): Promise<User> {
+  return updateEmployee(id, { disabled: false });
 }
 
 // DELETE /users/{id} instrada già lato backend sia il self-service sia

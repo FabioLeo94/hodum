@@ -13,9 +13,12 @@ export interface Project {
   tasks: Task[];
 }
 
+// username già risolto lato SQL (COALESCE su first_name/last_name, vedi
+// backend/src/models/task.ts): rinominato displayName per rendere esplicito
+// che è già la stringa finale, non serve/va passato a getDisplayName.
 export interface TaskAssignee {
   id: string;
-  username: string;
+  displayName: string;
 }
 
 // 1 = priorità più alta, 10 = più bassa: coerente con il campo omonimo nel
@@ -59,7 +62,8 @@ export interface TaskComment {
   id: string;
   taskId: string;
   authorId: string;
-  authorUsername: string;
+  // Già risolto lato SQL, stesso principio di TaskAssignee.displayName sopra.
+  authorDisplayName: string;
   body: string;
   createdAt: string;
   edited: boolean;

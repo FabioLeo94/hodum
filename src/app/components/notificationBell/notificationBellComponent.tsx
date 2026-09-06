@@ -22,7 +22,7 @@ const MAX_BADGE_COUNT = 99;
 // di parseDateOnly/isTaskOverdue in taskDueDate.ts, senza doverne dipendere
 // (quella funzione vuole un Task intero, qui basta la stringa).
 function describeNotification(notification: Notification, t: TFunction): string {
-  const actor = notification.actorUsername ?? t("components.notificationBell.actorFallback");
+  const actor = notification.actorDisplayName ?? t("components.notificationBell.actorFallback");
   const taskTitle = notification.taskTitle ?? t("components.notificationBell.taskTitleFallback");
   switch (notification.type) {
     case "task_comment":
@@ -250,6 +250,10 @@ function NotificationBellComponent() {
             ) : (
               items.map((notification, index) => {
                 const navigable = isNavigableNotification(notification);
+                // Calcolato una sola volta per notifica (invece che nel
+                // title e nel testo, sotto): describeNotification è pura ma
+                // non c'è motivo di richiamarla due volte sulla stessa notifica.
+                const description = describeNotification(notification, t);
                 return (
                   <button
                     key={notification.id}
@@ -261,11 +265,8 @@ function NotificationBellComponent() {
                     onClick={() => handleNotificationClick(notification)}
                   >
                     <span className={styles.itemBody}>
-                      <span
-                        className={styles.itemText}
-                        title={describeNotification(notification, t)}
-                      >
-                        {describeNotification(notification, t)}
+                      <span className={styles.itemText} title={description}>
+                        {description}
                       </span>
                       <span className={styles.itemTime}>
                         {formatDateTime(notification.createdAt)}

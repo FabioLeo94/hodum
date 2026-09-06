@@ -33,7 +33,7 @@ export interface ExportTaskComment {
   taskId: string;
   projectId: string;
   authorId: string;
-  authorUsername: string;
+  authorDisplayName: string;
   body: string;
   createdAt: string;
   edited: boolean;

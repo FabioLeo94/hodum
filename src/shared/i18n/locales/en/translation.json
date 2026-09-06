@@ -11,7 +11,6 @@
         "dashboard": "Dashboard",
         "projects": "Projects",
         "projectFallback": "Project",
-        "employees": "Employees",
         "companyManagement": "Company management"
       },
       "projectsMenu": {
@@ -25,8 +24,11 @@
         "logout": "Sign out",
         "lastLogin": "Last login: {{date}}",
         "updateError": "Unable to update the account.",
+        "updateSuccess": "Account updated.",
         "exportError": "Unable to export your data. Please try again later.",
-        "deleteAccountError": "Unable to delete the account. Please try again later."
+        "exportSuccess": "Export completed.",
+        "deleteAccountError": "Unable to delete the account. Please try again later.",
+        "deleteAccountSuccess": "Account deleted."
       }
     },
     "authForm": {
@@ -36,6 +38,7 @@
       "passwordPlaceholder": "Password",
       "emailInvalid": "Enter a valid email address.",
       "invalidCredentials": "Incorrect email or password.",
+      "accountDisabled": "Account disabled: contact the company owner.",
       "rememberMe": "Stay signed in",
       "forgotPassword": "Forgot your password?",
       "rateLimited": "Too many login attempts. Try again in {{countdown}}.",
@@ -45,8 +48,14 @@
     "registerForm": {
       "companyNameLabel": "Company name",
       "companyNamePlaceholder": "Company name",
-      "usernameLabel": "Username",
+      "firstNameLabel": "First name",
+      "firstNamePlaceholder": "First name",
+      "lastNameLabel": "Last name",
+      "lastNamePlaceholder": "Last name",
+      "usernameLabel": "Username (optional)",
       "usernamePlaceholder": "Username",
+      "pronounLabel": "Pronoun",
+      "pronounPlaceholder": "Pronoun",
       "emailLabel": "Email",
       "emailPlaceholder": "Email",
       "passwordLabel": "Password",
@@ -54,7 +63,8 @@
       "confirmPasswordLabel": "Confirm password",
       "confirmPasswordPlaceholder": "Confirm password",
       "companyNameRequired": "Enter the company name.",
-      "usernameRequired": "Enter a username.",
+      "firstNameRequired": "Enter your first name.",
+      "lastNameRequired": "Enter your last name.",
       "emailInvalid": "Enter a valid email address.",
       "passwordInvalid": "The password must be at least 8 characters long and include a lowercase letter, an uppercase letter, and a number.",
       "passwordMismatch": "Passwords don't match.",
@@ -125,6 +135,7 @@
       "passwordMismatch": "Passwords don't match.",
       "invalidSession": "Invalid session. Please sign in again.",
       "updateFailed": "Password change failed. Please try again later.",
+      "updateSuccess": "Password updated.",
       "submitting": "Updating...",
       "submit": "Update password"
     },
@@ -138,8 +149,14 @@
       "submit": "Create employee",
       "cancel": "Cancel",
       "description": "The initial password must be shared with the employee: at their first sign-in they'll be asked to replace it with one of their own choosing.",
-      "usernameLabel": "Username",
+      "firstNameLabel": "First name",
+      "firstNamePlaceholder": "First name",
+      "lastNameLabel": "Last name",
+      "lastNamePlaceholder": "Last name",
+      "usernameLabel": "Username (optional)",
       "usernamePlaceholder": "Username",
+      "pronounLabel": "Pronoun",
+      "pronounPlaceholder": "Pronoun",
       "emailLabel": "Email",
       "emailPlaceholder": "Email",
       "roleLabel": "Role",
@@ -149,7 +166,8 @@
       "passwordPlaceholder": "Initial password",
       "confirmPasswordLabel": "Confirm initial password",
       "confirmPasswordPlaceholder": "Confirm initial password",
-      "usernameRequired": "Enter a username.",
+      "firstNameRequired": "Enter a first name.",
+      "lastNameRequired": "Enter a last name.",
       "emailInvalid": "Enter a valid email address.",
       "passwordInvalid": "The password must be at least 8 characters long and include a lowercase letter, an uppercase letter, and a number.",
       "passwordMismatch": "Passwords don't match."
@@ -160,12 +178,17 @@
       "submitting": "Saving...",
       "submit": "Save",
       "cancel": "Cancel",
-      "description": "Leave the password fields empty to keep it unchanged. A new password must be shared with the employee: at their next sign-in they'll be asked to replace it with one of their own choosing.",
       "createdAtLabel": "Created on",
       "lastLoginLabel": "Last login",
       "lastLoginNever": "Never",
-      "usernameLabel": "Username",
+      "firstNameLabel": "First name",
+      "firstNamePlaceholder": "First name",
+      "lastNameLabel": "Last name",
+      "lastNamePlaceholder": "Last name",
+      "usernameLabel": "Username (optional)",
       "usernamePlaceholder": "Username",
+      "pronounLabel": "Pronoun",
+      "pronounPlaceholder": "Pronoun",
       "roleLabel": "Role",
       "roleEmployee": "Employee",
       "roleManager": "Project Manager",
@@ -173,7 +196,8 @@
       "passwordPlaceholder": "New password (optional)",
       "confirmPasswordLabel": "Confirm new password",
       "confirmPasswordPlaceholder": "Confirm new password",
-      "usernameRequired": "Enter a username.",
+      "firstNameRequired": "Enter a first name.",
+      "lastNameRequired": "Enter a last name.",
       "passwordInvalid": "The password must be at least 8 characters long and include a lowercase letter, an uppercase letter, and a number.",
       "passwordMismatch": "Passwords don't match."
     },
@@ -186,8 +210,24 @@
       "submit": "Delete",
       "cancel": "Cancel",
       "description": {
-        "employee": "You are about to delete “{{username}}”. This action cannot be undone and will also remove their project assignments.",
-        "self": "You are about to delete your account “{{username}}”. This action cannot be undone: you'll lose access immediately."
+        "employee": "You are about to delete “{{employeeDisplayName}}”. This action cannot be undone and will also remove their project assignments.",
+        "self": "You are about to delete your account “{{employeeDisplayName}}”. This action cannot be undone: you'll lose access immediately."
+      }
+    },
+    "disableEmployeeModal": {
+      "title": {
+        "disable": "Disable employee",
+        "enable": "Re-enable employee"
+      },
+      "submitting": "Working on it...",
+      "submit": {
+        "disable": "Disable",
+        "enable": "Re-enable"
+      },
+      "cancel": "Cancel",
+      "description": {
+        "disable": "You are about to disable “{{employeeDisplayName}}”: they won't be able to sign in until you re-enable them, but their data stays intact.",
+        "enable": "You are about to re-enable “{{employeeDisplayName}}”: they'll be able to sign in again with their credentials right away."
       }
     },
     "createProjectModal": {
@@ -246,7 +286,7 @@
       }
     },
     "assignProjectsModal": {
-      "title": "Assign projects to {{username}}",
+      "title": "Assign projects to {{employeeDisplayName}}",
       "submitting": "Saving...",
       "submit": "Save",
       "cancel": "Cancel",
@@ -259,17 +299,23 @@
       "submitting": "Saving...",
       "submit": "Save",
       "cancel": "Cancel",
-      "description": "Leave the password fields empty to keep it unchanged.",
       "createdAtLabel": "Created on",
-      "usernameLabel": "Username",
+      "firstNameLabel": "First name",
+      "firstNamePlaceholder": "First name",
+      "lastNameLabel": "Last name",
+      "lastNamePlaceholder": "Last name",
+      "usernameLabel": "Username (optional)",
       "usernamePlaceholder": "Username",
+      "pronounLabel": "Pronoun",
+      "pronounPlaceholder": "Pronoun",
       "emailLabel": "Email",
       "emailPlaceholder": "Email",
       "passwordLabel": "New password",
       "passwordPlaceholder": "New password (optional)",
       "confirmPasswordLabel": "Confirm new password",
       "confirmPasswordPlaceholder": "Confirm new password",
-      "usernameRequired": "Enter a username.",
+      "firstNameRequired": "Enter a first name.",
+      "lastNameRequired": "Enter a last name.",
       "emailInvalid": "Enter a valid email address.",
       "passwordInvalid": "The password must be at least 8 characters long and include a lowercase letter, an uppercase letter, and a number.",
       "passwordMismatch": "Passwords don't match.",
@@ -297,6 +343,7 @@
       "pecInvalid": "Enter a valid certified email address (PEC).",
       "loadError": "Unable to load company data.",
       "saveError": "Unable to save company data.",
+      "saveSuccess": "Company data saved.",
       "companyDataSectionTitle": "Company data",
       "rateAndScheduleSectionTitle": "Rate and work schedule",
       "companyRateLabel": "Company rate",
@@ -330,8 +377,11 @@
       "saving": "Saving...",
       "save": "Save",
       "saveError": "Unable to save the customer.",
+      "createSuccess": "Customer created.",
+      "updateSuccess": "Customer updated.",
       "delete": "Delete customer",
-      "deleteError": "Unable to delete the customer."
+      "deleteError": "Unable to delete the customer.",
+      "deleteSuccess": "Customer deleted."
     },
     "deleteCustomerModal": {
       "title": "Delete customer",
@@ -359,7 +409,8 @@
       "nonBillableLabel": "Mark {{title}} as non-billable",
       "generate": "Generate pre-invoice",
       "generating": "Generating...",
-      "generateError": "Unable to generate the pre-invoice."
+      "generateError": "Unable to generate the pre-invoice.",
+      "generateSuccess": "Pre-invoice generated."
     },
     "invoicePreview": {
       "title": "Pre-invoice preview",
@@ -392,7 +443,8 @@
         "never": "No backup has been run yet.",
         "hint": "A manual run resets the countdown to the next automatic backup.",
         "running": "Backup in progress...",
-        "action": "Run backup now"
+        "action": "Run backup now",
+        "success": "Backup completed."
       },
       "runError": "Backup run failed.",
       "settings": {
@@ -402,7 +454,8 @@
         "filenameFormatLabel": "Filename format",
         "placeholderHintPrefix": "Available placeholders:",
         "saving": "Saving...",
-        "save": "Save settings"
+        "save": "Save settings",
+        "saveSuccess": "Settings saved."
       },
       "intervalError": "Enter an integer between 1 and 10080 minutes (7 days).",
       "maxBackupsError": "Enter an integer between 1 and 500.",
@@ -417,9 +470,12 @@
         "empty": "No backup has been run yet."
       },
       "deleteError": "Unable to delete the backup.",
+      "deleteSuccess": "Backup deleted.",
       "bulkDeleteAllFailed": "Unable to delete the selected backups.",
       "bulkDeletePartialFailed": "Unable to delete {{failed}} of {{total}} backups.",
-      "restoreError": "Backup restore failed."
+      "bulkDeleteSuccess": "Selected backups deleted.",
+      "restoreError": "Backup restore failed.",
+      "restoreSuccess": "Backup restored."
     },
     "restoreBackupModal": {
       "title": "Restore backup",
@@ -595,7 +651,9 @@
       "cardLabelSimple": "{{name}}, {{count}} tasks",
       "cardLabelWithBreakdown": "{{name}}, {{count}} tasks: {{breakdown}}",
       "updateError": "Unable to update the project.",
+      "updateSuccess": "Project updated.",
       "deleteError": "Unable to delete the project.",
+      "deleteSuccess": "Project deleted.",
       "noTasks": "No tasks",
       "totalTasks": "total tasks",
       "otherActionsLabel": "More actions for {{name}}",
@@ -728,6 +786,7 @@
     },
     "employees": {
       "title": "Employees",
+      "backLabel": "Back to company management",
       "subtitleLoading": "Loading employees...",
       "subtitleEmpty": "No employees registered yet.",
       "subtitleCount_one": "{{count}} employee registered.",
@@ -742,27 +801,43 @@
       },
       "status": {
         "pending": "Awaiting first sign-in",
-        "active": "Active"
+        "active": "Active",
+        "disabled": "Disabled"
       },
-      "actions": {
-        "edit": "Edit employee {{username}}",
-        "assign": "Assign projects to {{username}}",
-        "delete": "Delete employee {{username}}"
+      "otherActionsLabel": "Other actions for {{employeeDisplayName}}",
+      "menu": {
+        "edit": "Edit",
+        "assign": "Assign projects",
+        "disable": "Disable",
+        "enable": "Re-enable",
+        "delete": "Delete"
       },
       "createButtonLabel": "Create new employee",
       "invalidSession": "Invalid session. Please sign in again.",
       "createError": "Unable to create the employee.",
+      "createSuccess": "Employee created.",
       "editError": "Unable to update the employee.",
+      "editSuccess": "Employee updated.",
       "deleteError": "Unable to delete the employee.",
+      "deleteSuccess": "Employee deleted.",
+      "disableError": "Unable to disable the employee.",
+      "disableSuccess": "Employee disabled.",
+      "enableError": "Unable to re-enable the employee.",
+      "enableSuccess": "Employee re-enabled.",
       "assignError": "Unable to update assigned projects.",
+      "assignSuccess": "Assigned projects updated.",
       "meta": {
         "title": "Employees"
       }
     },
     "companyManagement": {
       "title": "Company management",
-      "subtitle": "Tools reserved for the company owner.",
+      "subtitle": "Administrative tools for your company.",
       "cards": {
+        "employees": {
+          "title": "Employees",
+          "description": "Create and edit employees, assign projects to the project manager."
+        },
         "editCompany": {
           "title": "Edit company details",
           "description": "Your company's name, legal name, VAT number, tax code, address and certified email (PEC)."
@@ -792,7 +867,9 @@
         "title": "Danger zone"
       },
       "exportError": "Unable to export company data. Please try again later.",
+      "exportSuccess": "Export completed.",
       "deleteError": "Unable to delete the company. Please try again later.",
+      "deleteSuccess": "Company deleted.",
       "meta": {
         "title": "Company management"
       }
@@ -808,6 +885,8 @@
       "notFoundTitle": "Project not found.",
       "notFoundText": "The requested project doesn't exist or has been removed.",
       "saveTaskError": "Unable to save the task.",
+      "createTaskSuccess": "Task created.",
+      "editTaskSuccess": "Task updated.",
       "statusUpdateError": "Unable to update the task's status.",
       "priorityUpdateError": "Unable to update the task's priority.",
       "assigneesUpdateError": "Unable to update the task's assignees.",
@@ -853,6 +932,7 @@
     },
     "invoices": {
       "title": "Invoices",
+      "backLabel": "Back to company management",
       "generateButton": "Generate pre-invoice",
       "loading": "Loading invoices...",
       "loadErrorTitle": "Loading error",

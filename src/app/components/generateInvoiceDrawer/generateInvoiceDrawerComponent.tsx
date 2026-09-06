@@ -5,6 +5,7 @@ import DrawerBaseComponent from "../drawerBase/drawerBaseComponent";
 import { listCustomerSummaries } from "../../services/customer/customerService";
 import type { CustomerSummary } from "../../services/customer/customerService";
 import { generateInvoice, listBillableTasks } from "../../services/invoice/invoiceService";
+import { notifySuccess } from "../../services/notify/notifyService";
 import type { BillableTask } from "../../../shared/types/invoice";
 import { useAsyncSubmit } from "../../../shared/hooks/useAsyncSubmit";
 import { formatElapsedDuration } from "../../../shared/utils/formatElapsedDuration";
@@ -137,6 +138,7 @@ function GenerateInvoiceDrawerComponent({ isOpen, onClose, onGenerated }: Prop) 
     await submit(async () => {
       try {
         await generateInvoice(selectedCustomerId, taskSelections);
+        notifySuccess(t("components.generateInvoiceDrawer.generateSuccess"));
         onClose();
         onGenerated();
       } catch (error) {

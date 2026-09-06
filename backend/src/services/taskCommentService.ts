@@ -22,16 +22,17 @@ export class CommentNotFoundError extends Error {
 }
 
 // Forma della riga così come esce dalla JOIN con tasks e users: snake_case,
-// coerente con lo schema (migration 0020_task_comments). author_username
+// coerente con lo schema (migration 0020_task_comments). author_display_name
 // viene dalla JOIN su users, non da task_comments direttamente: il nome
 // utente può cambiare nel tempo, un commento vecchio mostra sempre l'ultimo
-// username noto invece di uno snapshot congelato al momento della scrittura.
+// display name noto (username, o "nome cognome" se assente, migrations/0041)
+// invece di uno snapshot congelato al momento della scrittura.
 interface TaskCommentRow {
   id: string;
   task_id: string;
   project_id: string;
   author_id: string;
-  author_username: string;
+  author_display_name: string;
   body: string;
   created_at: string;
   edited: boolean;
@@ -40,7 +41,9 @@ interface TaskCommentRow {
 // Select condivisa da listCommentsByTask, createComment e updateComment (per
 // ri-selezionare la riga appena scritta con la stessa forma): stesso pattern
 // di TASK_SELECT in taskService.ts, cambia solo il filtro WHERE.
-const TASK_COMMENT_SELECT = `SELECT tc.id, tc.task_id, t.project_id, tc.author_id, u.username AS author_username, tc.body, tc.created_at, tc.edited
+const TASK_COMMENT_SELECT = `SELECT tc.id, tc.task_id, t.project_id, tc.author_id,
+       COALESCE(NULLIF(u.username, ''), u.first_name || ' ' || u.last_name) AS author_display_name,
+       tc.body, tc.created_at, tc.edited
      FROM task_comments tc
      JOIN tasks t ON t.id = tc.task_id
      JOIN users u ON u.id = tc.author_id`;
@@ -51,7 +54,7 @@ function toTaskComment(row: TaskCommentRow): TaskComment {
     taskId: row.task_id,
     projectId: row.project_id,
     authorId: row.author_id,
-    authorUsername: row.author_username,
+    authorDisplayName: row.author_display_name,
     body: row.body,
     createdAt: row.created_at,
     edited: row.edited,
@@ -144,7 +147,7 @@ export async function createComment(
     [taskId, authorId, body],
   );
   // Ri-seleziona con la JOIN invece di comporre a mano il risultato: serve ad
-  // author_username (non disponibile sull'INSERT, che tocca solo
+  // author_display_name (non disponibile sull'INSERT, che tocca solo
   // task_comments) e a created_at (DEFAULT now() lato DB, non noto prima
   // dell'insert).
   const result = await pool.query<TaskCommentRow>(`${TASK_COMMENT_SELECT} WHERE tc.id = $1`, [inserted.rows[0].id]);
@@ -201,7 +204,7 @@ export async function updateComment(
 
   await pool.query('UPDATE task_comments SET body = $1, edited = true WHERE id = $2', [body, commentId]);
   // Ri-seleziona con la JOIN invece di comporre a mano il risultato: stesso
-  // motivo di createComment (author_username non disponibile sull'UPDATE).
+  // motivo di createComment (author_display_name non disponibile sull'UPDATE).
   const result = await pool.query<TaskCommentRow>(`${TASK_COMMENT_SELECT} WHERE tc.id = $1`, [commentId]);
   const comment = toTaskComment(result.rows[0]);
   emitTaskCommentUpdated(comment);

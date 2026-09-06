@@ -42,7 +42,7 @@ const task: TaskWithProject = {
   status: "progress",
   priority: 3,
   dueDate: "2026-09-10",
-  assignees: [{ id: "user-1", username: "mario" }],
+  assignees: [{ id: "user-1", displayName: "mario" }],
   workStartedAt: null,
   workAccumulatedSeconds: 0,
   workEndedAt: null,

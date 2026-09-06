@@ -42,9 +42,13 @@ function makeUser(overrides: Partial<User> = {}): User {
     email: 'owner@example.com',
     companyId: 'company-1',
     role: 'owner',
+    firstName: 'Mario',
+    lastName: 'Rossi',
+    pronoun: null,
     mustChangePassword: false,
     createdAt: '2026-01-01T00:00:00.000Z',
     lastLoginAt: null,
+    disabledAt: null,
     ...overrides,
   };
 }
@@ -142,7 +146,7 @@ describe('CompanyController.createEmployee: creazione dipendenti riservata alla 
 
     const result = await controller.createEmployee(
       'company-di-un-altro',
-      { username: 'nuovo', email: 'n@example.com', password: 'Password1' },
+      { username: 'nuovo', email: 'n@example.com', password: 'Password1', firstName: 'Luigi', lastName: 'Bianchi' },
       makeRequest(makeUser({ role: 'owner', companyId: 'company-1' })),
     );
 
@@ -157,7 +161,7 @@ describe('CompanyController.createEmployee: creazione dipendenti riservata alla 
 
     await controller.createEmployee(
       'company-1',
-      { username: 'nuovo', email: 'n@example.com', password: 'Password1' },
+      { username: 'nuovo', email: 'n@example.com', password: 'Password1', firstName: 'Luigi', lastName: 'Bianchi' },
       makeRequest(makeUser({ role: 'owner', companyId: 'company-1' })),
     );
 

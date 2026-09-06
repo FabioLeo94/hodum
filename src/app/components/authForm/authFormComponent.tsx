@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import styles from "./authFormComponent.module.css";
 import InputComponent from "../input/inputComponent";
 import ButtonComponent from "../button/buttonComponent";
-import { login, persistSession, RateLimitError } from "../../services/auth/authService";
+import { login, persistSession, RateLimitError, UserDisabledError } from "../../services/auth/authService";
 import { validateEmail } from "../../services/validation/validationService";
 import { Link, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
@@ -65,6 +65,10 @@ function AuthFormComponent() {
       persistSession(result.token, result.user, rememberMe);
       navigate(result.user.mustChangePassword ? "/change-password" : "/dashboard");
     } catch (err) {
+      if (err instanceof UserDisabledError) {
+        setPasswordError(t("components.authForm.accountDisabled"));
+        return;
+      }
       if (!(err instanceof RateLimitError)) {
         throw err;
       }

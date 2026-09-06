@@ -1,7 +1,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
-import { Plus } from "lucide-react";
+import { ArrowLeft, Plus } from "lucide-react";
 import TopbarComponent from "../../components/topbar/topbarComponent";
 import GenerateInvoiceDrawerComponent from "../../components/generateInvoiceDrawer/generateInvoiceDrawerComponent";
 import InvoicePreviewComponent from "../../components/invoicePreview/invoicePreviewComponent";
@@ -132,7 +132,17 @@ function Invoices() {
       <TopbarComponent onLogout={handleLogout} />
       <div className={styles.container}>
         <header className={styles.header}>
-          <h1 className={styles.title}>{t("pages.invoices.title")}</h1>
+          <div className={styles.titleGroup}>
+            <button
+              type="button"
+              className={styles.backButton}
+              aria-label={t("pages.invoices.backLabel")}
+              onClick={() => navigate("/company-management")}
+            >
+              <ArrowLeft size={18} aria-hidden="true" />
+            </button>
+            <h1 className={styles.title}>{t("pages.invoices.title")}</h1>
+          </div>
           <button
             type="button"
             className={styles.generateButton}

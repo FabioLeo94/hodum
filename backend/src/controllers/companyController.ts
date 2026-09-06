@@ -28,9 +28,14 @@ interface CompanyErrorResponse {
 
 export interface RegisterCompanyRequest {
   companyName: string;
-  username: string;
+  // Opzionale da migrations/0041: se assente si mostra "nome cognome" (vedi
+  // firstName/lastName sotto).
+  username?: string;
   email: string;
   password: string;
+  firstName: string;
+  lastName: string;
+  pronoun?: string;
 }
 
 export interface RegisterCompanyResponse {
@@ -100,9 +105,13 @@ export interface UpdateCompanyRequest {
 }
 
 export interface CreateEmployeeRequest {
-  username: string;
+  // Opzionale da migrations/0041, stesso trattamento di RegisterCompanyRequest.
+  username?: string;
   email: string;
   password: string;
+  firstName: string;
+  lastName: string;
+  pronoun?: string;
   // Assente/'employee' = dipendente (comportamento storico). 'manager' crea
   // invece un project manager: stesso account, stesso flusso di primo
   // accesso, ma con permessi più ampi (vedi @Security('manager') su
@@ -152,6 +161,9 @@ export class CompanyController extends Controller {
         username: body.username,
         email: body.email,
         password: body.password,
+        firstName: body.firstName,
+        lastName: body.lastName,
+        pronoun: body.pronoun,
       });
       const token = signSessionToken(user.id);
       this.setStatus(201);
@@ -313,6 +325,9 @@ export class CompanyController extends Controller {
         username: body.username,
         email: body.email,
         password: body.password,
+        firstName: body.firstName,
+        lastName: body.lastName,
+        pronoun: body.pronoun,
         role: body.role,
       });
       this.setStatus(201);

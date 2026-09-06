@@ -15,6 +15,7 @@ import {
   updateBackupSettings,
 } from "../../services/backup/backupService";
 import type { BackupRecord, BackupSettings } from "../../services/backup/backupService";
+import { notifySuccess } from "../../services/notify/notifyService";
 import { useAsyncSubmit } from "../../../shared/hooks/useAsyncSubmit";
 import { formatDateTime } from "../../../shared/utils/formatDate";
 import styles from "./backupSettingsDrawerComponent.module.css";
@@ -177,6 +178,7 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
           filenameFormat: filenameFormat.trim(),
         });
         applySettings(updated);
+        notifySuccess(t("components.backupSettingsDrawer.settings.saveSuccess"));
       } catch (error) {
         setSaveError(
           error instanceof Error ? error.message : t("components.backupSettingsDrawer.saveError"),
@@ -199,6 +201,7 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
         const [freshSettings] = await Promise.all([getBackupSettings(companyId)]);
         applySettings(freshSettings);
         loadHistory();
+        notifySuccess(t("components.backupSettingsDrawer.runNow.success"));
       } catch (error) {
         setRunError(
           error instanceof Error ? error.message : t("components.backupSettingsDrawer.runError"),
@@ -257,6 +260,7 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
         return next;
       });
       loadHistory();
+      notifySuccess(t("components.backupSettingsDrawer.deleteSuccess"));
     } catch (error) {
       setActionError(
         error instanceof Error ? error.message : t("components.backupSettingsDrawer.deleteError"),
@@ -294,6 +298,7 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
 
     setActionModal(null);
     setSelectedIds(new Set());
+    notifySuccess(t("components.backupSettingsDrawer.bulkDeleteSuccess"));
   }
 
   // Il ripristino cambia anche last_backup_at (lo snapshot pre-restore creato
@@ -310,6 +315,7 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
       loadHistory();
       const freshSettings = await getBackupSettings(companyId);
       applySettings(freshSettings);
+      notifySuccess(t("components.backupSettingsDrawer.restoreSuccess"));
     } catch (error) {
       setActionError(
         error instanceof Error ? error.message : t("components.backupSettingsDrawer.restoreError"),

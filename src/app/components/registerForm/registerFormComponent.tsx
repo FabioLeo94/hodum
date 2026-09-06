@@ -16,7 +16,10 @@ function RegisterFormComponent() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [companyName, setCompanyName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [username, setUsername] = useState("");
+  const [pronoun, setPronoun] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -33,9 +36,14 @@ function RegisterFormComponent() {
       ? t("components.registerForm.companyNameRequired")
       : "";
 
-  const usernameError =
-    submitAttempted && username.trim() === ""
-      ? t("components.registerForm.usernameRequired")
+  const firstNameError =
+    submitAttempted && firstName.trim() === ""
+      ? t("components.registerForm.firstNameRequired")
+      : "";
+
+  const lastNameError =
+    submitAttempted && lastName.trim() === ""
+      ? t("components.registerForm.lastNameRequired")
       : "";
 
   const emailError =
@@ -64,7 +72,8 @@ function RegisterFormComponent() {
 
     const isValid =
       companyName.trim() !== "" &&
-      username.trim() !== "" &&
+      firstName.trim() !== "" &&
+      lastName.trim() !== "" &&
       validateEmail(email) &&
       validatePassword(password) &&
       password === confirmPassword;
@@ -77,7 +86,10 @@ function RegisterFormComponent() {
     try {
       const { token, user, recoveryCode: newRecoveryCode } = await registerCompany({
         companyName,
-        username,
+        username: username.trim() === "" ? undefined : username.trim(),
+        firstName,
+        lastName,
+        pronoun: pronoun.trim() === "" ? undefined : pronoun,
         email,
         password,
       });
@@ -120,14 +132,43 @@ function RegisterFormComponent() {
       />
       <InputComponent
         type="text"
+        name="firstName"
+        label={t("components.registerForm.firstNameLabel")}
+        placeholder={t("components.registerForm.firstNamePlaceholder")}
+        value={firstName}
+        onChange={(event) => setFirstName(event.target.value)}
+        autoComplete="given-name"
+        required
+        error={firstNameError}
+      />
+      <InputComponent
+        type="text"
+        name="lastName"
+        label={t("components.registerForm.lastNameLabel")}
+        placeholder={t("components.registerForm.lastNamePlaceholder")}
+        value={lastName}
+        onChange={(event) => setLastName(event.target.value)}
+        autoComplete="family-name"
+        required
+        error={lastNameError}
+      />
+      <InputComponent
+        type="text"
         name="username"
         label={t("components.registerForm.usernameLabel")}
         placeholder={t("components.registerForm.usernamePlaceholder")}
         value={username}
         onChange={(event) => setUsername(event.target.value)}
         autoComplete="username"
-        required
-        error={usernameError}
+      />
+      <InputComponent
+        type="text"
+        name="pronoun"
+        label={t("components.registerForm.pronounLabel")}
+        placeholder={t("components.registerForm.pronounPlaceholder")}
+        value={pronoun}
+        onChange={(event) => setPronoun(event.target.value)}
+        autoComplete="off"
       />
       <InputComponent
         type="email"

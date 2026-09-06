@@ -10,7 +10,13 @@ import { formatDate, formatDateTime } from "../../../shared/utils/formatDate";
 import styles from "./editEmployeeModalComponent.module.css";
 
 export interface EditEmployeeFormValues {
-  username: string;
+  // Omesso quando l'owner lascia il campo vuoto (opzionale): il backend
+  // applica il fallback su firstName/lastName, vedi getDisplayName
+  // (shared/utils/displayName.ts).
+  username?: string;
+  firstName: string;
+  lastName: string;
+  pronoun?: string;
   // Omesso quando l'owner non vuole cambiare la password: distinto da una
   // stringa vuota, che invece verrebbe rifiutata dalla validazione.
   password?: string;
@@ -23,7 +29,10 @@ export interface EditEmployeeFormValues {
 interface Prop {
   isOpen: boolean;
   onClose: () => void;
-  currentUsername: string;
+  currentUsername: string | null;
+  currentFirstName: string;
+  currentLastName: string;
+  currentPronoun: string | null;
   currentRole: EmployeeRole;
   // Sola lettura (task "Modifica account"): l'owner le vede ma non può
   // cambiarle, da qui fuori dallo state del form sotto.
@@ -37,6 +46,9 @@ function EditEmployeeModalComponent({
   isOpen,
   onClose,
   currentUsername,
+  currentFirstName,
+  currentLastName,
+  currentPronoun,
   currentRole,
   currentCreatedAt,
   currentLastLoginAt,
@@ -47,7 +59,10 @@ function EditEmployeeModalComponent({
   // Precompilato solo al mount: il chiamante rimonta il componente (via
   // `key`) ogni volta che la modale si riapre, stesso pattern di
   // editProjectModalComponent.
-  const [username, setUsername] = useState(currentUsername);
+  const [firstName, setFirstName] = useState(currentFirstName);
+  const [lastName, setLastName] = useState(currentLastName);
+  const [username, setUsername] = useState(currentUsername ?? "");
+  const [pronoun, setPronoun] = useState(currentPronoun ?? "");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [role, setRole] = useState<EmployeeRole>(currentRole);
@@ -55,9 +70,14 @@ function EditEmployeeModalComponent({
   const { isSubmitting, submit } = useAsyncSubmit();
   const roleFieldId = useId();
 
-  const usernameError =
-    submitAttempted && username.trim() === ""
-      ? t("components.editEmployeeModal.usernameRequired")
+  const firstNameError =
+    submitAttempted && firstName.trim() === ""
+      ? t("components.editEmployeeModal.firstNameRequired")
+      : "";
+
+  const lastNameError =
+    submitAttempted && lastName.trim() === ""
+      ? t("components.editEmployeeModal.lastNameRequired")
       : "";
 
   // La password è opzionale: la validazione scatta solo se l'owner ha
@@ -77,7 +97,10 @@ function EditEmployeeModalComponent({
       : "";
 
   function resetForm() {
-    setUsername(currentUsername);
+    setFirstName(currentFirstName);
+    setLastName(currentLastName);
+    setUsername(currentUsername ?? "");
+    setPronoun(currentPronoun ?? "");
     setPassword("");
     setConfirmPassword("");
     setRole(currentRole);
@@ -92,16 +115,19 @@ function EditEmployeeModalComponent({
   async function handleSave() {
     setSubmitAttempted(true);
 
-    const trimmedUsername = username.trim();
     const isValid =
-      trimmedUsername !== "" &&
+      firstName.trim() !== "" &&
+      lastName.trim() !== "" &&
       (password === "" || (validatePassword(password) && password === confirmPassword));
 
     if (!isValid) return;
 
     await submit(async () => {
       await onSave({
-        username: trimmedUsername,
+        username: username.trim() === "" ? undefined : username.trim(),
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        pronoun: pronoun.trim() === "" ? undefined : pronoun,
         password: password === "" ? undefined : password,
         role,
       });
@@ -136,9 +162,6 @@ function EditEmployeeModalComponent({
         </button>
       }
     >
-      <p className={styles.description}>
-        {t("components.editEmployeeModal.description")}
-      </p>
       <div className={styles.metaInfo}>
         <p className={styles.metaRow}>
           <span className={styles.metaLabel}>
@@ -160,15 +183,47 @@ function EditEmployeeModalComponent({
       <div className={styles.fields}>
         <InputComponent
           type="text"
+          name="firstName"
+          label={t("components.editEmployeeModal.firstNameLabel")}
+          placeholder={t("components.editEmployeeModal.firstNamePlaceholder")}
+          value={firstName}
+          onChange={(event) => setFirstName(event.target.value)}
+          autoComplete="off"
+          autoFocus
+          required
+          error={firstNameError}
+          showLabel
+        />
+        <InputComponent
+          type="text"
+          name="lastName"
+          label={t("components.editEmployeeModal.lastNameLabel")}
+          placeholder={t("components.editEmployeeModal.lastNamePlaceholder")}
+          value={lastName}
+          onChange={(event) => setLastName(event.target.value)}
+          autoComplete="off"
+          required
+          error={lastNameError}
+          showLabel
+        />
+        <InputComponent
+          type="text"
           name="username"
           label={t("components.editEmployeeModal.usernameLabel")}
           placeholder={t("components.editEmployeeModal.usernamePlaceholder")}
           value={username}
           onChange={(event) => setUsername(event.target.value)}
           autoComplete="off"
-          autoFocus
-          required
-          error={usernameError}
+          showLabel
+        />
+        <InputComponent
+          type="text"
+          name="pronoun"
+          label={t("components.editEmployeeModal.pronounLabel")}
+          placeholder={t("components.editEmployeeModal.pronounPlaceholder")}
+          value={pronoun}
+          onChange={(event) => setPronoun(event.target.value)}
+          autoComplete="off"
           showLabel
         />
         <div className={styles.roleField}>

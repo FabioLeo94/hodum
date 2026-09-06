@@ -55,6 +55,8 @@ describe("companyService.createEmployee", () => {
     await expect(
       createEmployee("10", {
         username: "dipendente1",
+        firstName: "Dipendente",
+        lastName: "Uno",
         email: "dipendente1@example.com",
         password: "Password1",
       }),
@@ -69,9 +71,26 @@ describe("companyService.createEmployee", () => {
     });
     expect(JSON.parse(options?.body as string)).toEqual({
       username: "dipendente1",
+      firstName: "Dipendente",
+      lastName: "Uno",
       email: "dipendente1@example.com",
       password: "Password1",
     });
+  });
+
+  it("invia la richiesta senza username quando è omesso", async () => {
+    sessionStorage.setItem(AUTH_TOKEN_KEY, "signed-jwt-token");
+    vi.mocked(fetch).mockResolvedValue(jsonResponse(201, createdEmployee));
+
+    await createEmployee("10", {
+      firstName: "Dipendente",
+      lastName: "Uno",
+      email: "dipendente1@example.com",
+      password: "Password1",
+    });
+
+    const [, options] = vi.mocked(fetch).mock.calls[0];
+    expect(JSON.parse(options?.body as string)).not.toHaveProperty("username");
   });
 
   it("lancia un errore con il messaggio del backend su 409", async () => {
@@ -82,6 +101,8 @@ describe("companyService.createEmployee", () => {
     await expect(
       createEmployee("10", {
         username: "dipendente1",
+        firstName: "Dipendente",
+        lastName: "Uno",
         email: "dipendente1@example.com",
         password: "Password1",
       }),
@@ -94,6 +115,8 @@ describe("companyService.createEmployee", () => {
     await expect(
       createEmployee("10", {
         username: "dipendente1",
+        firstName: "Dipendente",
+        lastName: "Uno",
         email: "dipendente1@example.com",
         password: "Password1",
       }),

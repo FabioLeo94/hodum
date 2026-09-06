@@ -43,7 +43,7 @@ export interface NotificationEventDto {
   taskTitle: string | null;
   commentId: string | null;
   actorId: string | null;
-  actorUsername: string | null;
+  actorDisplayName: string | null;
   dueDate: string | null;
 }
 
@@ -52,7 +52,7 @@ interface TaskCommentEventDto {
   taskId: string;
   projectId: string;
   authorId: string;
-  authorUsername: string;
+  authorDisplayName: string;
   body: string;
   createdAt: string;
   edited: boolean;
@@ -171,7 +171,7 @@ function toTaskComment(dto: TaskCommentEventDto): TaskComment {
     id: dto.id,
     taskId: dto.taskId,
     authorId: dto.authorId,
-    authorUsername: dto.authorUsername,
+    authorDisplayName: dto.authorDisplayName,
     body: dto.body,
     createdAt: dto.createdAt,
     edited: dto.edited,

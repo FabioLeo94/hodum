@@ -96,8 +96,8 @@ function TaskDetailModalComponent({ isOpen, task, onClose, onGoToTask }: Prop) {
               <ul className={styles.assigneesList}>
                 {task.assignees.map((assignee) => (
                   <li key={assignee.id} className={styles.assigneeRow}>
-                    <AvatarComponent username={assignee.username} size="sm" />
-                    <span>{assignee.username}</span>
+                    <AvatarComponent displayName={assignee.displayName} size="sm" />
+                    <span>{assignee.displayName}</span>
                   </li>
                 ))}
               </ul>

@@ -8,6 +8,7 @@ import WorkHoursEditorComponent from "../workHoursEditor/workHoursEditorComponen
 import DrawerBaseComponent from "../drawerBase/drawerBaseComponent";
 import { getCompany, updateCompany } from "../../services/company/companyService";
 import type { RegisteredCompany } from "../../services/company/companyService";
+import { notifySuccess } from "../../services/notify/notifyService";
 import { validateEmail } from "../../services/validation/validationService";
 import { useAsyncSubmit } from "../../../shared/hooks/useAsyncSubmit";
 import { formatDate } from "../../../shared/utils/formatDate";
@@ -175,6 +176,8 @@ function EditCompanyDrawerComponent({ isOpen, onClose, companyId }: Prop) {
         });
         applyCompany(updated);
         setSubmitAttempted(false);
+        notifySuccess(t("components.editCompanyDrawer.saveSuccess"));
+        onClose();
       } catch (error) {
         setSaveError(
           error instanceof Error ? error.message : t("components.editCompanyDrawer.saveError"),

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import styles from "./importedCredentialsDisplayComponent.module.css";
 import ButtonComponent from "../button/buttonComponent";
 import type { TemporaryPasswordEntry } from "../../services/company/companyService";
+import { getDisplayName } from "../../../shared/utils/displayName";
 
 interface Prop {
   temporaryPasswords: TemporaryPasswordEntry[];
@@ -43,9 +44,14 @@ function ImportedCredentialsDisplayComponent({ temporaryPasswords, onConfirm }: 
               </tr>
             </thead>
             <tbody>
-              {temporaryPasswords.map((entry) => (
-                <tr key={entry.username}>
-                  <td>{entry.username}</td>
+              {/* Indice come key (non entry.username, ora nullable e
+                  potenzialmente duplicato tra più dipendenti importati senza
+                  username): lista costruita una sola volta e mai riordinata
+                  dopo il render, l'indice resta stabile per l'intera vita di
+                  questo componente. */}
+              {temporaryPasswords.map((entry, index) => (
+                <tr key={index}>
+                  <td>{getDisplayName(entry)}</td>
                   <td>
                     {entry.role === "manager"
                       ? t("components.importedCredentialsDisplay.roleManager")

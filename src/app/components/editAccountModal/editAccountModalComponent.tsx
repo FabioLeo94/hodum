@@ -9,7 +9,13 @@ import { formatDate } from "../../../shared/utils/formatDate";
 import styles from "./editAccountModalComponent.module.css";
 
 export interface EditAccountFormValues {
-  username: string;
+  // Omesso quando l'utente lascia il campo vuoto (opzionale): il backend
+  // applica il fallback su firstName/lastName, vedi getDisplayName
+  // (shared/utils/displayName.ts).
+  username?: string;
+  firstName: string;
+  lastName: string;
+  pronoun?: string;
   email: string;
   // Omesso quando l'utente non vuole cambiare la password: a differenza di
   // EditEmployeeModalComponent, qui è l'utente stesso a impostarla, quindi
@@ -21,7 +27,10 @@ export interface EditAccountFormValues {
 interface Prop {
   isOpen: boolean;
   onClose: () => void;
-  currentUsername: string;
+  currentUsername: string | null;
+  currentFirstName: string;
+  currentLastName: string;
+  currentPronoun: string | null;
   currentEmail: string;
   currentCreatedAt: string;
   // L'owner non ha un percorso di cancellazione self-service (vincolo FK
@@ -44,6 +53,9 @@ function EditAccountModalComponent({
   isOpen,
   onClose,
   currentUsername,
+  currentFirstName,
+  currentLastName,
+  currentPronoun,
   currentEmail,
   currentCreatedAt,
   isOwner,
@@ -57,7 +69,10 @@ function EditAccountModalComponent({
   // Precompilato solo al mount: il chiamante rimonta il componente (via
   // `key`) ogni volta che la modale si riapre, stesso pattern di
   // EditEmployeeModalComponent.
-  const [username, setUsername] = useState(currentUsername);
+  const [firstName, setFirstName] = useState(currentFirstName);
+  const [lastName, setLastName] = useState(currentLastName);
+  const [username, setUsername] = useState(currentUsername ?? "");
+  const [pronoun, setPronoun] = useState(currentPronoun ?? "");
   const [email, setEmail] = useState(currentEmail);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -68,9 +83,14 @@ function EditAccountModalComponent({
   // disabilitare indipendentemente.
   const { isSubmitting: isExporting, submit: submitExport } = useAsyncSubmit();
 
-  const usernameError =
-    submitAttempted && username.trim() === ""
-      ? t("components.editAccountModal.usernameRequired")
+  const firstNameError =
+    submitAttempted && firstName.trim() === ""
+      ? t("components.editAccountModal.firstNameRequired")
+      : "";
+
+  const lastNameError =
+    submitAttempted && lastName.trim() === ""
+      ? t("components.editAccountModal.lastNameRequired")
       : "";
 
   const emailError =
@@ -93,7 +113,10 @@ function EditAccountModalComponent({
       : "";
 
   function resetForm() {
-    setUsername(currentUsername);
+    setFirstName(currentFirstName);
+    setLastName(currentLastName);
+    setUsername(currentUsername ?? "");
+    setPronoun(currentPronoun ?? "");
     setEmail(currentEmail);
     setPassword("");
     setConfirmPassword("");
@@ -114,9 +137,9 @@ function EditAccountModalComponent({
   async function handleSave() {
     setSubmitAttempted(true);
 
-    const trimmedUsername = username.trim();
     const isValid =
-      trimmedUsername !== "" &&
+      firstName.trim() !== "" &&
+      lastName.trim() !== "" &&
       validateEmail(email) &&
       (password === "" || (validatePassword(password) && password === confirmPassword));
 
@@ -124,7 +147,10 @@ function EditAccountModalComponent({
 
     await submit(async () => {
       await onSave({
-        username: trimmedUsername,
+        username: username.trim() === "" ? undefined : username.trim(),
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        pronoun: pronoun.trim() === "" ? undefined : pronoun,
         email,
         password: password === "" ? undefined : password,
       });
@@ -151,9 +177,6 @@ function EditAccountModalComponent({
         </button>
       }
     >
-      <p className={styles.description}>
-        {t("components.editAccountModal.description")}
-      </p>
       <div className={styles.metaInfo}>
         <p className={styles.metaRow}>
           <span className={styles.metaLabel}>
@@ -165,15 +188,47 @@ function EditAccountModalComponent({
       <div className={styles.fields}>
         <InputComponent
           type="text"
+          name="firstName"
+          label={t("components.editAccountModal.firstNameLabel")}
+          placeholder={t("components.editAccountModal.firstNamePlaceholder")}
+          value={firstName}
+          onChange={(event) => setFirstName(event.target.value)}
+          autoComplete="off"
+          autoFocus
+          required
+          error={firstNameError}
+          showLabel
+        />
+        <InputComponent
+          type="text"
+          name="lastName"
+          label={t("components.editAccountModal.lastNameLabel")}
+          placeholder={t("components.editAccountModal.lastNamePlaceholder")}
+          value={lastName}
+          onChange={(event) => setLastName(event.target.value)}
+          autoComplete="off"
+          required
+          error={lastNameError}
+          showLabel
+        />
+        <InputComponent
+          type="text"
           name="username"
           label={t("components.editAccountModal.usernameLabel")}
           placeholder={t("components.editAccountModal.usernamePlaceholder")}
           value={username}
           onChange={(event) => setUsername(event.target.value)}
           autoComplete="off"
-          autoFocus
-          required
-          error={usernameError}
+          showLabel
+        />
+        <InputComponent
+          type="text"
+          name="pronoun"
+          label={t("components.editAccountModal.pronounLabel")}
+          placeholder={t("components.editAccountModal.pronounPlaceholder")}
+          value={pronoun}
+          onChange={(event) => setPronoun(event.target.value)}
+          autoComplete="off"
           showLabel
         />
         <InputComponent

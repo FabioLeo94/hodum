@@ -16,7 +16,7 @@ export class NotificationNotFoundError extends Error {
 
 // Forma della riga così come esce dalla JOIN con projects/tasks/users: stesso
 // principio di TaskCommentRow in taskCommentService.ts, i campi denormalizzati
-// (project_name, task_title, actor_username) vengono da tabelle diverse da
+// (project_name, task_title, actor_display_name) vengono da tabelle diverse da
 // notifications e possono essere NULL: project_id/task_id/actor_id sono
 // nullable in schema, e le rispettive JOIN sono LEFT JOIN di conseguenza.
 interface NotificationRow {
@@ -30,7 +30,7 @@ interface NotificationRow {
   task_title: string | null;
   comment_id: string | null;
   actor_id: string | null;
-  actor_username: string | null;
+  actor_display_name: string | null;
   // Come tasks.due_date in taskService.ts: colonna `date`, il driver pg la
   // converte sempre in Date a runtime.
   due_date: Date | null;
@@ -44,7 +44,8 @@ interface NotificationRow {
 const NOTIFICATION_SELECT = `SELECT n.id, n.type, n.read, n.created_at,
        n.project_id, p.name AS project_name,
        n.task_id, t.title AS task_title,
-       n.comment_id, n.actor_id, actor.username AS actor_username,
+       n.comment_id, n.actor_id,
+       COALESCE(NULLIF(actor.username, ''), actor.first_name || ' ' || actor.last_name) AS actor_display_name,
        n.due_date
      FROM notifications n
      LEFT JOIN projects p ON p.id = n.project_id
@@ -63,7 +64,7 @@ function toNotification(row: NotificationRow): Notification {
     taskTitle: row.task_title,
     commentId: row.comment_id,
     actorId: row.actor_id,
-    actorUsername: row.actor_username,
+    actorDisplayName: row.actor_display_name,
     dueDate: row.due_date ? formatDateOnly(row.due_date) : null,
   };
 }
@@ -148,7 +149,7 @@ export async function notifyUsers(userIds: string[], params: NotifyUsersParams):
 
   // Ri-seleziona con la JOIN invece di comporre a mano il risultato: stesso
   // motivo di createComment in taskCommentService.ts (project_name/
-  // task_title/actor_username non disponibili sull'INSERT, che tocca solo
+  // task_title/actor_display_name non disponibili sull'INSERT, che tocca solo
   // notifications). Un solo round-trip con WHERE ... = ANY($1) invece di uno
   // per destinatario (stesso principio del bulk insert via unnest sopra):
   // con N destinatari la versione precedente eseguiva N query sequenziali

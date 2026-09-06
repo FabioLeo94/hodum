@@ -4,10 +4,11 @@ import { Link, useLocation } from "react-router";
 import { ChevronDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { updateStoredUser, useAuthUser } from "../../services/auth/authService";
-import { getCompanyName } from "../../services/company/companyService";
+import { useCompanyName } from "../../services/company/companyService";
 import { getProjectName, listProjectsSummary } from "../../services/project/projectService";
 import type { ProjectSummary } from "../../services/project/projectService";
 import { deleteEmployee, exportUserData, updateEmployee } from "../../services/user/userService";
+import { notifySuccess } from "../../services/notify/notifyService";
 import AvatarComponent from "../avatar/avatarComponent";
 import EditAccountModalComponent from "../editAccountModal/editAccountModalComponent";
 import DeleteEmployeeModalComponent from "../deleteEmployeeModal/deleteEmployeeModalComponent";
@@ -16,6 +17,7 @@ import LanguageSwitcherComponent from "../languageSwitcher/languageSwitcherCompo
 import type { EditAccountFormValues } from "../editAccountModal/editAccountModalComponent";
 import { formatDateTime } from "../../../shared/utils/formatDate";
 import { downloadJsonFile } from "../../../shared/utils/downloadJsonFile";
+import { getDisplayName } from "../../../shared/utils/displayName";
 import styles from "./topbarComponent.module.css";
 
 interface Prop {
@@ -36,41 +38,32 @@ function TopbarComponent({ onLogout }: Prop) {
   // Letto direttamente da qui (invece che passato come prop) per non dover
   // propagare user/role in ogni pagina che monta TopbarComponent (dashboard,
   // taskList in 5 punti diversi): stesso storage già usato da
-  // ProtectedRouteComponent per la stessa decisione. Il project manager vede
-  // "Dipendenti" come l'owner (per assegnare progetti), ma la pagina stessa
-  // gli nasconde crea/modifica dipendente (vedi employees.tsx). useAuthUser
-  // (invece di getUser diretto) fa ri-renderizzare questo componente quando
-  // arriva 'user:updated' (es. l'owner promuove questo utente a manager
-  // mentre è già sulla pagina), senza dover disconnettere e riconnettere.
+  // ProtectedRouteComponent per la stessa decisione. "Dipendenti" non è più
+  // una voce di questa nav (spostata come card dentro "Gestione aziendale",
+  // vedi companyManagement.tsx): il project manager vi accede da lì insieme
+  // all'owner. useAuthUser (invece di getUser diretto) fa ri-renderizzare
+  // questo componente quando arriva 'user:updated' (es. l'owner promuove
+  // questo utente a manager mentre è già sulla pagina), senza dover
+  // disconnettere e riconnettere.
   const { t } = useTranslation();
   const NAV_ITEMS: NavItem[] = [{ to: "/dashboard", label: t("components.topbar.nav.dashboard") }];
   const authUser = useAuthUser();
   const role = authUser?.role;
   const companyId = authUser?.companyId ?? undefined;
-  const canSeeEmployees = role === "owner" || role === "manager";
+  // "Gestione aziendale" è ora aperta anche al project manager (non solo
+  // all'owner): la pagina stessa nasconde a lui le card infrastrutturali
+  // (backup, fatture, export, cancellazione azienda), vedi companyManagement.tsx.
+  const canSeeCompanyManagement = role === "owner" || role === "manager";
   const isOwner = role === "owner";
   const { pathname } = useLocation();
 
   // Nessun placeholder mentre carica (a differenza di activeProjectLabel):
   // il nome azienda non cambia mai durante la sessione, quindi un vuoto
   // momentaneo alla prima renderizzazione è meno invasivo di un testo
-  // segnaposto che lampeggia ad ogni mount della topbar.
-  const [companyName, setCompanyName] = useState<string | undefined>(undefined);
-
-  useEffect(() => {
-    if (!companyId) return;
-    let cancelled = false;
-    getCompanyName(companyId)
-      .then((name) => {
-        if (!cancelled) setCompanyName(name);
-      })
-      .catch(() => {
-        if (!cancelled) setCompanyName(undefined);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [companyId]);
+  // segnaposto che lampeggia ad ogni mount della topbar. useCompanyName (non
+  // più un fetch + state locale) si aggiorna anche dopo un rename fatto da
+  // EditCompanyDrawerComponent, vedi companyService.ts.
+  const companyName = useCompanyName(companyId);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -284,6 +277,7 @@ function TopbarComponent({ onLogout }: Prop) {
     try {
       const data = await exportUserData(authUser.id);
       downloadJsonFile(data, "hodum-export-utente.json");
+      notifySuccess(t("components.topbar.account.exportSuccess"));
     } catch (error) {
       setExportAccountError(
         error instanceof Error ? error.message : t("components.topbar.account.exportError"),
@@ -313,6 +307,7 @@ function TopbarComponent({ onLogout }: Prop) {
     if (!authUser) return;
     try {
       await deleteEmployee(authUser.id);
+      notifySuccess(t("components.topbar.account.deleteAccountSuccess"));
       onLogout();
     } catch (error) {
       setDeleteAccountError(
@@ -331,6 +326,7 @@ function TopbarComponent({ onLogout }: Prop) {
     try {
       const updated = await updateEmployee(authUser.id, values);
       updateStoredUser(updated);
+      notifySuccess(t("components.topbar.account.updateSuccess"));
       closeEditAccountModal();
     } catch (error) {
       setEditAccountError(
@@ -343,10 +339,15 @@ function TopbarComponent({ onLogout }: Prop) {
     setIsProjectsMenuOpen(false);
   }
 
-  // Dashboard e Dipendenti condividono lo stesso span/link attivo, ma ora
-  // vivono in due gruppi separati della topbar (nav primaria a sinistra,
-  // Dipendenti accanto all'account a destra): la funzione resta unica per
-  // coerenza di stato/stile, non per contiguità nel markup.
+  // Dashboard e Gestione aziendale condividono lo stesso span/link attivo,
+  // pur vivendo in due gruppi separati della topbar (nav primaria a sinistra,
+  // Gestione aziendale accanto all'account a destra): la funzione resta unica
+  // per coerenza di stato/stile, non per contiguità nel markup.
+  // Calcolato una sola volta per render (invece che ad ogni punto in cui
+  // serve, sotto): getDisplayName è pura ma non c'è motivo di richiamarla tre
+  // volte sullo stesso authUser nello stesso render.
+  const authUserDisplayName = authUser ? getDisplayName(authUser) : "";
+
   function renderNavItem(item: NavItem) {
     return pathname === item.to ? (
       <span key={item.to} className={styles.navItemActive} aria-current="page">
@@ -456,22 +457,11 @@ function TopbarComponent({ onLogout }: Prop) {
       )}
 
       <div className={styles.rightGroup}>
-        {canSeeEmployees && (
-          <>
-            {renderNavItem({ to: "/employees", label: t("components.topbar.nav.employees") })}
-            {/* Separatore puramente visivo: segnala che "Dipendenti" è
-                amministrativo, non parte della nav primaria a sinistra. */}
-            <span className={styles.separator} aria-hidden="true" />
-          </>
-        )}
-
-        {/* Owner-only (a differenza di "Dipendenti" sopra, visibile anche al
-            project manager): backup e le altre voci future di questa pagina
-            toccano l'infrastruttura dell'azienda, non la gestione operativa
-            che il manager già presidia (vedi companyManagement.tsx).
-            "Fatture" non è più una voce separata: vive come card dentro
-            questa stessa pagina (vedi companyManagement.tsx). */}
-        {isOwner && (
+        {/* Aperta anche al project manager (non più owner-only): "Dipendenti"
+            vive ora come card dentro questa pagina insieme a backup, fatture
+            ed export, che restano invece visibili alla sola card owner-only
+            di companyManagement.tsx. */}
+        {canSeeCompanyManagement && (
           <>
             {renderNavItem({
               to: "/company-management",
@@ -481,8 +471,7 @@ function TopbarComponent({ onLogout }: Prop) {
           </>
         )}
 
-        {/* Visibile a tutti i ruoli (a differenza di "Dipendenti" sopra),
-            quindi fuori dal blocco canSeeEmployees. */}
+        {/* Visibile a tutti i ruoli, quindi fuori dal blocco sopra. */}
         <LanguageSwitcherComponent />
         <NotificationBellComponent />
 
@@ -497,7 +486,7 @@ function TopbarComponent({ onLogout }: Prop) {
             aria-controls={menuId}
             onClick={() => setIsMenuOpen((current) => !current)}
           >
-            <AvatarComponent username={authUser?.username ?? ""} size="md" />
+            <AvatarComponent displayName={authUserDisplayName} size="md" />
           </button>
 
           {isMenuOpen && (
@@ -508,8 +497,8 @@ function TopbarComponent({ onLogout }: Prop) {
               {authUser && (
                 <>
                   <div className={styles.menuUserInfo}>
-                    <p className={styles.menuUserName} title={authUser.username}>
-                      {authUser.username}
+                    <p className={styles.menuUserName} title={authUserDisplayName}>
+                      {authUserDisplayName}
                     </p>
                     <p className={styles.menuUserEmail} title={authUser.email}>
                       {authUser.email}
@@ -569,6 +558,9 @@ function TopbarComponent({ onLogout }: Prop) {
           isOpen={isEditAccountModalOpen}
           onClose={closeEditAccountModal}
           currentUsername={authUser.username}
+          currentFirstName={authUser.firstName}
+          currentLastName={authUser.lastName}
+          currentPronoun={authUser.pronoun}
           currentEmail={authUser.email}
           currentCreatedAt={authUser.createdAt}
           isOwner={isOwner}
@@ -585,7 +577,7 @@ function TopbarComponent({ onLogout }: Prop) {
           key={authUser.id}
           isOpen={isDeleteAccountModalOpen}
           onClose={closeDeleteAccountModal}
-          employeeUsername={authUser.username}
+          employeeDisplayName={authUserDisplayName}
           onConfirm={handleConfirmDeleteAccount}
           submitError={deleteAccountError}
           variant="self"

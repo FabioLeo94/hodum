@@ -14,10 +14,44 @@
   gap: var(--m-md);
 }
 
+.titleGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--m-sm);
+}
+
 .title {
   color: var(--text-primary);
   font-size: 1.75rem;
   font-weight: 700;
+}
+
+/* Stesso pattern icon-button di .backButton in
+   customersDrawerComponent.module.css: qui torna alla pagina Gestione
+   aziendale invece che a una vista interna al drawer. */
+.backButton {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: var(--icon-button-size-sm);
+  height: var(--icon-button-size-sm);
+  border-radius: var(--radious-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.backButton:hover {
+  background-color: var(--bg-field);
+  color: var(--text-primary);
+}
+
+.backButton:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
 }
 
 /* Stesso tono pieno di .buttonBase in buttonComponent.module.css (azione

@@ -115,9 +115,14 @@ function toCompany(row: CompanyRow): Company {
 
 export interface RegisterCompanyInput {
   companyName: string;
-  username: string;
+  // Opzionale da migrations/0041: se assente/vuoto si mostra "nome cognome"
+  // (vedi firstName/lastName sotto), come per updateUser in userService.ts.
+  username?: string;
   email: string;
   password: string;
+  firstName: string;
+  lastName: string;
+  pronoun?: string;
 }
 
 export interface RegisterCompanyResult {
@@ -133,9 +138,13 @@ export interface RegisterCompanyResult {
 }
 
 export interface CreateEmployeeInput {
-  username: string;
+  // Opzionale da migrations/0041, stesso trattamento di RegisterCompanyInput.
+  username?: string;
   email: string;
   password: string;
+  firstName: string;
+  lastName: string;
+  pronoun?: string;
   // Assente = 'employee' (comportamento storico): vedi CreateEmployeeRequest
   // in companyController.ts.
   role?: 'employee' | 'manager';
@@ -158,7 +167,12 @@ export async function registerCompany(input: RegisterCompanyInput): Promise<Regi
   // resta invece nel controller (fuori dallo scope di questo intervento: non
   // segue lo stesso pattern "duplicato identico ovunque").
   assertNonEmpty(input.companyName, 'companyName', "Il nome dell'azienda non può essere vuoto");
-  assertNonEmpty(input.username, 'username');
+  assertNonEmpty(input.firstName, 'firstName');
+  assertNonEmpty(input.lastName, 'lastName');
+  // username è opzionale da migrations/0041: una stringa vuota va trattata
+  // come "non fornito" (NULL), non come errore di validazione, a differenza
+  // di firstName/lastName sopra.
+  const username = input.username?.trim() || null;
 
   const client = await pool.connect();
   try {
@@ -176,8 +190,9 @@ export async function registerCompany(input: RegisterCompanyInput): Promise<Regi
     const recoveryCode = generateRecoveryCode();
     const recoveryCodeHash = await hashPassword(normalizeRecoveryCode(recoveryCode));
     await client.query(
-      'INSERT INTO users (id, username, email, password, recovery_code_hash) VALUES ($1, $2, $3, $4, $5)',
-      [userId, input.username, input.email, passwordHash, recoveryCodeHash],
+      `INSERT INTO users (id, username, email, password, recovery_code_hash, first_name, last_name, pronoun)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [userId, username, input.email, passwordHash, recoveryCodeHash, input.firstName.trim(), input.lastName.trim(), input.pronoun?.trim() || null],
     );
 
     // owner_id è NOT NULL su companies (0013): l'utente va creato prima e
@@ -427,7 +442,10 @@ export async function updateCompany(id: string, body: UpdateCompanyInput): Promi
 export async function createEmployee(companyId: string, input: CreateEmployeeInput): Promise<User> {
   // Stesso principio di registerCompany sopra (punto 2 della code review):
   // "campo vuoto dopo trim" prima duplicato in companyController.createEmployee.
-  assertNonEmpty(input.username, 'username');
+  assertNonEmpty(input.firstName, 'firstName');
+  assertNonEmpty(input.lastName, 'lastName');
+  // username opzionale da migrations/0041, stesso trattamento di registerCompany.
+  const username = input.username?.trim() || null;
 
   const userId = randomUUID();
   const passwordHash = await hashPassword(input.password);
@@ -439,10 +457,20 @@ export async function createEmployee(companyId: string, input: CreateEmployeeInp
     // (registerCompany), che sceglie la propria password e resta a false via
     // DEFAULT.
     const result = await pool.query<UserRow>(
-      `INSERT INTO users (id, username, email, password, company_id, role, must_change_password)
-       VALUES ($1, $2, $3, $4, $5, $6, true)
+      `INSERT INTO users (id, username, email, password, company_id, role, must_change_password, first_name, last_name, pronoun)
+       VALUES ($1, $2, $3, $4, $5, $6, true, $7, $8, $9)
        RETURNING ${USER_COLUMNS}`,
-      [userId, input.username, input.email, passwordHash, companyId, input.role ?? 'employee'],
+      [
+        userId,
+        username,
+        input.email,
+        passwordHash,
+        companyId,
+        input.role ?? 'employee',
+        input.firstName.trim(),
+        input.lastName.trim(),
+        input.pronoun?.trim() || null,
+      ],
     );
     return toUser(result.rows[0]);
   } catch (err) {
@@ -495,7 +523,11 @@ export async function deleteCompany(companyId: string, ownerId: string): Promise
 // principio del recoveryCode, e mai più recuperabili da qui (solo l'hash
 // resta salvato).
 export interface TemporaryPasswordEntry {
-  username: string;
+  // Nullable da migrations/0041, come User.username: il frontend mostra
+  // firstName/lastName quando assente.
+  username: string | null;
+  firstName: string;
+  lastName: string;
   role: 'employee' | 'manager';
   password: string;
 }
@@ -574,8 +606,18 @@ function validateImportPayload(input: ImportCompanyInput): void {
     throw new ImportCompanyDataError("l'export deve contenere esattamente un utente owner, con id uguale a export.company.ownerId");
   }
   for (const user of data.users) {
-    if (user.username.trim().length === 0) {
+    // username è nullable da migrations/0041 (User.username: string | null):
+    // un export legittimo può contenerlo null, si valida solo se presente.
+    // firstName/lastName invece restano NOT NULL in DB, quindi vanno sempre
+    // validati qui come già lo era username prima di questa modifica.
+    if (user.username !== null && user.username.trim().length === 0) {
       throw new ImportCompanyDataError('username non può essere vuoto (in export.users)');
+    }
+    if (user.firstName.trim().length === 0) {
+      throw new ImportCompanyDataError('firstName non può essere vuoto (in export.users)');
+    }
+    if (user.lastName.trim().length === 0) {
+      throw new ImportCompanyDataError('lastName non può essere vuoto (in export.users)');
     }
     if (!isValidEmail(user.email)) {
       throw new ImportCompanyDataError('email non valida (in export.users)');
@@ -685,8 +727,18 @@ export async function importCompanyData(input: ImportCompanyInput): Promise<Impo
     const recoveryCode = generateRecoveryCode();
     const recoveryCodeHash = await hashPassword(normalizeRecoveryCode(recoveryCode));
     await client.query(
-      'INSERT INTO users (id, username, email, password, recovery_code_hash) VALUES ($1, $2, $3, $4, $5)',
-      [newOwnerId, ownerExport.username, ownerExport.email, ownerPasswordHash, recoveryCodeHash],
+      `INSERT INTO users (id, username, email, password, recovery_code_hash, first_name, last_name, pronoun)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [
+        newOwnerId,
+        ownerExport.username,
+        ownerExport.email,
+        ownerPasswordHash,
+        recoveryCodeHash,
+        ownerExport.firstName,
+        ownerExport.lastName,
+        ownerExport.pronoun,
+      ],
     );
 
     const companyResult = await client.query<CompanyRow>(
@@ -728,11 +780,27 @@ export async function importCompanyData(input: ImportCompanyInput): Promise<Impo
       // createEmployee sopra: il dipendente deve sceglierne una propria al
       // primo accesso sulla nuova istanza.
       await client.query(
-        `INSERT INTO users (id, username, email, password, company_id, role, must_change_password)
-         VALUES ($1, $2, $3, $4, $5, $6, true)`,
-        [newId, exportedUser.username, exportedUser.email, passwordHash, company.id, role],
+        `INSERT INTO users (id, username, email, password, company_id, role, must_change_password, first_name, last_name, pronoun)
+         VALUES ($1, $2, $3, $4, $5, $6, true, $7, $8, $9)`,
+        [
+          newId,
+          exportedUser.username,
+          exportedUser.email,
+          passwordHash,
+          company.id,
+          role,
+          exportedUser.firstName,
+          exportedUser.lastName,
+          exportedUser.pronoun,
+        ],
       );
-      temporaryPasswords.push({ username: exportedUser.username, role, password: temporaryPassword });
+      temporaryPasswords.push({
+        username: exportedUser.username,
+        firstName: exportedUser.firstName,
+        lastName: exportedUser.lastName,
+        role,
+        password: temporaryPassword,
+      });
     }
 
     // --- Progetti: id generato dal database (projects.id ha DEFAULT

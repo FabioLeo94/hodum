@@ -8,6 +8,7 @@ import EditProjectModalComponent, {
 } from "../editProjectModal/editProjectModalComponent";
 import DeleteProjectModalComponent from "../deleteProjectModal/deleteProjectModalComponent";
 import DownloadProjectModalComponent from "../downloadProjectModal/downloadProjectModalComponent";
+import { notifySuccess } from "../../services/notify/notifyService";
 import {
   downloadProject,
   type ExportFormat,
@@ -180,6 +181,7 @@ function ProjectComponent({
     try {
       await onEditProject(id, values);
       setActiveModal(null);
+      notifySuccess(t("components.project.updateSuccess"));
     } catch (error) {
       setEditError(
         error instanceof Error
@@ -193,6 +195,7 @@ function ProjectComponent({
     try {
       await onDeleteProject(id);
       setActiveModal(null);
+      notifySuccess(t("components.project.deleteSuccess"));
     } catch (error) {
       setDeleteError(
         error instanceof Error

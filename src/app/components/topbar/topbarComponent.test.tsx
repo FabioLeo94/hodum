@@ -47,6 +47,9 @@ function storeUser(
     JSON.stringify({
       id: "1",
       username: "mario",
+      firstName: "Mario",
+      lastName: "Rossi",
+      pronoun: null,
       email: "mario@example.com",
       companyId: "10",
       role,
@@ -63,37 +66,35 @@ describe("TopbarComponent", () => {
     sessionStorage.clear();
   });
 
-  it("does not render the employees link when there is no authenticated owner", () => {
+  it("does not render the company management link when there is no authenticated user", () => {
     renderTopbar();
     expect(
-      screen.queryByRole("link", { name: "Dipendenti" }),
+      screen.queryByRole("link", { name: "Gestione aziendale" }),
     ).not.toBeInTheDocument();
   });
 
-  it("does not render the employees link for an employee", () => {
+  it("does not render the company management link for an employee", () => {
     storeUser("employee");
     renderTopbar();
     expect(
-      screen.queryByRole("link", { name: "Dipendenti" }),
+      screen.queryByRole("link", { name: "Gestione aziendale" }),
     ).not.toBeInTheDocument();
   });
 
-  it("renders a link to /employees for an owner", () => {
+  it("renders a link to /company-management for an owner", () => {
     storeUser("owner");
     renderTopbar();
-    expect(screen.getByRole("link", { name: "Dipendenti" })).toHaveAttribute(
-      "href",
-      "/employees",
-    );
+    expect(
+      screen.getByRole("link", { name: "Gestione aziendale" }),
+    ).toHaveAttribute("href", "/company-management");
   });
 
-  it("renders a link to /employees for a manager", () => {
+  it("renders a link to /company-management for a manager", () => {
     storeUser("manager");
     renderTopbar();
-    expect(screen.getByRole("link", { name: "Dipendenti" })).toHaveAttribute(
-      "href",
-      "/employees",
-    );
+    expect(
+      screen.getByRole("link", { name: "Gestione aziendale" }),
+    ).toHaveAttribute("href", "/company-management");
   });
 
   it("renders a link to /dashboard when not on the dashboard page", () => {
@@ -114,13 +115,13 @@ describe("TopbarComponent", () => {
     expect(activeItem).toHaveAttribute("aria-current", "page");
   });
 
-  it("renders Dipendenti as a non-clickable current item when on the employees page", () => {
+  it("renders Gestione aziendale as a non-clickable current item when on the company management page", () => {
     storeUser("owner");
-    renderTopbar(() => {}, "/employees");
+    renderTopbar(() => {}, "/company-management");
     expect(
-      screen.queryByRole("link", { name: "Dipendenti" }),
+      screen.queryByRole("link", { name: "Gestione aziendale" }),
     ).not.toBeInTheDocument();
-    const activeItem = screen.getByText("Dipendenti");
+    const activeItem = screen.getByText("Gestione aziendale");
     expect(activeItem.tagName.toLowerCase()).toBe("span");
     expect(activeItem).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument();

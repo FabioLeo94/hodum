@@ -14,6 +14,7 @@ import {
   updateTaskWorkTimer,
 } from "../../services/project/projectService";
 import { subscribeToProjectTasks } from "../../services/realtime/socketService";
+import { notifySuccess } from "../../services/notify/notifyService";
 import { getDueUrgency } from "../../../shared/utils/taskDueDate";
 import { logout, type User } from "../../services/auth/authService";
 import { listUsers } from "../../services/user/userService";
@@ -30,6 +31,7 @@ import TaskLockedBadgeComponent from "../../components/taskLockedBadge/taskLocke
 import MessageCardComponent from "../../components/messageCard/messageCardComponent";
 import type { AssistantLayoutContext } from "../../components/protectedLayout/protectedLayoutComponent";
 import { usePageMeta } from "../../../shared/hooks/usePageMeta";
+import { getDisplayName } from "../../../shared/utils/displayName";
 import {
   STATUS_ORDER,
   useStatusGroupLabels,
@@ -367,6 +369,9 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
           ? current
           : { ...current, tasks: [...current.tasks, savedTask] };
       });
+      notifySuccess(
+        t(editingTask ? "pages.taskList.editTaskSuccess" : "pages.taskList.createTaskSuccess"),
+      );
       closeTaskModal();
     } catch (error) {
       setTaskModalError(
@@ -695,7 +700,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
               <option value="all">{t("pages.taskList.allAssignees")}</option>
               {employees.map((employee) => (
                 <option key={employee.id} value={employee.id}>
-                  {employee.username}
+                  {getDisplayName(employee)}
                 </option>
               ))}
             </select>
@@ -747,12 +752,14 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
             hasActiveFilters={hasActiveFilters}
           />
         ) : viewMode === "calendar" ? (
-          <TaskCalendarComponent
-            tasks={visibleTasks}
-            onOpenTask={openEditModal}
-            dimmedTaskIds={dimmedTaskIds}
-            onDueDateChange={handleDueDateChange}
-          />
+          <div className={styles.calendarViewWrapper}>
+            <TaskCalendarComponent
+              tasks={visibleTasks}
+              onOpenTask={openEditModal}
+              dimmedTaskIds={dimmedTaskIds}
+              onDueDateChange={handleDueDateChange}
+            />
+          </div>
         ) : (
           <div className={styles.taskTableCard}>
             <table className={styles.taskTable}>

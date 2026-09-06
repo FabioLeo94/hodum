@@ -1,0 +1,209 @@
+.employeeCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--m-md);
+  padding: var(--p-lg);
+  border-radius: var(--radious-lg);
+  background-color: var(--bg-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.employeeInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-xs);
+  min-width: 0;
+}
+
+.employeeUsername {
+  overflow: hidden;
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.employeeEmail {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.employeeRoleBadge {
+  flex-shrink: 0;
+  padding: var(--p-xs) var(--p-sm);
+  border-radius: var(--radious-sm);
+  background-color: var(--bg-field);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Stessa tinta ambra già usata altrove (es. .activeProjectLabel in
+   topbarComponent.module.css) per un'etichetta di ruolo elevato, distinta
+   dalla tinta menta di stato/azioni. */
+.employeeRoleBadge[data-role="manager"] {
+  background-color: color-mix(in srgb, var(--color-warning) 14%, transparent);
+  color: var(--color-warning);
+}
+
+.employeeStatus {
+  flex-shrink: 0;
+  padding: var(--p-xs) var(--p-sm);
+  border-radius: var(--radious-sm);
+  background-color: var(--bg-field);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.employeeStatus[data-pending="true"] {
+  background-color: color-mix(in srgb, var(--bg-primary) 18%, transparent);
+  color: var(--bg-primary);
+}
+
+/* Dopo [data-pending="true"] nell'ordine del file: un utente bloccato ha
+   sempre anche mustChangePassword coerente col suo stato precedente, ma la
+   copy (vedi employeeCardComponent.tsx) mostra sempre "Bloccato" in quel
+   caso, quindi lo stile deve vincere allo stesso modo a parità di
+   specificità. */
+.employeeStatus[data-disabled="true"] {
+  background-color: color-mix(in srgb, var(--color-danger) 16%, transparent);
+  color: var(--color-danger);
+}
+
+/* Kebab + popover: stesso pattern di projectComponent.module.css, ma
+   .kebabArea qui è un item flex in linea con avatar/info/badge/stato (non un
+   overlay assoluto sopra la card), quindi solo "position: relative" per
+   ancorare il popover. */
+.kebabArea {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.kebabButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radious-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    transform 100ms ease;
+}
+
+.kebabButton:hover {
+  background-color: var(--bg-field);
+  color: var(--text-primary);
+}
+
+.kebabButton:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+.kebabButton:active {
+  transform: scale(0.94);
+}
+
+.kebabButton[aria-expanded="true"] {
+  background-color: var(--bg-primary);
+  color: var(--text-on-primary);
+}
+
+.popoverMenu {
+  position: absolute;
+  top: calc(100% + var(--m-sm));
+  right: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+  padding: var(--p-sm);
+  border-radius: var(--radious-md);
+  background-color: var(--bg-field);
+  box-shadow: var(--shadow-popover);
+  animation: popoverPopIn 140ms ease both;
+}
+
+.popoverItem {
+  padding: var(--p-sm) var(--p-md);
+  border-radius: var(--radious-sm);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.popoverItem:hover {
+  background-color: var(--bg-surface);
+}
+
+.popoverItem:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: -2px;
+}
+
+.popoverItemDanger {
+  color: var(--color-danger);
+}
+
+.popoverItemDanger:hover {
+  background-color: var(--color-danger);
+  color: var(--text-on-primary);
+}
+
+.popoverSeparator {
+  height: 1px;
+  margin: var(--p-xs) var(--p-sm);
+  background-color: var(--bg-surface);
+  opacity: 0.6;
+}
+
+@keyframes popoverPopIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kebabButton {
+    transition: none;
+  }
+
+  .kebabButton:active {
+    transform: none;
+  }
+
+  .popoverMenu {
+    animation: none;
+  }
+}
+
+@media (max-width: 400px) {
+  .employeeCard {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .kebabArea {
+    align-self: flex-end;
+  }
+}

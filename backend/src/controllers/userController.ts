@@ -33,15 +33,26 @@ interface UserErrorResponse {
 }
 
 export interface UpdateUserRequest {
+  // Stringa vuota rimuove lo username esistente (userService.updateUser),
+  // non è un errore di validazione: username è opzionale da migrations/0041.
   username?: string;
   email?: string;
   password?: string;
+  firstName?: string;
+  lastName?: string;
+  // Stesso trattamento di username: stringa vuota rimuove il pronome.
+  pronoun?: string;
   // Applicato solo quando l'owner modifica un proprio dipendente (mai nel
   // self-service: un utente non può cambiare il proprio ruolo), per
   // promuoverlo a project manager o retrocederlo a dipendente. 'owner' non è
   // un valore accettato: non è raggiungibile per via applicativa da questo
   // endpoint (vedi isOwnerEditingEmployee sotto).
   role?: 'employee' | 'manager';
+  // Task "blocco utente": stesso trattamento di role, applicato solo quando
+  // l'owner modifica un proprio dipendente (mai nel self-service, mai
+  // sull'owner stesso). true blocca, false riabilita, omesso non tocca lo
+  // stato attuale.
+  disabled?: boolean;
 }
 
 export interface ChangePasswordRequest {
@@ -68,6 +79,34 @@ function notFoundResponse(id: string): UserErrorResponse {
 // dell'avvio, una costante importata non verrebbe risolta in generazione.
 @Route('users')
 export class UserController extends Controller {
+  // Stesso blocco di controlli (ruolo owner, target esistente, target
+  // dipendente/manager della stessa company) prima duplicato identico in
+  // updateUser e deleteUser sotto: qui una sola volta. Restituisce null per
+  // qualunque esito negativo, mai una distinzione più fine: il chiamante lo
+  // traduce sempre in un 404, stesso principio di notFoundResponse sopra
+  // (un utente fuori dal proprio ambito non va confermato con un 403).
+  // Privato e senza decoratori HTTP: tsoa genera le rotte solo dai metodi
+  // con un decoratore (@Get/@Post/...), stesso pattern di
+  // TaskController.mapTaskLockedError in taskController.ts.
+  private async resolveOwnedEmployee(id: string, requester: User): Promise<User | null> {
+    if (requester.role !== 'owner') {
+      return null;
+    }
+    let target: User;
+    try {
+      target = await getUserById(id);
+    } catch (err) {
+      if (err instanceof UserNotFoundError) {
+        return null;
+      }
+      throw err;
+    }
+    if ((target.role !== 'employee' && target.role !== 'manager') || target.companyId !== requester.companyId) {
+      return null;
+    }
+    return target;
+  }
+
   @Get()
   @Security('jwt')
   public async listUsers(@Request() request: ExRequest): Promise<User[]> {
@@ -141,24 +180,8 @@ export class UserController extends Controller {
     const requester = getAuthenticatedUser(request);
     let isOwnerEditingEmployee = false;
     if (id !== requester.id) {
-      if (requester.role !== 'owner') {
-        this.setStatus(404);
-        return notFoundResponse(id);
-      }
-      let target: User;
-      try {
-        target = await getUserById(id);
-      } catch (err) {
-        if (err instanceof UserNotFoundError) {
-          this.setStatus(404);
-          return notFoundResponse(id);
-        }
-        throw err;
-      }
-      if (
-        (target.role !== 'employee' && target.role !== 'manager') ||
-        target.companyId !== requester.companyId
-      ) {
+      const target = await this.resolveOwnedEmployee(id, requester);
+      if (!target) {
         this.setStatus(404);
         return notFoundResponse(id);
       }
@@ -194,6 +217,10 @@ export class UserController extends Controller {
         // cambiando il proprio ruolo.
         role: isOwnerEditingEmployee ? body.role : undefined,
         forceChangePassword: isOwnerEditingEmployee && body.password !== undefined,
+        // Stesso motivo di role sopra: un utente non deve poter (s)bloccare
+        // sé stesso, e nessuno può farlo sull'owner (isOwnerEditingEmployee è
+        // false in quel caso).
+        disabled: isOwnerEditingEmployee ? body.disabled : undefined,
       });
     } catch (err) {
       if (err instanceof UserNotFoundError) {
@@ -314,24 +341,8 @@ export class UserController extends Controller {
   public async deleteUser(@Path() id: string, @Request() request: ExRequest): Promise<void> {
     const requester = getAuthenticatedUser(request);
     if (id !== requester.id) {
-      if (requester.role !== 'owner') {
-        this.setStatus(404);
-        return;
-      }
-      let target: User;
-      try {
-        target = await getUserById(id);
-      } catch (err) {
-        if (err instanceof UserNotFoundError) {
-          this.setStatus(404);
-          return;
-        }
-        throw err;
-      }
-      if (
-        (target.role !== 'employee' && target.role !== 'manager') ||
-        target.companyId !== requester.companyId
-      ) {
+      const target = await this.resolveOwnedEmployee(id, requester);
+      if (!target) {
         this.setStatus(404);
         return;
       }

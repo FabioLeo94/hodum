@@ -15,7 +15,15 @@ export type UserRole = "owner" | EmployeeRole;
 
 export interface User {
   id: string;
-  username: string;
+  // Nullable (migrations/0041): mostrare sempre con getDisplayName
+  // (shared/utils/displayName.ts), mai leggere questo campo direttamente per
+  // la UI, il fallback su firstName/lastName va calcolato lì.
+  username: string | null;
+  firstName: string;
+  lastName: string;
+  // Testo libero, mai validato/vincolato a un insieme di valori: mostrato
+  // così com'è dove serve (form di modifica), mai usato per logica di dominio.
+  pronoun: string | null;
   email: string;
   companyId: string | null;
   role: UserRole | null;
@@ -26,6 +34,9 @@ export interface User {
   // ISO 8601 o null se l'account non ha ancora effettuato un accesso.
   // Aggiornato dal backend a ogni login riuscito, sola lettura come createdAt.
   lastLoginAt: string | null;
+  // ISO 8601 o null se l'utente è attivo. Sola lettura come createdAt: si
+  // modifica solo tramite disableEmployee/enableEmployee (userService.ts).
+  disabledAt: string | null;
 }
 
 interface LoginResponseBody {
@@ -56,6 +67,17 @@ export class RateLimitError extends Error {
   }
 }
 
+// Lanciato da login() quando /auth/login risponde 423 (account bloccato,
+// vedi backend/src/middleware/authentication.ts): distinto da "credenziali
+// sbagliate" (quello resta null) perché qui il form deve mostrare un
+// messaggio dedicato, non un errore di validazione generico.
+export class UserDisabledError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "UserDisabledError";
+  }
+}
+
 // Ritorna { user, token } su credenziali valide, null se sono sbagliate;
 // lancia RateLimitError se il rate limit è scattato. Chi chiama decide se e
 // dove persistere la sessione (vedi persistSession).
@@ -75,6 +97,10 @@ export async function login(
     const resetHeader = response.headers.get("RateLimit-Reset");
     const parsed = resetHeader !== null ? Number(resetHeader) : NaN;
     throw new RateLimitError(Number.isFinite(parsed) && parsed > 0 ? parsed : 60);
+  }
+  if (response.status === 423) {
+    const message = await readErrorMessage(response);
+    throw new UserDisabledError(message ?? "Account disabilitato: contattare il titolare dell'azienda");
   }
   if (!response.ok) {
     return null;

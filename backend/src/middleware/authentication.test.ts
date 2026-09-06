@@ -30,9 +30,13 @@ function makeUser(overrides: Partial<User> = {}): User {
     email: 'mario@example.com',
     companyId: 'company-1',
     role: 'employee',
+    firstName: 'Mario',
+    lastName: 'Rossi',
+    pronoun: null,
     mustChangePassword: false,
     createdAt: '2026-01-01T00:00:00.000Z',
     lastLoginAt: null,
+    disabledAt: null,
     ...overrides,
   };
 }

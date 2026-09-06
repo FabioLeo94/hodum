@@ -19,12 +19,16 @@ function jsonResponse(status: number, body: unknown): Response {
 const sampleUser: User = {
   id: "1",
   username: "mario",
+  firstName: "Mario",
+  lastName: "Rossi",
+  pronoun: null,
   email: "mario@example.com",
   companyId: "10",
   role: "employee",
   mustChangePassword: true,
   createdAt: "2024-01-01T00:00:00.000Z",
   lastLoginAt: null,
+  disabledAt: null,
 };
 
 function seedSession(): void {

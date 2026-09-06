@@ -360,8 +360,8 @@ function TaskCommentsPanelComponent({ projectId, taskId, readOnly = false }: Pro
                 data-own={isOwn}
               >
                 <div className={styles.authorRow}>
-                  <AvatarComponent username={comment.authorUsername} size="sm" />
-                  <span className={styles.author}>{comment.authorUsername}</span>
+                  <AvatarComponent displayName={comment.authorDisplayName} size="sm" />
+                  <span className={styles.author}>{comment.authorDisplayName}</span>
                   {!readOnly && isOwn && !isEditingThis && (
                     <div
                       className={styles.kebabArea}

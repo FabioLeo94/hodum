@@ -13,10 +13,43 @@
   gap: var(--m-sm);
 }
 
+.titleGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--m-sm);
+}
+
 .employeesTitle {
   color: var(--text-primary);
   font-size: 1.75rem;
   font-weight: 700;
+}
+
+/* Stesso pattern icon-button di .backButton in invoices.module.css: qui
+   torna alla pagina Gestione aziendale invece che alla dashboard. */
+.backButton {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: var(--icon-button-size-sm);
+  height: var(--icon-button-size-sm);
+  border-radius: var(--radious-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.backButton:hover {
+  background-color: var(--bg-field);
+  color: var(--text-primary);
+}
+
+.backButton:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
 }
 
 .employeesSubtitle {
@@ -31,112 +64,8 @@
   max-width: 560px;
 }
 
-.employeeCard {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--m-md);
-  padding: var(--p-lg);
-  border-radius: var(--radious-lg);
-  background-color: var(--bg-surface);
-  box-shadow: var(--shadow-card);
-}
-
-.employeeInfo {
-  display: flex;
-  flex-direction: column;
-  gap: var(--m-xs);
-  min-width: 0;
-}
-
-.employeeUsername {
-  color: var(--text-primary);
-  font-weight: 600;
-  font-size: 0.95rem;
-}
-
-.employeeEmail {
-  overflow: hidden;
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.employeeRoleBadge {
-  flex-shrink: 0;
-  padding: var(--p-xs) var(--p-sm);
-  border-radius: var(--radious-sm);
-  background-color: var(--bg-field);
-  color: var(--text-muted);
-  font-size: 0.8rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-/* Stessa tinta ambra già usata altrove (es. .activeProjectLabel in
-   topbarComponent.module.css) per un'etichetta di ruolo elevato, distinta
-   dalla tinta menta di stato/azioni. */
-.employeeRoleBadge[data-role="manager"] {
-  background-color: color-mix(in srgb, var(--color-warning) 14%, transparent);
-  color: var(--color-warning);
-}
-
-.employeeStatus {
-  flex-shrink: 0;
-  padding: var(--p-xs) var(--p-sm);
-  border-radius: var(--radious-sm);
-  background-color: var(--bg-field);
-  color: var(--text-muted);
-  font-size: 0.8rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.employeeStatus[data-pending="true"] {
-  background-color: color-mix(in srgb, var(--bg-primary) 18%, transparent);
-  color: var(--bg-primary);
-}
-
-.employeeActions {
-  display: flex;
-  flex-shrink: 0;
-  gap: var(--m-xs);
-}
-
-.iconButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: var(--radious-sm);
-  color: var(--text-muted);
-  cursor: pointer;
-  transition:
-    background-color 150ms ease,
-    color 150ms ease,
-    transform 100ms ease;
-}
-
-.iconButton:hover {
-  background-color: var(--bg-field);
-  color: var(--text-primary);
-}
-
-.iconButton:focus-visible {
-  outline: 2px solid var(--bg-primary);
-  outline-offset: 2px;
-}
-
-.iconButton:active {
-  transform: scale(0.94);
-}
-
-.iconButtonDanger:hover {
-  background-color: var(--color-danger);
-  color: var(--text-on-primary);
-}
+/* Stile della card dipendente (avatar, badge, stato, menu azioni): vedi
+   employeeCardComponent.module.css. */
 
 /* Stesso FAB "+" di dashboard/taskList: vedi
    src/shared/styles/fabButton.module.css per proprietà, stati e riduzione
@@ -149,16 +78,6 @@
   composes: fabIcon from "../../../shared/styles/fabButton.module.css";
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .iconButton {
-    transition: none;
-  }
-
-  .iconButton:active {
-    transform: none;
-  }
-}
-
 @media (max-width: 400px) {
   .employeesTitle {
     font-size: 1.5rem;
@@ -166,14 +85,5 @@
 
   .employeesContainer {
     --fab-offset: var(--p-lg);
-  }
-
-  .employeeCard {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .employeeActions {
-    align-self: flex-end;
   }
 }

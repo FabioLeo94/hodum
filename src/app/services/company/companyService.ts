@@ -1,3 +1,4 @@
+import { useEffect, useSyncExternalStore } from "react";
 import { API_BASE_URL, readErrorMessage } from "../httpClient";
 import { authFetch, authHeader } from "../auth/authService";
 import type { EmployeeRole, User } from "../auth/authService";
@@ -11,7 +12,13 @@ import type { RateUnit, WorkDays, WorkHours } from "../../../shared/utils/rateCo
 
 export interface RegisterCompanyInput {
   companyName: string;
-  username: string;
+  // Opzionale (migrations/0041): il backend applica il fallback su
+  // firstName/lastName ovunque mostri questo utente, vedi getDisplayName
+  // (shared/utils/displayName.ts).
+  username?: string;
+  firstName: string;
+  lastName: string;
+  pronoun?: string;
   email: string;
   password: string;
 }
@@ -94,6 +101,63 @@ export async function getCompanyName(id: string): Promise<string | undefined> {
   return company?.name;
 }
 
+// Stesso problema di getUserSnapshot in authService.ts, versione azienda: il
+// nome era tenuto in uno state locale sia da topbarComponent sia da
+// companyManagement.tsx, ciascuno con il proprio useEffect agganciato a
+// companyId — che non cambia mai durante la sessione, quindi il fetch parte
+// una sola volta al mount e non si aggiorna più. updateCompany sotto scrive
+// qui il nome appena salvato e notifyCompanyNameChange sveglia ogni
+// sottoscrittore (useCompanyName), così il rename fatto dal drawer si
+// riflette subito ovunque il nome sia mostrato, senza remount né refetch.
+const companyNameCache = new Map<string, string | undefined>();
+const companyNameListeners = new Set<() => void>();
+
+function notifyCompanyNameChange(): void {
+  for (const listener of companyNameListeners) {
+    listener();
+  }
+}
+
+function setCachedCompanyName(id: string, name: string | undefined): void {
+  companyNameCache.set(id, name);
+  notifyCompanyNameChange();
+}
+
+function subscribeCompanyNameChange(listener: () => void): () => void {
+  companyNameListeners.add(listener);
+  return () => companyNameListeners.delete(listener);
+}
+
+// Da usare al posto di getCompanyName + uno state locale ovunque il nome
+// azienda debba restare aggiornato dopo un rename fatto da
+// EditCompanyDrawerComponent, anche altrove nell'albero (es. topbar mentre
+// companyManagement è aperta in un'altra scheda dello stesso browser tab
+// non serve, ma nello stesso mount sì). Il fetch parte una sola volta per
+// companyId (cache condivisa tra tutti i chiamanti), i rename successivi
+// arrivano via updateCompany, non da un nuovo fetch.
+export function useCompanyName(companyId: string | undefined): string | undefined {
+  const name = useSyncExternalStore(subscribeCompanyNameChange, () =>
+    companyId ? companyNameCache.get(companyId) : undefined,
+  );
+
+  useEffect(() => {
+    if (!companyId || companyNameCache.has(companyId)) return;
+    let cancelled = false;
+    getCompanyName(companyId)
+      .then((resolved) => {
+        if (!cancelled) setCachedCompanyName(companyId, resolved);
+      })
+      .catch(() => {
+        if (!cancelled) setCachedCompanyName(companyId, undefined);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [companyId]);
+
+  return name;
+}
+
 export interface UpdateCompanyInput {
   name: string;
   ragioneSociale: string | null;
@@ -124,11 +188,17 @@ export async function updateCompany(id: string, input: UpdateCompanyInput): Prom
     throw new Error(message ?? "Impossibile salvare i dati aziendali.");
   }
 
-  return (await response.json()) as RegisteredCompany;
+  const updated = (await response.json()) as RegisteredCompany;
+  setCachedCompanyName(id, updated.name);
+  return updated;
 }
 
 export interface CreateEmployeeInput {
-  username: string;
+  // Opzionale, stesso principio di RegisterCompanyInput sopra.
+  username?: string;
+  firstName: string;
+  lastName: string;
+  pronoun?: string;
   email: string;
   password: string;
   // Assente = dipendente (comportamento storico): vedi CreateEmployeeRequest
@@ -217,7 +287,11 @@ export async function deleteCompany(id: string): Promise<void> {
 // che sceglie la propria password fresca): mostrate una sola volta dal
 // frontend, stesso principio del recoveryCode, mai più recuperabili da qui.
 export interface TemporaryPasswordEntry {
-  username: string;
+  // Nullable (migrations/0041), stesso principio di User.username: mostrare
+  // sempre con getDisplayName (shared/utils/displayName.ts), mai da solo.
+  username: string | null;
+  firstName: string;
+  lastName: string;
   role: EmployeeRole;
   password: string;
 }

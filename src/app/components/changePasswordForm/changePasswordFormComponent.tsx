@@ -4,6 +4,7 @@ import InputComponent from "../input/inputComponent";
 import ButtonComponent from "../button/buttonComponent";
 import { changePassword } from "../../services/user/userService";
 import { getUser, updateStoredUser } from "../../services/auth/authService";
+import { notifySuccess } from "../../services/notify/notifyService";
 import { validatePassword } from "../../services/validation/validationService";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
@@ -52,6 +53,7 @@ function ChangePasswordFormComponent() {
     try {
       const updatedUser = await changePassword(user.id, password);
       updateStoredUser(updatedUser);
+      notifySuccess(t("components.changePasswordForm.updateSuccess"));
       navigate("/dashboard", { replace: true });
     } catch (error) {
       setFormError(

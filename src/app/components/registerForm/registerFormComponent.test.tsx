@@ -37,6 +37,12 @@ async function fillValidForm(): Promise<void> {
   fireEvent.change(screen.getByPlaceholderText("Nome azienda"), {
     target: { value: "Acme" },
   });
+  fireEvent.change(screen.getByPlaceholderText("Nome"), {
+    target: { value: "Mario" },
+  });
+  fireEvent.change(screen.getByPlaceholderText("Cognome"), {
+    target: { value: "Rossi" },
+  });
   fireEvent.change(screen.getByPlaceholderText("Username"), {
     target: { value: "mario" },
   });
@@ -61,9 +67,11 @@ describe("RegisterFormComponent", () => {
     vi.unstubAllGlobals();
   });
 
-  it("renders the five fields: company name, username, email, password, confirm password", () => {
+  it("renders the fields: company name, first/last name, username, email, password, confirm password", () => {
     renderForm();
     expect(screen.getByPlaceholderText("Nome azienda")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Nome")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Cognome")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Username")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Email")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Password")).toBeInTheDocument();
@@ -77,7 +85,8 @@ describe("RegisterFormComponent", () => {
     expect(
       await screen.findByText("Inserire il nome dell'azienda."),
     ).toBeInTheDocument();
-    expect(screen.getByText("Inserire uno username.")).toBeInTheDocument();
+    expect(screen.getByText("Inserire il nome.")).toBeInTheDocument();
+    expect(screen.getByText("Inserire il cognome.")).toBeInTheDocument();
     expect(screen.getByText("Inserire una email valida.")).toBeInTheDocument();
     expect(
       screen.getByText(
@@ -86,10 +95,47 @@ describe("RegisterFormComponent", () => {
     ).toBeInTheDocument();
   });
 
+  it("submits successfully with an empty username, falling back to first/last name server-side", async () => {
+    mockRegisterCompanySuccess();
+    renderForm();
+
+    fireEvent.change(screen.getByPlaceholderText("Nome azienda"), {
+      target: { value: "Acme" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Nome"), {
+      target: { value: "Mario" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Cognome"), {
+      target: { value: "Rossi" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Email"), {
+      target: { value: "mario@example.com" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Password"), {
+      target: { value: "Password1" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Conferma password"), {
+      target: { value: "Password1" },
+    });
+    fireEvent.click(screen.getByText("Registrati"));
+
+    await vi.waitFor(() =>
+      expect(localStorage.getItem(AUTH_TOKEN_KEY)).toBe("signed-jwt-token"),
+    );
+    const [, options] = vi.mocked(fetch).mock.calls[0];
+    expect(JSON.parse(options?.body as string)).not.toHaveProperty("username");
+  });
+
   it("shows a mismatch error when password and confirm password differ", async () => {
     renderForm();
     fireEvent.change(screen.getByPlaceholderText("Nome azienda"), {
       target: { value: "Acme" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Nome"), {
+      target: { value: "Mario" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Cognome"), {
+      target: { value: "Rossi" },
     });
     fireEvent.change(screen.getByPlaceholderText("Username"), {
       target: { value: "mario" },

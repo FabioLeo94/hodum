@@ -16,7 +16,7 @@ export interface Notification {
   taskTitle: string | null;
   commentId: string | null;
   actorId: string | null;
-  actorUsername: string | null;
+  actorDisplayName: string | null;
   dueDate: string | null;
 }
 

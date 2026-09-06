@@ -30,12 +30,16 @@ function jsonResponse(
 const sampleUser: User = {
   id: "1",
   username: "demo",
+  firstName: "Demo",
+  lastName: "User",
+  pronoun: null,
   email: "demo@taskmanager.dev",
   companyId: "10",
   role: "owner",
   mustChangePassword: false,
   createdAt: "2024-01-01T00:00:00.000Z",
   lastLoginAt: null,
+  disabledAt: null,
 };
 
 describe("authService", () => {

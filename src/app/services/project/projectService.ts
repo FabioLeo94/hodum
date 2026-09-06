@@ -284,7 +284,7 @@ interface TaskCommentDto {
   taskId: string;
   projectId: string;
   authorId: string;
-  authorUsername: string;
+  authorDisplayName: string;
   body: string;
   createdAt: string;
   edited: boolean;
@@ -298,7 +298,7 @@ function toTaskComment(dto: TaskCommentDto): TaskComment {
     id: dto.id,
     taskId: dto.taskId,
     authorId: dto.authorId,
-    authorUsername: dto.authorUsername,
+    authorDisplayName: dto.authorDisplayName,
     body: dto.body,
     createdAt: dto.createdAt,
     edited: dto.edited,

@@ -2,59 +2,49 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import EditEmployeeModalComponent from "./editEmployeeModalComponent";
 
+function renderModal(overrides: Partial<Parameters<typeof EditEmployeeModalComponent>[0]> = {}) {
+  return render(
+    <EditEmployeeModalComponent
+      isOpen
+      onClose={() => {}}
+      currentUsername="dipendente1"
+      currentFirstName="Nome"
+      currentLastName="Cognome"
+      currentPronoun={null}
+      currentRole="employee"
+      currentCreatedAt="2026-01-01T00:00:00.000Z"
+      currentLastLoginAt={null}
+      onSave={() => {}}
+      {...overrides}
+    />,
+  );
+}
+
 describe("EditEmployeeModalComponent", () => {
-  it("precompiles the username field with the current username", () => {
-    render(
-      <EditEmployeeModalComponent
-        isOpen
-        onClose={() => {}}
-        currentUsername="dipendente1"
-        currentRole="employee"
-        currentCreatedAt="2026-01-01T00:00:00.000Z"
-        currentLastLoginAt={null}
-        onSave={() => {}}
-      />,
-    );
+  it("precompiles the username, first name and last name fields with the current values", () => {
+    renderModal();
 
     expect(screen.getByDisplayValue("dipendente1")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Nome")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Cognome")).toBeInTheDocument();
   });
 
-  it("shows an error and does not call onSave when submitting an empty username", async () => {
+  it("shows validation errors and does not call onSave when submitting empty first/last name", async () => {
     const onSave = vi.fn();
-    render(
-      <EditEmployeeModalComponent
-        isOpen
-        onClose={() => {}}
-        currentUsername="dipendente1"
-        currentRole="employee"
-        currentCreatedAt="2026-01-01T00:00:00.000Z"
-        currentLastLoginAt={null}
-        onSave={onSave}
-      />,
-    );
+    renderModal({ onSave });
 
-    fireEvent.change(screen.getByDisplayValue("dipendente1"), {
-      target: { value: "   " },
-    });
+    fireEvent.change(screen.getByDisplayValue("Nome"), { target: { value: "   " } });
+    fireEvent.change(screen.getByDisplayValue("Cognome"), { target: { value: "   " } });
     fireEvent.click(screen.getByText("Salva"));
 
-    expect(await screen.findByText("Inserire uno username.")).toBeInTheDocument();
+    expect(await screen.findByText("Inserire il nome.")).toBeInTheDocument();
+    expect(screen.getByText("Inserire il cognome.")).toBeInTheDocument();
     expect(onSave).not.toHaveBeenCalled();
   });
 
-  it("calls onSave with only the trimmed username when the password fields are left empty", async () => {
+  it("calls onSave with the trimmed fields when the password fields are left empty", async () => {
     const onSave = vi.fn();
-    render(
-      <EditEmployeeModalComponent
-        isOpen
-        onClose={() => {}}
-        currentUsername="dipendente1"
-        currentRole="employee"
-        currentCreatedAt="2026-01-01T00:00:00.000Z"
-        currentLastLoginAt={null}
-        onSave={onSave}
-      />,
-    );
+    renderModal({ onSave });
 
     fireEvent.change(screen.getByDisplayValue("dipendente1"), {
       target: { value: "  nuovoNome  " },
@@ -64,23 +54,29 @@ describe("EditEmployeeModalComponent", () => {
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     expect(onSave).toHaveBeenCalledWith({
       username: "nuovoNome",
+      firstName: "Nome",
+      lastName: "Cognome",
+      pronoun: undefined,
       password: undefined,
       role: "employee",
     });
   });
 
-  it("shows an error when a new password does not meet the policy", async () => {
-    render(
-      <EditEmployeeModalComponent
-        isOpen
-        onClose={() => {}}
-        currentUsername="dipendente1"
-        currentRole="employee"
-        currentCreatedAt="2026-01-01T00:00:00.000Z"
-        currentLastLoginAt={null}
-        onSave={() => {}}
-      />,
+  it("calls onSave with username omitted when the field is cleared, without blocking submit", async () => {
+    const onSave = vi.fn();
+    renderModal({ onSave });
+
+    fireEvent.change(screen.getByDisplayValue("dipendente1"), { target: { value: "" } });
+    fireEvent.click(screen.getByText("Salva"));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ username: undefined }),
     );
+  });
+
+  it("shows an error when a new password does not meet the policy", async () => {
+    renderModal();
 
     fireEvent.change(screen.getByPlaceholderText("Nuova password (opzionale)"), {
       target: { value: "weak" },
@@ -95,17 +91,7 @@ describe("EditEmployeeModalComponent", () => {
 
   it("shows an error when the two password fields do not match", async () => {
     const onSave = vi.fn();
-    render(
-      <EditEmployeeModalComponent
-        isOpen
-        onClose={() => {}}
-        currentUsername="dipendente1"
-        currentRole="employee"
-        currentCreatedAt="2026-01-01T00:00:00.000Z"
-        currentLastLoginAt={null}
-        onSave={onSave}
-      />,
-    );
+    renderModal({ onSave });
 
     fireEvent.change(screen.getByPlaceholderText("Nuova password (opzionale)"), {
       target: { value: "Password1" },
@@ -123,17 +109,7 @@ describe("EditEmployeeModalComponent", () => {
 
   it("calls onSave with the new password when it is valid and confirmed", async () => {
     const onSave = vi.fn();
-    render(
-      <EditEmployeeModalComponent
-        isOpen
-        onClose={() => {}}
-        currentUsername="dipendente1"
-        currentRole="employee"
-        currentCreatedAt="2026-01-01T00:00:00.000Z"
-        currentLastLoginAt={null}
-        onSave={onSave}
-      />,
-    );
+    renderModal({ onSave });
 
     fireEvent.change(screen.getByPlaceholderText("Nuova password (opzionale)"), {
       target: { value: "Password1" },
@@ -146,6 +122,9 @@ describe("EditEmployeeModalComponent", () => {
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     expect(onSave).toHaveBeenCalledWith({
       username: "dipendente1",
+      firstName: "Nome",
+      lastName: "Cognome",
+      pronoun: undefined,
       password: "Password1",
       role: "employee",
     });
@@ -153,17 +132,7 @@ describe("EditEmployeeModalComponent", () => {
 
   it("precompiles the role select with currentRole and allows changing it", async () => {
     const onSave = vi.fn();
-    render(
-      <EditEmployeeModalComponent
-        isOpen
-        onClose={() => {}}
-        currentUsername="dipendente1"
-        currentRole="manager"
-        currentCreatedAt="2026-01-01T00:00:00.000Z"
-        currentLastLoginAt={null}
-        onSave={onSave}
-      />,
-    );
+    renderModal({ currentRole: "manager", onSave });
 
     expect(screen.getByLabelText("Ruolo")).toHaveValue("manager");
 
@@ -180,51 +149,20 @@ describe("EditEmployeeModalComponent", () => {
 
   it("calls onClose when the cancel button is clicked", () => {
     const onClose = vi.fn();
-    render(
-      <EditEmployeeModalComponent
-        isOpen
-        onClose={onClose}
-        currentUsername="dipendente1"
-        currentRole="employee"
-        currentCreatedAt="2026-01-01T00:00:00.000Z"
-        currentLastLoginAt={null}
-        onSave={() => {}}
-      />,
-    );
+    renderModal({ onClose });
 
     fireEvent.click(screen.getByText("Annulla"));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it("displays the submitError passed from the parent", () => {
-    render(
-      <EditEmployeeModalComponent
-        isOpen
-        onClose={() => {}}
-        currentUsername="dipendente1"
-        currentRole="employee"
-        currentCreatedAt="2026-01-01T00:00:00.000Z"
-        currentLastLoginAt={null}
-        onSave={() => {}}
-        submitError="Username già in uso."
-      />,
-    );
+    renderModal({ submitError: "Username già in uso." });
 
     expect(screen.getByText("Username già in uso.")).toBeInTheDocument();
   });
 
   it("shows the formatted creation date and last login when present", () => {
-    render(
-      <EditEmployeeModalComponent
-        isOpen
-        onClose={() => {}}
-        currentUsername="dipendente1"
-        currentRole="employee"
-        currentCreatedAt="2026-01-01T00:00:00.000Z"
-        currentLastLoginAt="2026-02-15T09:30:00.000Z"
-        onSave={() => {}}
-      />,
-    );
+    renderModal({ currentLastLoginAt: "2026-02-15T09:30:00.000Z" });
 
     expect(screen.getByText("Creato il")).toBeInTheDocument();
     expect(screen.getByText("Ultimo accesso")).toBeInTheDocument();
@@ -232,17 +170,7 @@ describe("EditEmployeeModalComponent", () => {
   });
 
   it("shows 'Mai' when the employee never logged in", () => {
-    render(
-      <EditEmployeeModalComponent
-        isOpen
-        onClose={() => {}}
-        currentUsername="dipendente1"
-        currentRole="employee"
-        currentCreatedAt="2026-01-01T00:00:00.000Z"
-        currentLastLoginAt={null}
-        onSave={() => {}}
-      />,
-    );
+    renderModal({ currentLastLoginAt: null });
 
     expect(screen.getByText("Mai")).toBeInTheDocument();
   });

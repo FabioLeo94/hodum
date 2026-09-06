@@ -263,15 +263,15 @@ async function loadAssigneesByTaskIds(taskIds: string[]): Promise<Map<string, Ta
   if (taskIds.length === 0) {
     return result;
   }
-  const rows = await pool.query<{ task_id: string; id: string; username: string }>(
-    `SELECT ta.task_id, u.id, u.username
+  const rows = await pool.query<{ task_id: string; id: string; display_name: string }>(
+    `SELECT ta.task_id, u.id, COALESCE(NULLIF(u.username, ''), u.first_name || ' ' || u.last_name) AS display_name
      FROM task_assignments ta JOIN users u ON u.id = ta.user_id
      WHERE ta.task_id = ANY($1::uuid[])
-     ORDER BY u.username`,
+     ORDER BY display_name`,
     [taskIds],
   );
   for (const row of rows.rows) {
-    const assignee: TaskAssignee = { id: row.id, username: row.username };
+    const assignee: TaskAssignee = { id: row.id, displayName: row.display_name };
     const existing = result.get(row.task_id);
     if (existing) {
       existing.push(assignee);

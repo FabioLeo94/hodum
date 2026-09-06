@@ -29,6 +29,20 @@ export class PasswordChangeRequiredError extends Error {
   }
 }
 
+// Distinta dalle altre tre: qui non c'è nessuna via d'uscita lato utente (a
+// differenza di PasswordChangeRequiredError, che lascia passare lo schema
+// 'password-change'). Un utente con disabledAt valorizzato è bloccato su
+// OGNI rotta, incluso il cambio password: solo l'owner può riabilitarlo
+// (updateUser). Usata sia qui sia da authService.login, che la lancia prima
+// ancora che esista un token di sessione. L'error handler globale (app.ts)
+// la riconosce per rispondere 423 Locked, distinto da 401/403/428.
+export class UserDisabledError extends Error {
+  constructor() {
+    super('Account disabilitato: contattare il titolare dell\'azienda');
+    this.name = 'UserDisabledError';
+  }
+}
+
 // Modulo referenziato da tsoa.json (routes.authenticationModule): generato il
 // codice delle rotte, tsoa invoca questa funzione per ogni @Security(...)
 // incontrato. Il valore risolto NON viene iniettato automaticamente in un
@@ -72,6 +86,12 @@ export async function expressAuthentication(request: Request, securityName: stri
       throw new AuthenticationError('Utente della sessione non trovato');
     }
     throw err;
+  }
+
+  // Controllo incondizionato, prima di ruolo e mustChangePassword: un utente
+  // bloccato non deve poter usare NESSUNA rotta, nemmeno 'password-change'.
+  if (user.disabledAt !== null) {
+    throw new UserDisabledError();
   }
 
   if (securityName === 'owner' && user.role !== 'owner') {

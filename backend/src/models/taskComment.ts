@@ -6,7 +6,7 @@ export interface TaskComment {
   taskId: string;
   projectId: string;
   authorId: string;
-  authorUsername: string;
+  authorDisplayName: string;
   body: string;
   createdAt: string; // ISO 8601
   edited: boolean;

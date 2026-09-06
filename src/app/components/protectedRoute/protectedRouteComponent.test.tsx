@@ -11,12 +11,16 @@ import {
 const baseUser: User = {
   id: "1",
   username: "mario",
+  firstName: "Mario",
+  lastName: "Rossi",
+  pronoun: null,
   email: "mario@example.com",
   companyId: "10",
   role: "employee",
   mustChangePassword: false,
   createdAt: "2024-01-01T00:00:00.000Z",
   lastLoginAt: null,
+  disabledAt: null,
 };
 
 function renderProtectedRoute() {

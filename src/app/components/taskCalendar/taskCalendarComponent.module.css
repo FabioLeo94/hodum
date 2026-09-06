@@ -39,9 +39,11 @@
    stretti, senza bisogno di regole @media dedicate. */
 .headerMain {
   display: flex;
+  flex: 1 1 auto;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--m-md);
+  min-width: 0;
 }
 
 /* Freccia | Oggi | freccia come un unico elemento a pillola invece di due
@@ -51,8 +53,10 @@
    bordi laterali di .todayButton (in mezzo), non un elemento a parte. */
 .headerControls {
   display: flex;
+  flex-shrink: 0;
   align-items: stretch;
   height: 32px;
+  margin-left: auto;
   border-radius: var(--radious-xl);
   background-color: var(--bg-field);
   overflow: hidden;
@@ -120,6 +124,21 @@
   outline-offset: -2px;
 }
 
+/* Già sul mese corrente: nessuna azione da compiere cliccandolo, quindi non
+   più interattivo (cursor/hover disattivati) e colorato come le voci "pagina
+   corrente" della topbar (stesso color-mix), per segnalare lo stato invece
+   che l'azione. */
+.todayButton[data-active="true"] {
+  background-color: color-mix(in srgb, var(--bg-primary) 18%, transparent);
+  color: var(--bg-primary);
+  cursor: default;
+}
+
+.todayButton[data-active="true"]:hover {
+  background-color: color-mix(in srgb, var(--bg-primary) 18%, transparent);
+  color: var(--bg-primary);
+}
+
 /* Il colore dei dot è l'unico canale che distingue lo stato di un task
    (progress/review/completed/rejected): senza questa riga quell'informazione
    sarebbe percepibile solo da chi vede e distingue quei colori. Riga compatta
@@ -135,15 +154,15 @@
 .legendItem {
   display: flex;
   align-items: center;
-  gap: var(--m-xs);
+  gap: var(--m-sm);
   color: var(--text-muted);
   font-size: 0.72rem;
   font-weight: 600;
 }
 
 .legendDot {
-  width: 9px;
-  height: 9px;
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
   flex-shrink: 0;
 }
@@ -156,8 +175,8 @@
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 9px;
-  height: 9px;
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
   background-color: var(--bg-main);
   box-shadow: 0 0 0 2px var(--text-muted);

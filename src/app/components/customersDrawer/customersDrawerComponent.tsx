@@ -14,6 +14,7 @@ import {
   updateCustomer,
 } from "../../services/customer/customerService";
 import { getCompany } from "../../services/company/companyService";
+import { notifySuccess } from "../../services/notify/notifyService";
 import type { Customer } from "../../../shared/types/customer";
 import { useAsyncSubmit } from "../../../shared/hooks/useAsyncSubmit";
 import { formatDate } from "../../../shared/utils/formatDate";
@@ -211,6 +212,13 @@ function CustomersDrawerComponent({ isOpen, onClose, companyId }: Prop) {
         }
         setView({ mode: "list" });
         loadCustomers();
+        notifySuccess(
+          t(
+            editingCustomer
+              ? "components.customersDrawer.updateSuccess"
+              : "components.customersDrawer.createSuccess",
+          ),
+        );
       } catch (error) {
         setSaveError(error instanceof Error ? error.message : t("components.customersDrawer.saveError"));
         throw error;
@@ -231,6 +239,7 @@ function CustomersDrawerComponent({ isOpen, onClose, companyId }: Prop) {
       setDeleteTarget(null);
       setView({ mode: "list" });
       loadCustomers();
+      notifySuccess(t("components.customersDrawer.deleteSuccess"));
     } catch (error) {
       setDeleteError(error instanceof Error ? error.message : t("components.customersDrawer.deleteError"));
     }

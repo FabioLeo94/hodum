@@ -11,6 +11,7 @@ import {
   AuthorizationError,
   expressAuthentication,
   PasswordChangeRequiredError,
+  UserDisabledError,
 } from './middleware/authentication';
 import { RegisterRoutes } from './routes/routes';
 import { getInvoicePdfPath, InvoiceNotFoundError, regenerateMissingInvoicePdf } from './services/invoiceService';
@@ -281,6 +282,15 @@ export async function createApp(): Promise<Express> {
       // un 403 generico così un futuro interceptor frontend può reagire
       // reindirizzando al cambio password invece che a un errore di permessi.
       res.status(428).json({ message: err.message });
+      return;
+    }
+
+    if (err instanceof UserDisabledError) {
+      // Identità accertata (login con credenziali corrette, o token già
+      // valido) ma l'account è bloccato: 423 Locked, distinto da 401/403/428
+      // così il frontend può mostrare un messaggio dedicato invece di
+      // "credenziali errate" o "permessi insufficienti".
+      res.status(423).json({ message: err.message });
       return;
     }
 

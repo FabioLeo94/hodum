@@ -3,6 +3,12 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import CreateEmployeeModalComponent from "./createEmployeeModalComponent";
 
 function fillValidForm() {
+  fireEvent.change(screen.getByPlaceholderText("Nome"), {
+    target: { value: "Dipendente" },
+  });
+  fireEvent.change(screen.getByPlaceholderText("Cognome"), {
+    target: { value: "Uno" },
+  });
   fireEvent.change(screen.getByPlaceholderText("Username"), {
     target: { value: "dipendente1" },
   });
@@ -59,7 +65,8 @@ describe("CreateEmployeeModalComponent", () => {
 
     fireEvent.click(screen.getByText("Crea dipendente"));
 
-    expect(await screen.findByText("Inserire uno username.")).toBeInTheDocument();
+    expect(await screen.findByText("Inserire il nome.")).toBeInTheDocument();
+    expect(screen.getByText("Inserire il cognome.")).toBeInTheDocument();
     expect(screen.getByText("Inserire una email valida.")).toBeInTheDocument();
     expect(onCreate).not.toHaveBeenCalled();
   });
@@ -94,6 +101,12 @@ describe("CreateEmployeeModalComponent", () => {
       />,
     );
 
+    fireEvent.change(screen.getByPlaceholderText("Nome"), {
+      target: { value: "Dipendente" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Cognome"), {
+      target: { value: "Uno" },
+    });
     fireEvent.change(screen.getByPlaceholderText("Username"), {
       target: { value: "  dipendente1  " },
     });
@@ -111,10 +124,46 @@ describe("CreateEmployeeModalComponent", () => {
     await waitFor(() => expect(onCreate).toHaveBeenCalledTimes(1));
     expect(onCreate).toHaveBeenCalledWith({
       username: "dipendente1",
+      firstName: "Dipendente",
+      lastName: "Uno",
+      pronoun: undefined,
       email: "dipendente1@example.com",
       password: "Password1",
       role: "employee",
     });
+  });
+
+  it("calls onCreate with username omitted when the field is left empty", async () => {
+    const onCreate = vi.fn();
+    render(
+      <CreateEmployeeModalComponent
+        isOpen
+        onClose={() => {}}
+        onCreate={onCreate}
+      />,
+    );
+
+    fireEvent.change(screen.getByPlaceholderText("Nome"), {
+      target: { value: "Dipendente" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Cognome"), {
+      target: { value: "Uno" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Email"), {
+      target: { value: "dipendente1@example.com" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Password iniziale"), {
+      target: { value: "Password1" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Conferma password iniziale"), {
+      target: { value: "Password1" },
+    });
+    fireEvent.click(screen.getByText("Crea dipendente"));
+
+    await waitFor(() => expect(onCreate).toHaveBeenCalledTimes(1));
+    expect(onCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ username: undefined }),
+    );
   });
 
   it("calls onCreate with role 'manager' when Project Manager is selected", async () => {

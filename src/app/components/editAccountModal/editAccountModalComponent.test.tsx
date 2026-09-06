@@ -8,6 +8,9 @@ function renderModal(overrides: Partial<Parameters<typeof EditAccountModalCompon
       isOpen
       onClose={() => {}}
       currentUsername="mario.rossi"
+      currentFirstName="Mario"
+      currentLastName="Rossi"
+      currentPronoun={null}
       currentEmail="mario@example.com"
       currentCreatedAt="2026-01-01T00:00:00.000Z"
       isOwner={false}
