@@ -391,13 +391,13 @@ function CustomersDrawerComponent({ isOpen, onClose, companyId }: Prop) {
               )}
 
               {editingCustomer && (
-                <button
-                  type="button"
-                  className={styles.deleteLink}
+                <ButtonComponent
                   onClick={() => openDeleteModal(editingCustomer)}
+                  variant="danger"
+                  type="button"
                 >
                   {t("components.customersDrawer.delete")}
-                </button>
+                </ButtonComponent>
               )}
             </div>
           </div>

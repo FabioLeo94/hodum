@@ -176,35 +176,11 @@
   gap: var(--m-md);
 }
 
-.deleteLink {
-  align-self: flex-start;
-  color: var(--color-danger);
-  font-size: 0.85rem;
-  font-weight: 600;
-  text-decoration: underline;
-  cursor: pointer;
-  transition: color 150ms ease;
-}
-
-/* Stesso schiarimento verso il bianco di .buttonDanger:hover in
-   buttonComponent.module.css, qui su un testo invece di uno sfondo: senza
-   questo stato l'unico link "distruttivo" del drawer restava l'unico
-   elemento cliccabile senza feedback al passaggio del mouse. */
-.deleteLink:hover {
-  color: color-mix(in srgb, var(--color-danger) 88%, white 12%);
-}
-
-.deleteLink:focus-visible {
-  outline: 2px solid var(--bg-primary);
-  outline-offset: 2px;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .track,
   .pane,
   .backButton,
-  .customerCard,
-  .deleteLink {
+  .customerCard {
     transition: none;
   }
 }
