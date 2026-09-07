@@ -44,6 +44,11 @@ function GenerateInvoiceDrawerComponent({ isOpen, onClose, onGenerated }: Prop) 
   const [tasksLoading, setTasksLoading] = useState(false);
   const [tasksError, setTasksError] = useState("");
 
+  // "" = tutti i progetti del cliente (nessun filtro): l'opzione di default,
+  // per non forzare una fattura per progetto quando l'utente ne vuole una
+  // unica su più progetti.
+  const [selectedProjectId, setSelectedProjectId] = useState("");
+
   const [includedIds, setIncludedIds] = useState<Set<string>>(new Set());
   const [nonFatturabileIds, setNonFatturabileIds] = useState<Set<string>>(new Set());
 
@@ -63,6 +68,7 @@ function GenerateInvoiceDrawerComponent({ isOpen, onClose, onGenerated }: Prop) 
     setPrevIsOpen(isOpen);
     if (isOpen) {
       setSelectedCustomerId("");
+      setSelectedProjectId("");
       setCustomersError("");
       setIsPreviewOpen(false);
     }
@@ -77,11 +83,23 @@ function GenerateInvoiceDrawerComponent({ isOpen, onClose, onGenerated }: Prop) 
   const [prevSelectedCustomerId, setPrevSelectedCustomerId] = useState(selectedCustomerId);
   if (selectedCustomerId !== prevSelectedCustomerId) {
     setPrevSelectedCustomerId(selectedCustomerId);
+    setSelectedProjectId("");
     setTasks([]);
     setTasksError("");
     setIncludedIds(new Set());
     setNonFatturabileIds(new Set());
     setTasksLoading(selectedCustomerId !== "");
+  }
+
+  // Cambiare il filtro progetto invalida la selezione fatta finora, stesso
+  // motivo del cambio cliente sopra: evita che task di un progetto restino
+  // "inclusi" in modo invisibile mentre si guarda un altro progetto,
+  // finendo per mischiarli nella stessa pre-fattura senza che sia voluto.
+  const [prevSelectedProjectId, setPrevSelectedProjectId] = useState(selectedProjectId);
+  if (selectedProjectId !== prevSelectedProjectId) {
+    setPrevSelectedProjectId(selectedProjectId);
+    setIncludedIds(new Set());
+    setNonFatturabileIds(new Set());
   }
 
   useEffect(() => {
@@ -133,14 +151,28 @@ function GenerateInvoiceDrawerComponent({ isOpen, onClose, onGenerated }: Prop) 
     setNonFatturabileIds((current) => toggleInSet(current, taskId));
   }
 
+  // Progetti distinti tra i task fatturabili del cliente, nell'ordine di
+  // prima comparsa: popolano la select "Progetto" sotto, con "" (tutti i
+  // progetti) come opzione aggiuntiva già gestita a parte nel JSX.
+  const projectOptions = Array.from(new Map(tasks.map((task) => [task.projectId, task.projectName])), (
+    [id, name],
+  ) => ({ id, name }));
+
+  // I task effettivamente mostrati/selezionabili: filtrati per progetto se
+  // l'utente ne ha scelto uno, altrimenti tutti quelli del cliente.
+  const visibleTasks =
+    selectedProjectId === "" ? tasks : tasks.filter((task) => task.projectId === selectedProjectId);
+
   // Non tocca nonFatturabileIds: stessa scelta di toggleIncluded, che lascia
   // un task escluso nel set "non fatturabile" finché non viene ri-incluso
   // (la sua checkbox resta comunque disabled e ininfluente su handleOpenPreview).
-  const allIncluded = tasks.length > 0 && includedIds.size === tasks.length;
-  const someIncluded = includedIds.size > 0 && !allIncluded;
+  // Calcolati su visibleTasks (non su tasks): con un filtro progetto attivo,
+  // "seleziona tutto" riguarda solo i task del progetto in vista.
+  const allIncluded = visibleTasks.length > 0 && visibleTasks.every((task) => includedIds.has(task.id));
+  const someIncluded = !allIncluded && visibleTasks.some((task) => includedIds.has(task.id));
 
   function toggleAllIncluded() {
-    setIncludedIds(allIncluded ? new Set() : new Set(tasks.map((task) => task.id)));
+    setIncludedIds(allIncluded ? new Set() : new Set(visibleTasks.map((task) => task.id)));
   }
 
   // Non genera più direttamente (spostato in GenerateInvoicePreviewModalComponent,
@@ -208,68 +240,96 @@ function GenerateInvoiceDrawerComponent({ isOpen, onClose, onGenerated }: Prop) 
               ) : tasks.length === 0 ? (
                 <p className={styles.hint}>{t("components.generateInvoiceDrawer.noBillableTasks")}</p>
               ) : (
-                <table className={styles.tasksTable}>
-                  <caption className={styles.srOnly}>
-                    {t("components.generateInvoiceDrawer.tableCaption")}
-                  </caption>
-                  <thead>
-                    <tr>
-                      <th scope="col">
-                        <input
-                          type="checkbox"
-                          className={styles.checkbox}
-                          aria-label={t("components.generateInvoiceDrawer.selectAllLabel")}
-                          checked={allIncluded}
-                          ref={(element) => {
-                            if (element) element.indeterminate = someIncluded;
-                          }}
-                          onChange={toggleAllIncluded}
-                        />
-                      </th>
-                      <th scope="col">{t("components.generateInvoiceDrawer.columnTask")}</th>
-                      <th scope="col">{t("components.generateInvoiceDrawer.columnProject")}</th>
-                      <th scope="col">{t("components.generateInvoiceDrawer.columnWorkedTime")}</th>
-                      <th scope="col">{t("components.generateInvoiceDrawer.columnNonBillable")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {tasks.map((task) => {
-                      const included = includedIds.has(task.id);
-                      return (
-                        <tr key={task.id}>
-                          <td>
+                <Fragment>
+                  <label className={styles.field}>
+                    <span className={styles.fieldLabel}>
+                      {t("components.generateInvoiceDrawer.projectLabel")}
+                    </span>
+                    <select
+                      className={styles.select}
+                      value={selectedProjectId}
+                      onChange={(event) => setSelectedProjectId(event.target.value)}
+                    >
+                      <option value="">
+                        {t("components.generateInvoiceDrawer.allProjectsOption")}
+                      </option>
+                      {projectOptions.map((project) => (
+                        <option key={project.id} value={project.id}>
+                          {project.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  {visibleTasks.length === 0 ? (
+                    <p className={styles.hint}>
+                      {t("components.generateInvoiceDrawer.noBillableTasksForProject")}
+                    </p>
+                  ) : (
+                    <table className={styles.tasksTable}>
+                      <caption className={styles.srOnly}>
+                        {t("components.generateInvoiceDrawer.tableCaption")}
+                      </caption>
+                      <thead>
+                        <tr>
+                          <th scope="col">
                             <input
                               type="checkbox"
                               className={styles.checkbox}
-                              aria-label={t("components.generateInvoiceDrawer.includeLabel", {
-                                title: task.title,
-                              })}
-                              checked={included}
-                              onChange={() => toggleIncluded(task.id)}
+                              aria-label={t("components.generateInvoiceDrawer.selectAllLabel")}
+                              checked={allIncluded}
+                              ref={(element) => {
+                                if (element) element.indeterminate = someIncluded;
+                              }}
+                              onChange={toggleAllIncluded}
                             />
-                          </td>
-                          <td>{task.title}</td>
-                          <td>{task.projectName}</td>
-                          <td>
-                            <ElapsedDurationBadgeComponent totalSeconds={task.workAccumulatedSeconds} />
-                          </td>
-                          <td>
-                            <input
-                              type="checkbox"
-                              className={styles.checkbox}
-                              aria-label={t("components.generateInvoiceDrawer.nonBillableLabel", {
-                                title: task.title,
-                              })}
-                              checked={nonFatturabileIds.has(task.id)}
-                              disabled={!included}
-                              onChange={() => toggleNonFatturabile(task.id)}
-                            />
-                          </td>
+                          </th>
+                          <th scope="col">{t("components.generateInvoiceDrawer.columnTask")}</th>
+                          <th scope="col">{t("components.generateInvoiceDrawer.columnProject")}</th>
+                          <th scope="col">{t("components.generateInvoiceDrawer.columnWorkedTime")}</th>
+                          <th scope="col">{t("components.generateInvoiceDrawer.columnNonBillable")}</th>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                      </thead>
+                      <tbody>
+                        {visibleTasks.map((task) => {
+                          const included = includedIds.has(task.id);
+                          return (
+                            <tr key={task.id}>
+                              <td>
+                                <input
+                                  type="checkbox"
+                                  className={styles.checkbox}
+                                  aria-label={t("components.generateInvoiceDrawer.includeLabel", {
+                                    title: task.title,
+                                  })}
+                                  checked={included}
+                                  onChange={() => toggleIncluded(task.id)}
+                                />
+                              </td>
+                              <td>{task.title}</td>
+                              <td>{task.projectName}</td>
+                              <td>
+                                <ElapsedDurationBadgeComponent totalSeconds={task.workAccumulatedSeconds} />
+                              </td>
+                              <td>
+                                <input
+                                  type="checkbox"
+                                  className={styles.checkbox}
+                                  aria-label={t("components.generateInvoiceDrawer.nonBillableLabel", {
+                                    title: task.title,
+                                  })}
+                                  checked={nonFatturabileIds.has(task.id)}
+                                  disabled={!included}
+                                  onChange={() => toggleNonFatturabile(task.id)}
+                                />
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
+                </Fragment>
               )}
             </div>
           )}

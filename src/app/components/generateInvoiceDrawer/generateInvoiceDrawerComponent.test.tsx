@@ -49,6 +49,23 @@ const TWO_TASKS = [
   },
 ];
 
+const TWO_PROJECTS_TASKS = [
+  {
+    id: "task-1",
+    title: "Task Uno",
+    workAccumulatedSeconds: 3600,
+    projectId: "project-1",
+    projectName: "Progetto Uno",
+  },
+  {
+    id: "task-2",
+    title: "Task Due",
+    workAccumulatedSeconds: 1800,
+    projectId: "project-2",
+    projectName: "Progetto Due",
+  },
+];
+
 beforeEach(() => {
   vi.mocked(listCustomerSummaries).mockReset();
   vi.mocked(listBillableTasks).mockReset();
@@ -81,7 +98,7 @@ describe("GenerateInvoiceDrawerComponent", () => {
 
     await selectCustomer();
 
-    expect(screen.getByText("Progetto Uno")).toBeInTheDocument();
+    expect(screen.getAllByText("Progetto Uno").length).toBeGreaterThan(0);
     // ElapsedDurationBadgeComponent spezza il valore in segmenti separati
     // (00 01:00:00): 3600s = 1 ora esatta, il segmento ore è "01".
     // getByTitle normalizza gli spazi bianchi ("\n" -> " "), quindi qui si
@@ -160,5 +177,27 @@ describe("GenerateInvoiceDrawerComponent", () => {
     fireEvent.click(selectAll);
     expect(screen.getByLabelText("Includi Task Uno nella pre-fattura")).toBeChecked();
     expect(screen.getByLabelText("Includi Task Due nella pre-fattura")).toBeChecked();
+  });
+
+  it("filtra i task per progetto e resetta la selezione quando cambia il filtro", async () => {
+    vi.mocked(listBillableTasks).mockResolvedValue(TWO_PROJECTS_TASKS);
+    renderDrawer();
+    await selectCustomer();
+    await screen.findByText("Task Due");
+
+    fireEvent.click(screen.getByLabelText("Includi Task Uno nella pre-fattura"));
+    expect(screen.getByRole("button", { name: "Genera pre-fattura" })).toBeEnabled();
+
+    fireEvent.change(screen.getByLabelText("Progetto"), { target: { value: "project-2" } });
+
+    expect(screen.queryByText("Task Uno")).not.toBeInTheDocument();
+    expect(screen.getByText("Task Due")).toBeInTheDocument();
+    // Cambiare progetto resetta la selezione fatta sul progetto precedente.
+    expect(screen.getByRole("button", { name: "Genera pre-fattura" })).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText("Progetto"), { target: { value: "" } });
+
+    expect(screen.getByText("Task Uno")).toBeInTheDocument();
+    expect(screen.getByText("Task Due")).toBeInTheDocument();
   });
 });
