@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import InputComponent from "../input/inputComponent";
 import ButtonComponent from "../button/buttonComponent";
 import RateInputComponent from "../rateInput/rateInputComponent";
+import CurrencySelectComponent from "../currencySelect/currencySelectComponent";
 import WorkDaysSelectorComponent from "../workDaysSelector/workDaysSelectorComponent";
 import WorkHoursEditorComponent from "../workHoursEditor/workHoursEditorComponent";
 import DrawerBaseComponent from "../drawerBase/drawerBaseComponent";
@@ -12,6 +13,7 @@ import { notifySuccess } from "../../services/notify/notifyService";
 import { validateEmail } from "../../services/validation/validationService";
 import { useAsyncSubmit } from "../../../shared/hooks/useAsyncSubmit";
 import { formatDate } from "../../../shared/utils/formatDate";
+import type { CurrencyCode } from "../../../shared/utils/currency";
 import type { RateUnit, WorkDays, WorkHours } from "../../../shared/utils/rateConversion";
 import styles from "./editCompanyDrawerComponent.module.css";
 
@@ -66,6 +68,7 @@ function EditCompanyDrawerComponent({ isOpen, onClose, companyId }: Prop) {
   const [pec, setPec] = useState("");
   const [tariffaOraria, setTariffaOraria] = useState<number | null>(null);
   const [tariffaUnita, setTariffaUnita] = useState<RateUnit | null>(null);
+  const [valuta, setValuta] = useState<CurrencyCode>("EUR");
   const [giorniLavorativi, setGiorniLavorativi] = useState<WorkDays>(EMPTY_WORK_DAYS);
   const [orarioLavoro, setOrarioLavoro] = useState<WorkHours>(EMPTY_WORK_HOURS);
   const [submitAttempted, setSubmitAttempted] = useState(false);
@@ -96,6 +99,7 @@ function EditCompanyDrawerComponent({ isOpen, onClose, companyId }: Prop) {
     setPec(loaded.pec ?? "");
     setTariffaOraria(loaded.tariffaOraria);
     setTariffaUnita(loaded.tariffaUnita);
+    setValuta(loaded.valuta);
     setGiorniLavorativi(loaded.giorniLavorativi);
     setOrarioLavoro(loaded.orarioLavoro);
   }
@@ -171,6 +175,7 @@ function EditCompanyDrawerComponent({ isOpen, onClose, companyId }: Prop) {
           pec: trimmedPec || null,
           tariffaOraria,
           tariffaUnita,
+          valuta,
           giorniLavorativi,
           orarioLavoro,
         });
@@ -279,6 +284,13 @@ function EditCompanyDrawerComponent({ isOpen, onClose, companyId }: Prop) {
                 setTariffaOraria(newValue);
                 setTariffaUnita(newUnit);
               }}
+            />
+            <CurrencySelectComponent
+              label={t("components.editCompanyDrawer.currencyLabel")}
+              name="valuta"
+              value={valuta}
+              onChange={(newValue) => setValuta(newValue ?? "EUR")}
+              required
             />
             <div>
               <p className={styles.fieldGroupLabel}>

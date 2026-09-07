@@ -1,6 +1,7 @@
 import { pool } from '../db/pool';
-import type { RateUnit } from '../models/company';
+import type { CurrencyCode, RateUnit } from '../models/company';
 import type { Customer } from '../models/customer';
+import { validateAndNormalizeCurrency } from '../utils/currency';
 import { validateAndNormalizeRate } from '../utils/rateUnit';
 import { isValidUuid } from '../utils/uuid';
 
@@ -40,6 +41,13 @@ function validateAndNormalizeTariffa(
   return validateAndNormalizeRate(tariffaOraria, tariffaUnita, (message) => new InvalidTariffaError(message));
 }
 
+// Stesso principio di validateAndNormalizeTariffa sopra, ma per la valuta
+// (0044): a differenza della tariffa, qui non c'è alcun accoppiamento da
+// normalizzare, solo un valore opzionale (null = eredita dalla company).
+function validateAndNormalizeValuta(valuta: string | null | undefined): CurrencyCode | null {
+  return validateAndNormalizeCurrency(valuta, (message) => new InvalidTariffaError(message));
+}
+
 // Forma della riga così come esce da pg: snake_case, coerente con lo schema
 // in migrations/0032_create_customers_table.sql.
 interface CustomerRow {
@@ -54,6 +62,7 @@ interface CustomerRow {
   // companyService.ts.
   tariffa_oraria: string | null;
   tariffa_unita: RateUnit | null;
+  valuta: CurrencyCode | null;
 }
 
 function toCustomer(row: CustomerRow): Customer {
@@ -66,10 +75,12 @@ function toCustomer(row: CustomerRow): Customer {
     lastInvoicedAt: row.last_invoiced_at ? row.last_invoiced_at.toISOString() : null,
     tariffaOraria: row.tariffa_oraria === null ? null : Number(row.tariffa_oraria),
     tariffaUnita: row.tariffa_unita,
+    valuta: row.valuta,
   };
 }
 
-const CUSTOMER_COLUMNS = 'id, company_id, name, description, created_at, last_invoiced_at, tariffa_oraria, tariffa_unita';
+const CUSTOMER_COLUMNS =
+  'id, company_id, name, description, created_at, last_invoiced_at, tariffa_oraria, tariffa_unita, valuta';
 const CUSTOMER_SELECT = `SELECT ${CUSTOMER_COLUMNS} FROM customers`;
 
 export async function listCustomersByCompany(companyId: string): Promise<Customer[]> {
@@ -124,15 +135,19 @@ export interface CreateCustomerInput {
   // controller la intercetta per rispondere 422.
   tariffaOraria?: number | null;
   tariffaUnita?: RateUnit | null;
+  // Opzionale per sempre (0044): se assente/null, la pre-fatturazione userà
+  // la valuta della company di appartenenza (Company.valuta).
+  valuta?: string | null;
 }
 
 export async function createCustomer(companyId: string, input: CreateCustomerInput): Promise<Customer> {
   const tariffa = validateAndNormalizeTariffa(input.tariffaOraria, input.tariffaUnita);
+  const valuta = validateAndNormalizeValuta(input.valuta);
   const result = await pool.query<CustomerRow>(
-    `INSERT INTO customers (company_id, name, description, tariffa_oraria, tariffa_unita)
-     VALUES ($1, $2, $3, $4, $5)
+    `INSERT INTO customers (company_id, name, description, tariffa_oraria, tariffa_unita, valuta)
+     VALUES ($1, $2, $3, $4, $5, $6)
      RETURNING ${CUSTOMER_COLUMNS}`,
-    [companyId, input.name, input.description ?? null, tariffa.tariffaOraria, tariffa.tariffaUnita],
+    [companyId, input.name, input.description ?? null, tariffa.tariffaOraria, tariffa.tariffaUnita, valuta],
   );
   return toCustomer(result.rows[0]);
 }
@@ -142,6 +157,7 @@ export interface UpdateCustomerInput {
   description?: string | null;
   tariffaOraria?: number | null;
   tariffaUnita?: RateUnit | null;
+  valuta?: string | null;
 }
 
 // Non tocca mai last_invoiced_at: nessun endpoint in questa fase la
@@ -151,13 +167,14 @@ export async function updateCustomer(id: string, companyId: string, input: Updat
     throw new CustomerNotFoundError(id);
   }
   const tariffa = validateAndNormalizeTariffa(input.tariffaOraria, input.tariffaUnita);
+  const valuta = validateAndNormalizeValuta(input.valuta);
 
   const result = await pool.query<CustomerRow>(
     `UPDATE customers
-     SET name = $3, description = $4, tariffa_oraria = $5, tariffa_unita = $6
+     SET name = $3, description = $4, tariffa_oraria = $5, tariffa_unita = $6, valuta = $7
      WHERE id = $1 AND company_id = $2
      RETURNING ${CUSTOMER_COLUMNS}`,
-    [id, companyId, input.name, input.description ?? null, tariffa.tariffaOraria, tariffa.tariffaUnita],
+    [id, companyId, input.name, input.description ?? null, tariffa.tariffaOraria, tariffa.tariffaUnita, valuta],
   );
   const row = result.rows[0];
   if (!row) {

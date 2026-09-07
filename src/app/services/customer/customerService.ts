@@ -1,6 +1,7 @@
 import { API_BASE_URL, readErrorMessage } from "../httpClient";
 import { authFetch, authHeader } from "../auth/authService";
 import type { Customer } from "../../../shared/types/customer";
+import type { CurrencyCode } from "../../../shared/utils/currency";
 import type { RateUnit } from "../../../shared/utils/rateConversion";
 
 // Riservato all'owner (backend @Security('owner')): stesso principio di
@@ -38,6 +39,7 @@ export interface CreateCustomerInput {
   description?: string | null;
   tariffaOraria?: number | null;
   tariffaUnita?: RateUnit | null;
+  valuta?: CurrencyCode | null;
 }
 
 export async function createCustomer(input: CreateCustomerInput): Promise<Customer> {
@@ -61,6 +63,7 @@ export interface UpdateCustomerInput {
   description?: string | null;
   tariffaOraria?: number | null;
   tariffaUnita?: RateUnit | null;
+  valuta?: CurrencyCode | null;
 }
 
 export async function updateCustomer(id: string, input: UpdateCustomerInput): Promise<Customer> {

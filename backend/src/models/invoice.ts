@@ -1,3 +1,5 @@
+import type { CurrencyCode } from './company';
+
 // Forma dell'entità Invoice (testata di una pre-fattura) esposta dall'API:
 // camelCase lato applicativo, coerente con customer.ts/task.ts (vedi
 // migrations/0036_create_invoices_table.sql). pdf_path NON è incluso qui
@@ -16,6 +18,11 @@ export interface Invoice {
   // invoice_items, coerente con il commento sulla colonna in 0036.
   totaleSecondi: number;
   totaleImporto: number;
+  // Valuta risolta (cliente -> azienda, migration 0045) al momento della
+  // generazione: uno snapshot come totaleImporto sopra, non cambia mai anche
+  // se l'azienda o il cliente la modificano dopo. Nessuna conversione tra
+  // valute: totaleImporto resta espresso in questa valuta, invariato.
+  valuta: CurrencyCode;
   // Annullamento (migration 0042): null finché la pre-fattura è attiva. Un
   // annullamento non elimina la riga né libera `numero` (vedi commento nella
   // migration): resta nello storico, sola lettura, i task coinvolti tornano

@@ -14,7 +14,7 @@ import {
   updateCompany,
   type TemporaryPasswordEntry,
 } from '../services/companyService';
-import { type CompanyExportData, exportCompanyData } from '../services/exportService';
+import { type CompanyExportData, type ImportedCompanyExportData, exportCompanyData } from '../services/exportService';
 import { signSessionToken } from '../services/tokenService';
 import { UserConflictError } from '../services/userService';
 import { isValidEmail, isValidPassword, PASSWORD_POLICY_MESSAGE } from '../utils/validation';
@@ -57,7 +57,12 @@ export interface RegisterCompanyResponse {
 // non esiste nell'export in primo luogo (models/user.ts non espone mai la
 // colonna password).
 export interface ImportCompanyRequest {
-  export: CompanyExportData;
+  // ImportedCompanyExportData (non CompanyExportData): company.valuta è
+  // opzionale qui, vedi il commento sul tipo in exportService.ts — un export
+  // legacy senza quella chiave non deve essere respinto dallo schema di
+  // validazione runtime generato da tsoa prima ancora di raggiungere
+  // companyService.importCompanyData.
+  export: ImportedCompanyExportData;
   ownerPassword: string;
 }
 
@@ -86,6 +91,10 @@ export interface UpdateCompanyRequest {
   // null indipendentemente da cosa arriva nel body (vedi updateCompany sotto).
   tariffaOraria?: number | null;
   tariffaUnita?: RateUnit | null;
+  // Obbligatoria (a differenza di tariffaOraria/tariffaUnita sopra): un
+  // PUT senza valuta viene rifiutato con 422 (vedi
+  // companyService.updateCompany).
+  valuta?: string | null;
   giorniLavorativi?: {
     lunedi: boolean;
     martedi: boolean;
@@ -232,7 +241,7 @@ export class CompanyController extends Controller {
   @Response<CompanyErrorResponse>(404, 'Company non trovata')
   @Response<CompanyErrorResponse>(
     422,
-    'name, piva, codiceFiscale, pec, tariffaOraria, tariffaUnita o orarioLavoro non validi',
+    'name, piva, codiceFiscale, pec, tariffaOraria, tariffaUnita, valuta o orarioLavoro non validi',
   )
   public async updateCompany(
     @Path() id: string,

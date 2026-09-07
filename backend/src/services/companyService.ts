@@ -1,8 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { DatabaseError } from 'pg';
 import { pool } from '../db/pool';
-import type { Company, RateUnit, WorkDays, WorkHours } from '../models/company';
+import type { Company, CurrencyCode, RateUnit, WorkDays, WorkHours } from '../models/company';
 import type { User } from '../models/user';
+import { CURRENCY_CODES, isValidCurrencyCode, validateAndNormalizeCurrency } from '../utils/currency';
 import { validateAndNormalizeRate } from '../utils/rateUnit';
 import { generateRecoveryCode, normalizeRecoveryCode } from '../utils/recoveryCode';
 import { generateTemporaryPassword } from '../utils/temporaryPassword';
@@ -11,7 +12,7 @@ import { assertNonEmpty, isValidEmail, isValidPassword, PASSWORD_POLICY_MESSAGE 
 // stesso modulo, quindi un import a runtime nella direzione opposta
 // creerebbe un ciclo. `import type` viene eraso a compile time, nessun ciclo
 // a runtime.
-import type { CompanyExportData } from './exportService';
+import type { ImportedCompanyExportData } from './exportService';
 import { isValidDueDate, isValidPriority, isValidTaskStatus, SLUG_TO_STATUS_NAME } from './taskService';
 import { hashPassword, mapUserUniqueViolation, toUser, USER_COLUMNS, type UserRow } from './userService';
 
@@ -47,6 +48,7 @@ interface CompanyRow {
   // lasciarla stringa romperebbe qualsiasi calcolo lato frontend.
   tariffa_oraria: string | null;
   tariffa_unita: RateUnit | null;
+  valuta: CurrencyCode;
   lavora_lunedi: boolean;
   lavora_martedi: boolean;
   lavora_mercoledi: boolean;
@@ -69,7 +71,7 @@ interface CompanyRow {
 // ripetere l'elenco colonne a rischio di disallineamento.
 export const COMPANY_COLUMNS =
   'id, name, owner_id, ragione_sociale, piva, codice_fiscale, indirizzo, pec, ' +
-  'tariffa_oraria, tariffa_unita, ' +
+  'tariffa_oraria, tariffa_unita, valuta, ' +
   'lavora_lunedi, lavora_martedi, lavora_mercoledi, lavora_giovedi, lavora_venerdi, lavora_sabato, lavora_domenica, ' +
   'orario_continuativo, ora_inizio_1, ora_fine_1, ora_inizio_2, ora_fine_2, ' +
   'created_at';
@@ -93,6 +95,7 @@ function toCompany(row: CompanyRow): Company {
     pec: row.pec,
     tariffaOraria: row.tariffa_oraria === null ? null : Number(row.tariffa_oraria),
     tariffaUnita: row.tariffa_unita,
+    valuta: row.valuta,
     giorniLavorativi: {
       lunedi: row.lavora_lunedi,
       martedi: row.lavora_martedi,
@@ -260,6 +263,10 @@ export interface UpdateCompanyInput {
   pec?: string | null;
   tariffaOraria?: number | null;
   tariffaUnita?: RateUnit | null;
+  // Obbligatoria (a differenza di tariffaOraria/tariffaUnita sopra): un
+  // PUT che la omette o la valorizza a null viene rifiutato con
+  // InvalidCompanyDataError, vedi validateAndNormalizeCompanyUpdate sotto.
+  valuta?: string | null;
   giorniLavorativi?: WorkDays;
   orarioLavoro?: WorkHours;
 }
@@ -276,6 +283,7 @@ interface CompanyWriteData {
   pec: string | null;
   tariffaOraria: number | null;
   tariffaUnita: RateUnit | null;
+  valuta: CurrencyCode;
   giorniLavorativi: WorkDays;
   orarioLavoro: WorkHours;
 }
@@ -314,6 +322,14 @@ function validateAndNormalizeCompanyUpdate(body: UpdateCompanyInput): CompanyWri
   // un valore (forzata a null), default 'oraria' se il valore c'è ma l'unità
   // manca.
   const tariffa = validateAndNormalizeRate(body.tariffaOraria, body.tariffaUnita, (message) => new InvalidCompanyDataError(message));
+
+  // Obbligatoria (a differenza dell'accoppiamento tariffa sopra, sempre
+  // opzionale): un'azienda opera sempre in un'unica valuta base, vedi il
+  // commento su UpdateCompanyInput.valuta sopra.
+  const valuta = validateAndNormalizeCurrency(body.valuta, (message) => new InvalidCompanyDataError(message));
+  if (valuta === null) {
+    throw new InvalidCompanyDataError('valuta è obbligatoria');
+  }
 
   // Assente = nessun giorno lavorativo impostato, coerente col default false
   // della migration: un PUT che non lo invia azzera i giorni già impostati,
@@ -381,6 +397,7 @@ function validateAndNormalizeCompanyUpdate(body: UpdateCompanyInput): CompanyWri
     pec,
     tariffaOraria: tariffa.tariffaOraria,
     tariffaUnita: tariffa.tariffaUnita,
+    valuta,
     giorniLavorativi,
     orarioLavoro: {
       continuativo: orarioLavoroInput.continuativo,
@@ -404,7 +421,8 @@ export async function updateCompany(id: string, body: UpdateCompanyInput): Promi
          tariffa_oraria = $8, tariffa_unita = $9,
          lavora_lunedi = $10, lavora_martedi = $11, lavora_mercoledi = $12, lavora_giovedi = $13,
          lavora_venerdi = $14, lavora_sabato = $15, lavora_domenica = $16,
-         orario_continuativo = $17, ora_inizio_1 = $18, ora_fine_1 = $19, ora_inizio_2 = $20, ora_fine_2 = $21
+         orario_continuativo = $17, ora_inizio_1 = $18, ora_fine_1 = $19, ora_inizio_2 = $20, ora_fine_2 = $21,
+         valuta = $22
      WHERE id = $1
      RETURNING ${COMPANY_COLUMNS}`,
     [
@@ -429,6 +447,7 @@ export async function updateCompany(id: string, body: UpdateCompanyInput): Promi
       input.orarioLavoro.fine1,
       input.orarioLavoro.inizio2,
       input.orarioLavoro.fine2,
+      input.valuta,
     ],
   );
   return toCompany(result.rows[0]);
@@ -533,7 +552,7 @@ export interface TemporaryPasswordEntry {
 }
 
 export interface ImportCompanyInput {
-  data: CompanyExportData;
+  data: ImportedCompanyExportData;
   // Password scelta dall'owner per LA NUOVA istanza: mai importata alcuna
   // password/hash dal vecchio server, non esistono nell'export in primo
   // luogo (models/user.ts non espone mai la colonna password).
@@ -596,6 +615,13 @@ function validateImportPayload(input: ImportCompanyInput): void {
   const pec = data.company.pec;
   if (pec !== null && pec !== undefined && pec !== '' && !isValidEmail(pec)) {
     throw new ImportCompanyDataError('pec non valida');
+  }
+  // Opzionale in ingresso (a differenza dell'obbligatorietà lato service per
+  // updateCompany): un export prodotto prima di questa feature non ha alcun
+  // campo valuta, vedi il fallback a 'EUR' più sotto in importCompanyData.
+  const importedValuta = data.company.valuta;
+  if (importedValuta !== null && importedValuta !== undefined && !isValidCurrencyCode(importedValuta)) {
+    throw new ImportCompanyDataError(`valuta deve essere una tra: ${CURRENCY_CODES.join(', ')} (in export.company)`);
   }
 
   if (!Array.isArray(data.users) || data.users.length === 0) {
@@ -742,8 +768,8 @@ export async function importCompanyData(input: ImportCompanyInput): Promise<Impo
     );
 
     const companyResult = await client.query<CompanyRow>(
-      `INSERT INTO companies (name, owner_id, ragione_sociale, piva, codice_fiscale, indirizzo, pec)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO companies (name, owner_id, ragione_sociale, piva, codice_fiscale, indirizzo, pec, valuta)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING ${COMPANY_COLUMNS}`,
       [
         data.company.name,
@@ -753,6 +779,10 @@ export async function importCompanyData(input: ImportCompanyInput): Promise<Impo
         data.company.codiceFiscale,
         data.company.indirizzo,
         data.company.pec,
+        // Fallback 'EUR' per un export prodotto prima di questa feature
+        // (nessun campo valuta nel JSON originale): già validato sopra in
+        // validateImportPayload, qui resta solo la normalizzazione.
+        data.company.valuta ?? 'EUR',
       ],
     );
     const company = toCompany(companyResult.rows[0]);

@@ -1,5 +1,5 @@
 import type { BackupRecord } from '../models/backup';
-import type { Company } from '../models/company';
+import type { Company, CurrencyCode } from '../models/company';
 import type { Notification } from '../models/notification';
 import type { Project } from '../models/project';
 import type { TaskComment } from '../models/taskComment';
@@ -57,6 +57,20 @@ export interface CompanyExportData {
   tasks: TaskWithProject[];
   comments: TaskComment[];
   backups: BackupRecord[];
+}
+
+// Variante usata SOLO per il body di POST /companies/import (vedi
+// companyController.ImportCompanyRequest/companyService.ImportCompanyInput):
+// un export prodotto prima della migration 0043 non ha alcuna chiave
+// "valuta" nel JSON, quindi qui è opzionale — a differenza di
+// CompanyExportData.company sopra, sempre completo perché letto fresco dal DB
+// (GET /companies/{id}/export). tsoa genera lo schema di validazione runtime
+// del body direttamente da questo tipo: se company.valuta restasse
+// obbligatoria come in CompanyExportData, un export legacy verrebbe respinto
+// con un 400 generico di tsoa PRIMA di raggiungere il fallback 'EUR' già
+// scritto in companyService.validateImportPayload/importCompanyData.
+export interface ImportedCompanyExportData extends Omit<CompanyExportData, 'company'> {
+  company: Omit<Company, 'valuta'> & { valuta?: CurrencyCode | null };
 }
 
 // Task "Cancellazione account self-service": stesso principio del vecchio

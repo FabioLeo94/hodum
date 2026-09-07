@@ -5,6 +5,7 @@ import InputComponent from "../input/inputComponent";
 import TextareaComponent from "../textarea/textareaComponent";
 import ButtonComponent from "../button/buttonComponent";
 import RateInputComponent from "../rateInput/rateInputComponent";
+import CurrencySelectComponent from "../currencySelect/currencySelectComponent";
 import DrawerBaseComponent from "../drawerBase/drawerBaseComponent";
 import DeleteCustomerModalComponent from "../deleteCustomerModal/deleteCustomerModalComponent";
 import {
@@ -16,6 +17,7 @@ import {
 import { getCompany } from "../../services/company/companyService";
 import { notifySuccess } from "../../services/notify/notifyService";
 import type { Customer } from "../../../shared/types/customer";
+import type { CurrencyCode } from "../../../shared/utils/currency";
 import { useAsyncSubmit } from "../../../shared/hooks/useAsyncSubmit";
 import { formatDate } from "../../../shared/utils/formatDate";
 import type { RateUnit, WorkDays, WorkHours } from "../../../shared/utils/rateConversion";
@@ -81,6 +83,7 @@ function CustomersDrawerComponent({ isOpen, onClose, companyId }: Prop) {
   const [formDescription, setFormDescription] = useState("");
   const [formTariffaOraria, setFormTariffaOraria] = useState<number | null>(null);
   const [formTariffaUnita, setFormTariffaUnita] = useState<RateUnit | null>(null);
+  const [formValuta, setFormValuta] = useState<CurrencyCode | null>(null);
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [saveError, setSaveError] = useState("");
   const { isSubmitting, submit } = useAsyncSubmit();
@@ -110,6 +113,7 @@ function CustomersDrawerComponent({ isOpen, onClose, companyId }: Prop) {
       setFormDescription(view.customer?.description ?? "");
       setFormTariffaOraria(view.customer?.tariffaOraria ?? null);
       setFormTariffaUnita(view.customer?.tariffaUnita ?? null);
+      setFormValuta(view.customer?.valuta ?? null);
       setSubmitAttempted(false);
       setSaveError("");
     }
@@ -201,6 +205,7 @@ function CustomersDrawerComponent({ isOpen, onClose, companyId }: Prop) {
             description: formDescription.trim() || null,
             tariffaOraria: formTariffaOraria,
             tariffaUnita: formTariffaUnita,
+            valuta: formValuta,
           });
         } else {
           await createCustomer({
@@ -208,6 +213,7 @@ function CustomersDrawerComponent({ isOpen, onClose, companyId }: Prop) {
             description: formDescription.trim() || null,
             tariffaOraria: formTariffaOraria,
             tariffaUnita: formTariffaUnita,
+            valuta: formValuta,
           });
         }
         setView({ mode: "list" });
@@ -349,6 +355,13 @@ function CustomersDrawerComponent({ isOpen, onClose, companyId }: Prop) {
                     setFormTariffaOraria(newValue);
                     setFormTariffaUnita(newUnit);
                   }}
+                />
+                <CurrencySelectComponent
+                  label={t("components.customersDrawer.currencyLabel")}
+                  name="valuta"
+                  value={formValuta}
+                  onChange={setFormValuta}
+                  allowInherit
                 />
                 {editingCustomer && (
                   <p className={styles.hint}>

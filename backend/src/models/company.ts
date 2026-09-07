@@ -5,6 +5,12 @@
 // canonica in €/ora).
 export type RateUnit = 'oraria' | 'giornaliera' | 'settimanale' | 'mensile' | 'annuale';
 
+// Elenco chiuso di valute supportate (vedi backend/src/utils/currency.ts):
+// nessuna conversione tra valute, servono solo a etichettare/formattare gli
+// importi già espressi in tariffaOraria/totaleImporto, che restano numeri
+// puri come prima di questa feature (vedi .tasks/TASK.md, punto 1).
+export type CurrencyCode = 'EUR' | 'USD' | 'GBP' | 'CHF' | 'JPY' | 'CAD' | 'AUD' | 'CNY';
+
 // I 7 giorni della settimana in cui l'azienda presta servizio (0033,
 // lavora_lunedi..lavora_domenica): sempre boolean, mai null, default false già
 // garantito dal DB.
@@ -51,6 +57,12 @@ export interface Company {
   // dal controller, mai scritti in stato incoerente).
   tariffaOraria: number | null;
   tariffaUnita: RateUnit | null;
+  // Valuta base dell'azienda (0043): obbligatoria e sempre valorizzata, a
+  // differenza di tariffaOraria/tariffaUnita sopra — un'azienda opera sempre
+  // in un'unica valuta, mai null. Un cliente può sovrascriverla (vedi
+  // Customer.valuta in models/customer.ts), altrimenti una pre-fattura la
+  // eredita da qui.
+  valuta: CurrencyCode;
   giorniLavorativi: WorkDays;
   orarioLavoro: WorkHours;
   createdAt: string;

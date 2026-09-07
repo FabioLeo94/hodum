@@ -31,6 +31,10 @@ export interface CreateCustomerRequest {
   // Company, vedi companyController.updateCompany).
   tariffaOraria?: number | null;
   tariffaUnita?: RateUnit | null;
+  // Opzionale per sempre (0044): se assente/null, la pre-fatturazione userà
+  // la valuta della company di appartenenza (stesso accoppiamento di
+  // tariffaOraria/tariffaUnita sopra, ma senza default forzato).
+  valuta?: string | null;
 }
 
 export interface UpdateCustomerRequest {
@@ -38,6 +42,7 @@ export interface UpdateCustomerRequest {
   description?: string | null;
   tariffaOraria?: number | null;
   tariffaUnita?: RateUnit | null;
+  valuta?: string | null;
 }
 
 // Un id nel path che non combacia con la company del richiedente (o un
@@ -85,7 +90,7 @@ export class CustomerController extends Controller {
   @Security('owner')
   @SuccessResponse(201, 'Cliente creato')
   @Response<CustomerErrorResponse>(404, 'Azienda non trovata')
-  @Response<CustomerErrorResponse>(422, 'name, tariffaOraria o tariffaUnita non validi')
+  @Response<CustomerErrorResponse>(422, 'name, tariffaOraria, tariffaUnita o valuta non validi')
   public async createCustomer(
     @Body() body: CreateCustomerRequest,
     @Request() request: ExRequest,
@@ -109,6 +114,7 @@ export class CustomerController extends Controller {
         description: body.description?.trim() || null,
         tariffaOraria: body.tariffaOraria,
         tariffaUnita: body.tariffaUnita,
+        valuta: body.valuta,
       });
       this.setStatus(201);
       return customer;
@@ -147,7 +153,7 @@ export class CustomerController extends Controller {
   @Put('{id}')
   @Security('owner')
   @Response<CustomerErrorResponse>(404, 'Cliente non trovato')
-  @Response<CustomerErrorResponse>(422, 'name, tariffaOraria o tariffaUnita non validi')
+  @Response<CustomerErrorResponse>(422, 'name, tariffaOraria, tariffaUnita o valuta non validi')
   public async updateCustomer(
     @Path() id: string,
     @Body() body: UpdateCustomerRequest,
@@ -171,6 +177,7 @@ export class CustomerController extends Controller {
         description: body.description?.trim() || null,
         tariffaOraria: body.tariffaOraria,
         tariffaUnita: body.tariffaUnita,
+        valuta: body.valuta,
       });
     } catch (err) {
       if (err instanceof CustomerNotFoundError) {

@@ -164,6 +164,7 @@ describe("companyService.updateCompany", () => {
       pec: "azienda@pec.it",
       tariffaOraria: null,
       tariffaUnita: null,
+      valuta: "EUR" as const,
       giorniLavorativi: NO_WORK_DAYS,
       orarioLavoro: NO_WORK_HOURS,
     };
@@ -195,6 +196,7 @@ describe("companyService.updateCompany", () => {
         pec: null,
         tariffaOraria: null,
         tariffaUnita: null,
+        valuta: "EUR",
         giorniLavorativi: NO_WORK_DAYS,
         orarioLavoro: NO_WORK_HOURS,
       }),
@@ -214,6 +216,7 @@ describe("companyService.updateCompany", () => {
         pec: null,
         tariffaOraria: null,
         tariffaUnita: null,
+        valuta: "EUR",
         giorniLavorativi: NO_WORK_DAYS,
         orarioLavoro: NO_WORK_HOURS,
       }),

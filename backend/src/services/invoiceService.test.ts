@@ -90,6 +90,7 @@ function makeCustomer(overrides: Partial<Customer> = {}): Customer {
     lastInvoicedAt: null,
     tariffaOraria: null,
     tariffaUnita: null,
+    valuta: null,
     ...overrides,
   };
 }
@@ -106,6 +107,7 @@ function makeCompany(overrides: Partial<Company> = {}): Company {
     pec: null,
     tariffaOraria: null,
     tariffaUnita: null,
+    valuta: 'EUR',
     giorniLavorativi: {
       lunedi: true,
       martedi: true,
@@ -339,6 +341,7 @@ describe('generateInvoice', () => {
       5,
       5400,
       40,
+      'EUR',
       'pending',
     ]);
 

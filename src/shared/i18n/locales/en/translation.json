@@ -341,6 +341,7 @@
       "companyDataSectionTitle": "Company data",
       "rateAndScheduleSectionTitle": "Rate and work schedule",
       "companyRateLabel": "Company rate",
+      "currencyLabel": "Currency",
       "workDaysLabel": "Work days",
       "workHoursLabel": "Work hours"
     },
@@ -364,6 +365,7 @@
       "nameLabel": "Customer name",
       "descriptionLabel": "Description",
       "rateLabel": "Customer rate",
+      "currencyLabel": "Currency",
       "nameRequired": "The customer name cannot be empty.",
       "registeredOn": "Registered on {{date}}",
       "lastInvoicedOn": "Last invoiced: {{date}}",
@@ -684,6 +686,9 @@
         "annuale": "Per year"
       },
       "scheduleHint": "Set work days and hours to calculate non-hourly rates."
+    },
+    "currencySelect": {
+      "inheritOption": "Use company currency"
     },
     "workDaysSelector": {
       "groupLabel": "Work days",

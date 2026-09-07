@@ -1,4 +1,4 @@
-import type { RateUnit } from './company';
+import type { CurrencyCode, RateUnit } from './company';
 
 // Forma dell'entità Customer esposta dall'API: camelCase lato applicativo,
 // coerente con company.ts/task.ts (vedi migrations/0032_create_customers_table.sql).
@@ -19,4 +19,8 @@ export interface Customer {
   // migrations/0034_add_tariffa_a_customers.sql).
   tariffaOraria: number | null;
   tariffaUnita: RateUnit | null;
+  // Opzionale per sempre (0044), stessa semantica di tariffaOraria sopra: se
+  // null, la pre-fatturazione usa la valuta della company di appartenenza
+  // (Company.valuta, sempre valorizzata).
+  valuta: CurrencyCode | null;
 }

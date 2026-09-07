@@ -12,19 +12,17 @@ import { cancelInvoice, listCompanyInvoices } from "../../services/invoice/invoi
 import { listCustomerSummaries } from "../../services/customer/customerService";
 import type { CustomerSummary } from "../../services/customer/customerService";
 import type { Invoice } from "../../../shared/types/invoice";
+import type { CurrencyCode } from "../../../shared/utils/currency";
 import { getUser, isAuthenticated, logout, useAuthUser } from "../../services/auth/authService";
 import { formatDate, resolveDateLocale } from "../../../shared/utils/formatDate";
 import { usePageMeta } from "../../../shared/hooks/usePageMeta";
 import styles from "./invoices.module.css";
 
-// Nessuna libreria di formattazione valuta nel progetto (rateConversion.ts
-// tratta solo l'orario canonico €/ora): un Intl.NumberFormat locale basta,
-// EUR è l'unica valuta gestita (vedi il commento su tariffaOraria in
-// shared/types/customer.ts).
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat(resolveDateLocale(), { style: "currency", currency: "EUR" }).format(
-    amount,
-  );
+// Nessuna libreria di formattazione valuta nel progetto: un Intl.NumberFormat
+// locale basta, currency arriva dallo snapshot invoice.valuta (risolto
+// cliente -> azienda al momento della generazione, mai ricalcolato).
+function formatCurrency(amount: number, currency: CurrencyCode): string {
+  return new Intl.NumberFormat(resolveDateLocale(), { style: "currency", currency }).format(amount);
 }
 
 // Pannello riservato al solo owner (stessa guardia di companyManagement.tsx):
@@ -247,7 +245,7 @@ function Invoices() {
                             <XCircle size={18} aria-hidden="true" />
                           </span>
                         ) : (
-                          formatCurrency(invoice.totaleImporto)
+                          formatCurrency(invoice.totaleImporto, invoice.valuta)
                         )}
                       </td>
                       <td>

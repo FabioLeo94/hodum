@@ -6,7 +6,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import PDFDocument from 'pdfkit';
-import type { Company } from '../models/company';
+import type { Company, CurrencyCode } from '../models/company';
 import type { Customer } from '../models/customer';
 import type { Invoice } from '../models/invoice';
 import type { InvoiceItem } from '../models/invoiceItem';
@@ -19,8 +19,12 @@ import { roundToCents } from '../utils/rounding';
 // generati, non codice.
 const INVOICES_DIR = join(__dirname, '..', '..', 'invoices');
 
-function formatCurrency(value: number): string {
-  return `€ ${value.toFixed(2)}`;
+// Intl.NumberFormat invece della stringa hardcoded `€ ${value.toFixed(2)}`
+// di prima di questa feature (vedi .tasks/TASK.md, punto 1): locale 'it-IT'
+// fisso, stesso principio di formatDateTime sotto, un documento non fiscale
+// non ha bisogno di localizzare sul locale dell'utente.
+function formatCurrency(value: number, currency: CurrencyCode): string {
+  return new Intl.NumberFormat('it-IT', { style: 'currency', currency }).format(value);
 }
 
 function formatHours(secondi: number): string {
@@ -122,17 +126,20 @@ export async function renderInvoicePdf(
     const y = doc.y;
     doc.text(item.taskTitle, 50, y, { width: 220 });
     doc.text(formatHours(item.secondiFatturati), 270, y, { width: 60 });
-    doc.text(formatCurrency(item.tariffaOrariaSnapshot) + '/h', 330, y, { width: 80 });
-    doc.text(item.nonFatturabile ? `${formatCurrency(0)} (omaggio)` : formatCurrency(importoRiga), 410, y, {
-      width: 100,
-    });
+    doc.text(formatCurrency(item.tariffaOrariaSnapshot, invoice.valuta) + '/h', 330, y, { width: 80 });
+    doc.text(
+      item.nonFatturabile ? `${formatCurrency(0, invoice.valuta)} (omaggio)` : formatCurrency(importoRiga, invoice.valuta),
+      410,
+      y,
+      { width: 100 },
+    );
     doc.moveDown(0.5);
   }
 
   doc.moveDown();
   doc.font('Helvetica-Bold');
   doc.text(`Totale ore: ${formatHours(invoice.totaleSecondi)}`);
-  doc.text(`Totale importo: ${formatCurrency(invoice.totaleImporto)}`);
+  doc.text(`Totale importo: ${formatCurrency(invoice.totaleImporto, invoice.valuta)}`);
   doc.font('Helvetica');
 
   doc.end();

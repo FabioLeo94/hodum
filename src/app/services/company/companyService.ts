@@ -8,6 +8,7 @@ import type {
   ExportTaskComment,
   ExportTaskWithProject,
 } from "../../../shared/types/companyExport";
+import type { CurrencyCode } from "../../../shared/utils/currency";
 import type { RateUnit, WorkDays, WorkHours } from "../../../shared/utils/rateConversion";
 
 export interface RegisterCompanyInput {
@@ -39,6 +40,9 @@ export interface RegisteredCompany {
   // tariffaUnita è null se e solo se tariffaOraria è null.
   tariffaOraria: number | null;
   tariffaUnita: RateUnit | null;
+  // Valuta base dell'azienda: obbligatoria e sempre valorizzata (a differenza
+  // di tariffaOraria/tariffaUnita sopra), vedi backend/src/models/company.ts.
+  valuta: CurrencyCode;
   giorniLavorativi: WorkDays;
   orarioLavoro: WorkHours;
   createdAt: string;
@@ -167,6 +171,7 @@ export interface UpdateCompanyInput {
   pec: string | null;
   tariffaOraria: number | null;
   tariffaUnita: RateUnit | null;
+  valuta: CurrencyCode;
   giorniLavorativi: WorkDays;
   orarioLavoro: WorkHours;
 }

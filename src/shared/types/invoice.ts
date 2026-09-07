@@ -1,3 +1,5 @@
+import type { CurrencyCode } from "../utils/currency";
+
 // Forme dell'entità Invoice/InvoiceItem esposte dall'API: camelCase lato
 // applicativo, identiche a backend/src/models/invoice.ts e invoiceItem.ts
 // (vedi i commenti lì per la semantica di ogni campo, es. perché
@@ -11,6 +13,9 @@ export interface Invoice {
   dataGenerazione: string;
   totaleSecondi: number;
   totaleImporto: number;
+  // Valuta risolta (cliente -> azienda) al momento della generazione: uno
+  // snapshot come totaleImporto sopra, non cambia mai in seguito.
+  valuta: CurrencyCode;
   // Annullamento (vedi backend/migrations/0042): null finché la pre-fattura è
   // attiva. Un annullamento non elimina l'invoice né libera `numero`, resta
   // nello storico in sola lettura.

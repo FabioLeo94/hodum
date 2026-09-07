@@ -80,6 +80,7 @@ describe("GenerateInvoicePreviewModalComponent", () => {
       dataGenerazione: "2026-01-01T00:00:00.000Z",
       totaleSecondi: 3600,
       totaleImporto: 50,
+      valuta: "EUR",
       cancelledAt: null,
     });
     renderModal({ onConfirmed });

@@ -323,7 +323,7 @@ describe('importCompanyData: validazione del payload prima di aprire la transazi
 });
 
 describe('updateCompany: validazione anagrafica/tariffa/orario (ex companyController.updateCompany)', () => {
-  const VALID_BODY = { name: 'Acme' };
+  const VALID_BODY = { name: 'Acme', valuta: 'EUR' };
 
   it('rigetta con InvalidCompanyDataError un name vuoto dopo trim', async () => {
     await expect(updateCompany(COMPANY_ID, { name: '   ' })).rejects.toBeInstanceOf(InvalidCompanyDataError);
@@ -365,6 +365,7 @@ describe('updateCompany: validazione anagrafica/tariffa/orario (ex companyContro
           pec: null,
           tariffa_oraria: '25',
           tariffa_unita: 'oraria',
+          valuta: 'EUR',
           lavora_lunedi: false,
           lavora_martedi: false,
           lavora_mercoledi: false,

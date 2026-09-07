@@ -1,0 +1,16 @@
+/* Stessa struttura label+campo di inputComponent.module.css, applicata a un
+   <select> invece di un <input>: coerenza visiva tra i campi di un form senza
+   duplicare gli stessi valori di sfondo/bordo/focus. */
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-xs);
+}
+
+.label {
+  composes: fieldLabel from "../../../shared/styles/fieldBase.module.css";
+}
+
+.select {
+  composes: fieldBase from "../../../shared/styles/fieldBase.module.css";
+}

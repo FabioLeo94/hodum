@@ -341,6 +341,7 @@
       "companyDataSectionTitle": "Dati aziendali",
       "rateAndScheduleSectionTitle": "Tariffa e orari di lavoro",
       "companyRateLabel": "Tariffa aziendale",
+      "currencyLabel": "Valuta",
       "workDaysLabel": "Giorni lavorativi",
       "workHoursLabel": "Orario di lavoro"
     },
@@ -364,6 +365,7 @@
       "nameLabel": "Nome cliente",
       "descriptionLabel": "Descrizione",
       "rateLabel": "Tariffa cliente",
+      "currencyLabel": "Valuta",
       "nameRequired": "Il nome del cliente non può essere vuoto.",
       "registeredOn": "Registrato il {{date}}",
       "lastInvoicedOn": "Ultima fatturazione: {{date}}",
@@ -684,6 +686,9 @@
         "annuale": "All'anno"
       },
       "scheduleHint": "Imposta giorni e orari di lavoro per calcolare tariffe non orarie."
+    },
+    "currencySelect": {
+      "inheritOption": "Usa valuta azienda"
     },
     "workDaysSelector": {
       "groupLabel": "Giorni lavorativi",

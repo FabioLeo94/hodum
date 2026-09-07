@@ -1,7 +1,7 @@
 import type { PoolClient } from 'pg';
 import { pool } from '../db/pool';
 import { getCompanyById } from './companyService';
-import type { Company } from '../models/company';
+import type { Company, CurrencyCode } from '../models/company';
 import type { Customer } from '../models/customer';
 import { getCustomerById } from './customerService';
 import { getTasksByIds } from './taskService';
@@ -107,12 +107,13 @@ interface InvoiceRow {
   // numeric in pg torna come stringa dal driver, stesso trattamento di
   // Customer.tariffaOraria in customerService.ts.
   totale_importo: string;
+  valuta: CurrencyCode;
   pdf_path: string;
   cancelled_at: Date | null;
 }
 
 const INVOICE_COLUMNS =
-  'id, company_id, customer_id, numero, data_generazione, totale_secondi, totale_importo, pdf_path, cancelled_at';
+  'id, company_id, customer_id, numero, data_generazione, totale_secondi, totale_importo, valuta, pdf_path, cancelled_at';
 
 // Sentinel scritto in pdf_path (colonna NOT NULL, niente NULL possibile senza
 // una migration) finché il PDF non è ancora stato scritto su disco: sia
@@ -131,6 +132,7 @@ function toInvoice(row: InvoiceRow): Invoice {
     dataGenerazione: row.data_generazione.toISOString(),
     totaleSecondi: row.totale_secondi,
     totaleImporto: Number(row.totale_importo),
+    valuta: row.valuta,
     cancelledAt: row.cancelled_at ? row.cancelled_at.toISOString() : null,
   };
 }
@@ -145,6 +147,14 @@ function toInvoice(row: InvoiceRow): Invoice {
 // proprio.
 function pickRate(customerRate: number | null, companyRate: number | null): number | null {
   return customerRate ?? companyRate;
+}
+
+// Stessa regola a due livelli di pickRate sopra, applicata alla valuta: a
+// differenza della tariffa, qui il risultato non è mai null perché
+// Company.valuta è obbligatoria (0043) — nessun MissingRateError equivalente
+// necessario.
+function pickCurrency(customerCurrency: CurrencyCode | null, companyCurrency: CurrencyCode): CurrencyCode {
+  return customerCurrency ?? companyCurrency;
 }
 
 // Variante che fallisce: usata dove l'assenza di una tariffa risolvibile deve
@@ -501,6 +511,7 @@ export async function generateInvoice(
     }
     company = resolvedCompany;
     const tariffa = resolveRate(customer, company);
+    const valuta = pickCurrency(customer.valuta, company.valuta);
 
     // 4. Numerazione progressiva per company: MAX(numero)+1 letto DENTRO la
     // stessa transazione che detiene il lock advisory di company, così due
@@ -542,10 +553,10 @@ export async function generateInvoice(
     totaleImporto = roundToCents(totaleImporto);
 
     const insertedInvoice = await lockClient.query<InvoiceRow>(
-      `INSERT INTO invoices (company_id, customer_id, numero, totale_secondi, totale_importo, pdf_path)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO invoices (company_id, customer_id, numero, totale_secondi, totale_importo, valuta, pdf_path)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING ${INVOICE_COLUMNS}`,
-      [companyId, customerId, numero, totaleSecondi, totaleImporto, PENDING_PDF_PATH],
+      [companyId, customerId, numero, totaleSecondi, totaleImporto, valuta, PENDING_PDF_PATH],
     );
     const invoiceRow = insertedInvoice.rows[0];
 
@@ -770,6 +781,7 @@ export async function previewInvoicePdf(
     throw new Error(`Company con id ${companyId} non trovata durante l'anteprima della pre-fattura`);
   }
   const tariffa = resolveRate(customer, company);
+  const valuta = pickCurrency(customer.valuta, company.valuta);
 
   let totaleSecondi = 0;
   let totaleImporto = 0;
@@ -800,6 +812,7 @@ export async function previewInvoicePdf(
     dataGenerazione: new Date().toISOString(),
     totaleSecondi,
     totaleImporto,
+    valuta,
     cancelledAt: null,
   };
 

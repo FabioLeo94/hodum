@@ -1,3 +1,4 @@
+import type { CurrencyCode } from "../utils/currency";
 import type { RateUnit } from "../utils/rateConversion";
 
 // Forma dell'entità Customer esposta dall'API: camelCase lato applicativo,
@@ -18,4 +19,7 @@ export interface Customer {
   // (vedi backend/src/models/customer.ts).
   tariffaOraria: number | null;
   tariffaUnita: RateUnit | null;
+  // Opzionale per sempre: se null, la pre-fatturazione usa la valuta della
+  // company di appartenenza (vedi backend/src/models/customer.ts).
+  valuta: CurrencyCode | null;
 }

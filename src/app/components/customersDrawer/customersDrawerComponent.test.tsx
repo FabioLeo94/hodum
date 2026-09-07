@@ -38,6 +38,7 @@ function makeCustomer(overrides: Partial<Customer> = {}): Customer {
     lastInvoicedAt: null,
     tariffaOraria: null,
     tariffaUnita: null,
+    valuta: null,
     ...overrides,
   };
 }
@@ -100,6 +101,7 @@ describe("CustomersDrawerComponent", () => {
         description: null,
         tariffaOraria: null,
         tariffaUnita: null,
+        valuta: null,
       });
     });
     expect(await screen.findByText("Nuovo Cliente")).toBeInTheDocument();
@@ -139,6 +141,7 @@ describe("CustomersDrawerComponent", () => {
         description: "Una nota",
         tariffaOraria: null,
         tariffaUnita: null,
+        valuta: null,
       });
     });
     expect(await screen.findByText("Cliente Modificato")).toBeInTheDocument();
