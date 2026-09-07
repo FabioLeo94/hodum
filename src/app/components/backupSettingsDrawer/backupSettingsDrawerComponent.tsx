@@ -6,6 +6,7 @@ import BackupHistoryItemComponent from "../backupHistoryItem/backupHistoryItemCo
 import DeleteBackupModalComponent from "../deleteBackupModal/deleteBackupModalComponent";
 import RestoreBackupModalComponent from "../restoreBackupModal/restoreBackupModalComponent";
 import DrawerBaseComponent from "../drawerBase/drawerBaseComponent";
+import NoticeComponent from "../notice/noticeComponent";
 import {
   deleteBackup,
   getBackupSettings,
@@ -365,9 +366,12 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
                   ? t("components.backupSettingsDrawer.runNow.lastBackup", {
                       date: formatDateTime(settings.lastBackupAt),
                     })
-                  : t("components.backupSettingsDrawer.runNow.never")}{" "}
-                {t("components.backupSettingsDrawer.runNow.hint")}
+                  : t("components.backupSettingsDrawer.runNow.never")}
               </p>
+              <NoticeComponent
+                variant="warning"
+                text={t("components.backupSettingsDrawer.runNow.hint")}
+              />
               <ButtonComponent onClick={handleRunNow} disabled={isRunning}>
                 {isRunning
                   ? t("components.backupSettingsDrawer.runNow.running")

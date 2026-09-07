@@ -1,0 +1,65 @@
+/* 4 stili predefiniti selezionati via data-variant sullo stesso elemento
+   (stesso pattern di messageCard.module.css/notifyComponent.module.css):
+   bordo sinistro e icona si tingono, il testo resta a piena leggibilità
+   (--text-primary) invece di un colore di stato, per non ricadere nel
+   problema di contrasto già annotato in errorBanner.module.css. */
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--m-sm);
+  padding: var(--p-sm) var(--p-md);
+  border-left: 3px solid var(--color-info);
+  border-radius: var(--radious-sm);
+  background-color: var(--bg-field);
+}
+
+.notice[data-variant="error"] {
+  border-left-color: var(--color-danger);
+}
+
+.notice[data-variant="warning"] {
+  border-left-color: var(--color-warning);
+}
+
+.notice[data-variant="important"] {
+  border-left-color: var(--bg-primary);
+}
+
+/* margin-top allinea otticamente l'icona alla prima riga di testo invece del
+   centro dell'intero blocco titolo+testo, quando entrambi sono presenti. */
+.icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--color-info);
+}
+
+.notice[data-variant="error"] .icon {
+  color: var(--color-danger);
+}
+
+.notice[data-variant="warning"] .icon {
+  color: var(--color-warning);
+}
+
+.notice[data-variant="important"] .icon {
+  color: var(--bg-primary);
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-xs);
+  min-width: 0;
+}
+
+.title {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.text {
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
