@@ -1,0 +1,39 @@
+.description {
+  margin-bottom: var(--m-lg);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.fileField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-xs);
+}
+
+.fileLabel {
+  composes: fieldLabel from "../../../shared/styles/fieldBase.module.css";
+}
+
+.fileInput {
+  composes: fieldBase from "../../../shared/styles/fieldBase.module.css";
+  cursor: pointer;
+}
+
+.fileName {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  overflow-wrap: break-word;
+}
+
+.fieldError {
+  composes: fieldErrorMessage from "../../../shared/styles/fieldBase.module.css";
+}
+
+.submitError {
+  composes: submitError from "../../../shared/styles/modalForm.module.css";
+}
+
+.cancelButton {
+  composes: cancelButton from "../../../shared/styles/modalForm.module.css";
+}

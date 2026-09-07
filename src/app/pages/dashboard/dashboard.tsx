@@ -1,9 +1,10 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useNavigate, useOutletContext } from "react-router";
 import { useTranslation } from "react-i18next";
-import { Plus } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
 import ProjectComponent from "../../components/project/projectComponent";
 import CreateProjectModalComponent from "../../components/createProjectModal/createProjectModalComponent";
+import ImportProjectModalComponent from "../../components/importProjectModal/importProjectModalComponent";
 import TopbarComponent from "../../components/topbar/topbarComponent";
 import TaskCalendarComponent from "../../components/taskCalendar/taskCalendarComponent";
 import TaskDetailModalComponent from "../../components/taskDetailModal/taskDetailModalComponent";
@@ -11,19 +12,23 @@ import MessageCardComponent from "../../components/messageCard/messageCardCompon
 import type { AssistantLayoutContext } from "../../components/protectedLayout/protectedLayoutComponent";
 import {
   createProject,
+  createTask,
   deleteProject,
   getAllCompanyTasks,
   getAllProjects,
+  getProjectById,
   updateProject,
   updateTask,
 } from "../../services/project/projectService";
 import { subscribeToProjects } from "../../services/realtime/socketService";
 import { logout, useAuthUser } from "../../services/auth/authService";
+import { notifySuccess, notifyWarning } from "../../services/notify/notifyService";
 import type {
   Project,
   Task,
   TaskWithProject,
 } from "../../../shared/types/project";
+import type { ParsedProjectImport } from "../../../shared/utils/projectImport";
 import type { EditProjectFormValues } from "../../components/editProjectModal/editProjectModalComponent";
 import { usePageMeta } from "../../../shared/hooks/usePageMeta";
 import styles from "./dashboard.module.css";
@@ -52,6 +57,8 @@ function Dashboard() {
   const [loadError, setLoadError] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createError, setCreateError] = useState("");
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importError, setImportError] = useState("");
   // Calendario aggregato (task di tutti i progetti): fetch singola all'mount,
   // nessuna sincronizzazione realtime in questa v1 (a differenza di projects
   // sopra) — riaprire/navigare la dashboard basta per un refresh, e aggregare
@@ -186,6 +193,61 @@ function Dashboard() {
     }
   }
 
+  function openImportModal() {
+    setImportError("");
+    setIsImportModalOpen(true);
+  }
+
+  function closeImportModal() {
+    setImportError("");
+    setIsImportModalOpen(false);
+  }
+
+  // Il progetto e ciascun task sono creati con le stesse chiamate usate
+  // altrove (createProject/createTask): non esiste un endpoint di import
+  // massivo lato backend, quindi qui si ricostruisce il progetto un task alla
+  // volta. Gli assegnatari del file esportato non vengono ripropagati (vedi
+  // projectImport.ts): gli id utente potrebbero non esistere in questa
+  // azienda, o appartenere a un'altra.
+  async function handleImportProject(data: ParsedProjectImport) {
+    try {
+      const created = await createProject(data.name);
+      let failedTaskCount = 0;
+      for (const task of data.tasks) {
+        try {
+          await createTask(
+            created.id,
+            task.title,
+            task.description,
+            task.status,
+            task.priority,
+            task.dueDate,
+          );
+        } catch {
+          failedTaskCount += 1;
+        }
+      }
+      const imported = (await getProjectById(created.id)) ?? created;
+      setProjects((current) =>
+        current.some((existing) => existing.id === imported.id)
+          ? current.map((existing) => (existing.id === imported.id ? imported : existing))
+          : [...current, imported],
+      );
+      closeImportModal();
+      if (failedTaskCount > 0) {
+        notifyWarning(
+          t("pages.dashboard.importPartialError", { name: data.name, count: failedTaskCount }),
+        );
+      } else {
+        notifySuccess(t("pages.dashboard.importSuccess", { name: data.name }));
+      }
+    } catch (error) {
+      setImportError(
+        error instanceof Error ? error.message : t("pages.dashboard.importError"),
+      );
+    }
+  }
+
   async function handleEditProject(id: string, values: EditProjectFormValues) {
     const updated = await updateProject(id, values);
     setProjects((current) =>
@@ -256,7 +318,19 @@ function Dashboard() {
       <TopbarComponent onLogout={handleLogout} />
       <div className={styles.dashboardContainer}>
         <header className={styles.dashboardHeader}>
-          <h1 className={styles.dashboardTitle}>{t("pages.dashboard.title")}</h1>
+          <div className={styles.dashboardTitleRow}>
+            <h1 className={styles.dashboardTitle}>{t("pages.dashboard.title")}</h1>
+            {canManage && (
+              <button
+                type="button"
+                className={styles.importButton}
+                onClick={openImportModal}
+              >
+                <Upload size={16} aria-hidden="true" />
+                <span>{t("pages.dashboard.importButtonLabel")}</span>
+              </button>
+            )}
+          </div>
         </header>
 
         {loadError ? (
@@ -332,6 +406,12 @@ function Dashboard() {
               onClose={closeCreateModal}
               onCreate={handleCreateProject}
               submitError={createError}
+            />
+            <ImportProjectModalComponent
+              isOpen={isImportModalOpen}
+              onClose={closeImportModal}
+              onImport={handleImportProject}
+              submitError={importError}
             />
           </Fragment>
         )}

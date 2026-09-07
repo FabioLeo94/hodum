@@ -289,6 +289,17 @@
         }
       }
     },
+    "importProjectModal": {
+      "title": "Importa progetto",
+      "submitting": "Importazione in corso...",
+      "submit": "Importa",
+      "cancel": "Annulla",
+      "description": "Seleziona un file JSON scaricato in precedenza da questa applicazione: verrà creato un nuovo progetto con gli stessi task. Gli assegnatari non vengono importati.",
+      "fileLabel": "File del progetto",
+      "fileRequired": "Seleziona un file da importare.",
+      "invalidJson": "Il file selezionato non è un JSON leggibile.",
+      "invalidStructure": "Il file non corrisponde alla struttura di un progetto esportato."
+    },
     "editAccountModal": {
       "title": "Modifica account",
       "submitting": "Salvataggio in corso...",
@@ -802,6 +813,10 @@
       "calendarUpdateError": "Impossibile aggiornare la scadenza del task.",
       "createError": "Impossibile creare il progetto.",
       "createButtonLabel": "Crea nuovo progetto",
+      "importButtonLabel": "Importa progetto",
+      "importError": "Impossibile importare il progetto.",
+      "importSuccess": "Progetto «{{name}}» importato.",
+      "importPartialError": "Progetto «{{name}}» importato, ma {{count}} task non sono stati creati.",
       "meta": {
         "title": "Dashboard"
       }

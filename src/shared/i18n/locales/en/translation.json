@@ -289,6 +289,17 @@
         }
       }
     },
+    "importProjectModal": {
+      "title": "Import project",
+      "submitting": "Importing...",
+      "submit": "Import",
+      "cancel": "Cancel",
+      "description": "Select a JSON file previously downloaded from this application: a new project will be created with the same tasks. Assignees are not imported.",
+      "fileLabel": "Project file",
+      "fileRequired": "Select a file to import.",
+      "invalidJson": "The selected file isn't readable JSON.",
+      "invalidStructure": "The file doesn't match the structure of an exported project."
+    },
     "editAccountModal": {
       "title": "Edit account",
       "submitting": "Saving...",
@@ -802,6 +813,10 @@
       "calendarUpdateError": "Unable to update the task's due date.",
       "createError": "Unable to create the project.",
       "createButtonLabel": "Create new project",
+      "importButtonLabel": "Import project",
+      "importError": "Unable to import the project.",
+      "importSuccess": "Project \"{{name}}\" imported.",
+      "importPartialError": "Project \"{{name}}\" imported, but {{count}} tasks couldn't be created.",
       "meta": {
         "title": "Dashboard"
       }

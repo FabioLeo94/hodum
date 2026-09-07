@@ -20,10 +20,59 @@
   gap: var(--m-sm);
 }
 
+.dashboardTitleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--m-md);
+}
+
 .dashboardTitle {
   color: var(--text-primary);
   font-size: 1.75rem;
   font-weight: 700;
+}
+
+/* Pulsante testuale con icona, non un'icona sola: "importa progetto" non è
+   un'azione ricorrente come il FAB "+" (crea progetto), quindi merita
+   un'etichetta leggibile invece di affidarsi solo all'icona + aria-label. */
+.importButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--m-xs);
+  padding: var(--p-xs) var(--p-md);
+  border-radius: var(--radious-xl);
+  background-color: var(--bg-field);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    transform 100ms ease;
+}
+
+.importButton:hover {
+  background-color: color-mix(in srgb, var(--bg-field) 80%, white 20%);
+}
+
+.importButton:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+.importButton:active {
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .importButton {
+    transition: none;
+  }
+
+  .importButton:active {
+    transform: none;
+  }
 }
 
 /* Riga singola scrollabile orizzontalmente invece di wrap: le card restano a

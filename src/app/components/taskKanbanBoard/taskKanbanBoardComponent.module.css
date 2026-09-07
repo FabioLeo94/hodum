@@ -119,6 +119,11 @@
   background-color: color-mix(in srgb, var(--color-danger) 18%, transparent);
 }
 
+/* max-height in vh (non legata all'altezza di .board, che non ha un limite
+   proprio): senza, una colonna con molti task cresce oltre il viewport e
+   l'unico modo di vederne il fondo è scrollare l'intera pagina. Il tetto
+   tiene la colonna sempre visibile, il contenuto in eccesso scrolla al
+   proprio interno (overflow-y già presente sotto). */
 .columnBody {
   display: flex;
   flex: 1;
@@ -126,6 +131,7 @@
   gap: var(--m-sm);
   padding: var(--p-md);
   min-height: 120px;
+  max-height: 60vh;
   overflow-y: auto;
 }
 
