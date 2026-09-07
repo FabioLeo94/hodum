@@ -29,6 +29,12 @@ interface Prop {
   onDelete: (employee: User) => void;
 }
 
+function areSameProjectIds(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  const bSet = new Set(b);
+  return a.every((id) => bSet.has(id));
+}
+
 function EmployeeCardComponent({
   employee,
   canManageEmployees,
@@ -42,6 +48,7 @@ function EmployeeCardComponent({
   const [assignView, setAssignView] = useState(false);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
+  const initialProjectIdsRef = useRef<string[]>([]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
   const [projectsLoadError, setProjectsLoadError] = useState("");
   const menuId = useId();
@@ -76,6 +83,7 @@ function EmployeeCardComponent({
         if (cancelled) return;
         setProjects(allProjects);
         setSelectedProjectIds(assignedIds);
+        initialProjectIdsRef.current = assignedIds;
       })
       .catch((error: unknown) => {
         if (!cancelled) {
@@ -99,6 +107,7 @@ function EmployeeCardComponent({
   const finishAssigning = useCallback(() => {
     const state = assignStateRef.current;
     if (!state.assignView || !state.canSave) return;
+    if (areSameProjectIds(state.selectedProjectIds, initialProjectIdsRef.current)) return;
     setAssignedProjects(employee.id, state.selectedProjectIds)
       .then(() => notifySuccess(t("pages.employees.assignSuccess")))
       .catch((error: unknown) => {

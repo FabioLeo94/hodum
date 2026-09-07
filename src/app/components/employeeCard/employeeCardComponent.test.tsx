@@ -101,6 +101,24 @@ describe("EmployeeCardComponent - assegnazione progetti", () => {
     expect(mockedSetAssignedProjects).toHaveBeenCalledWith("u1", ["p1", "p2"]);
   });
 
+  it("non invia nulla se si torna al menu senza aver modificato la selezione", async () => {
+    mockedListProjectsSummary.mockResolvedValue([
+      { id: "p1", name: "Sito e-commerce" },
+      { id: "p2", name: "App interna" },
+    ]);
+    mockedGetAssignedProjectIds.mockResolvedValue(["p1"]);
+
+    renderCard();
+    openKebabMenu();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Assegna progetti" }));
+
+    await screen.findByRole("checkbox", { name: "Sito e-commerce" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Torna al menu" }));
+
+    expect(mockedSetAssignedProjects).not.toHaveBeenCalled();
+  });
+
   it("non salva nulla se il caricamento dei progetti fallisce", async () => {
     mockedListProjectsSummary.mockRejectedValue(new Error("Impossibile caricare i progetti."));
     mockedGetAssignedProjectIds.mockResolvedValue([]);
