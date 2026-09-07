@@ -193,6 +193,22 @@ export function isValidWorkTimerAction(value: unknown): value is WorkTimerAction
   return typeof value === 'string' && (WORK_TIMER_ACTIONS as readonly string[]).includes(value);
 }
 
+// 99gg 23:59:59: non un limite di dominio ma di rappresentabilità.
+// L'editor manuale lato frontend mostra il tempo accumulato come 4 segmenti
+// "gg hh:mm:ss" con giorni a due cifre (vedi decomposeElapsedDuration.ts):
+// un valore oltre questa soglia non avrebbe modo di essere scritto o
+// visualizzato correttamente da quell'editor.
+const MAX_ACCUMULATED_SECONDS = 99 * 86400 + 23 * 3600 + 59 * 60 + 59; // 8639999
+
+export function isValidAccumulatedSeconds(value: unknown): value is number {
+  return (
+    typeof value === 'number' &&
+    Number.isInteger(value) &&
+    value >= 0 &&
+    value <= MAX_ACCUMULATED_SECONDS
+  );
+}
+
 // Usata solo quando il valore è presente e non-null (stesso schema di
 // isValidPriority): "è null o assente" resta responsabilità del chiamante
 // (controller), qui si valida solo il formato di una stringa candidata.
@@ -688,6 +704,44 @@ export async function updateTaskWorkTimer(
       }
       break;
     }
+  }
+
+  const task = await getTaskById(taskId);
+  emitTaskUpdated(task);
+  return task;
+}
+
+// Correzione manuale del tempo accumulato, distinta dai comandi a stato di
+// updateTaskWorkTimer sopra: qui il chiamante impone direttamente il valore
+// finale (per rimediare a un timer dimenticato avviato/fermato), non applica
+// un comando relativo allo stato attuale. Se il timer è in esecuzione
+// (work_started_at IS NOT NULL) il CASE ribasa work_started_at a now()
+// invece di lasciarlo invariato o azzerarlo: lasciato invariato, il display
+// (accumulato + segmento in corso dalla vecchia partenza) salterebbe avanti
+// sommando due volte parte del tempo; azzerato a NULL, il timer si
+// fermerebbe inaspettatamente. Ribasando a now(), il timer continua a
+// correre ma riparte esattamente dal valore appena impostato dall'utente.
+export async function updateTaskElapsedTime(
+  projectId: string,
+  taskId: string,
+  workAccumulatedSeconds: number,
+  companyId?: string | null,
+): Promise<Task> {
+  await getProjectById(projectId, companyId);
+  if (!isValidUuid(taskId)) {
+    throw new TaskNotFoundError(taskId);
+  }
+  await assertTaskNotLocked(taskId, projectId);
+
+  const result = await pool.query(
+    `UPDATE tasks
+     SET work_accumulated_seconds = $3,
+         work_started_at = CASE WHEN work_started_at IS NOT NULL THEN now() ELSE work_started_at END
+     WHERE id = $1 AND project_id = $2 AND invoice_id IS NULL`,
+    [taskId, projectId, workAccumulatedSeconds],
+  );
+  if (result.rowCount === 0) {
+    await throwIfLockedByRace(taskId, projectId);
   }
 
   const task = await getTaskById(taskId);

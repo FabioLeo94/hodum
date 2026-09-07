@@ -27,6 +27,7 @@ describe("TaskWorkTimerComponent", () => {
         workAccumulatedSeconds={0}
         workEndedAt={null}
         onAction={onAction}
+        onElapsedTimeEdit={vi.fn()}
       />,
     );
 
@@ -54,6 +55,7 @@ describe("TaskWorkTimerComponent", () => {
         workAccumulatedSeconds={0}
         workEndedAt={null}
         onAction={onAction}
+        onElapsedTimeEdit={vi.fn()}
       />,
     );
 
@@ -73,6 +75,7 @@ describe("TaskWorkTimerComponent", () => {
         workAccumulatedSeconds={0}
         workEndedAt={null}
         onAction={onAction}
+        onElapsedTimeEdit={vi.fn()}
       />,
     );
 
@@ -114,7 +117,7 @@ describe("TaskWorkTimerComponent", () => {
     expect(secondSeconds).toHaveTextContent("06");
   });
 
-  it("non mostra alcun bottone su un task completato: il tempo resta congelato", () => {
+  it("non mostra i controlli play/pausa/stop/reset su un task completato, ma resta modificabile il tempo: il timer resta congelato", () => {
     render(
       <TaskWorkTimerComponent
         status="completed"
@@ -123,6 +126,7 @@ describe("TaskWorkTimerComponent", () => {
         workAccumulatedSeconds={125}
         workEndedAt="2026-01-01T00:02:05.000Z"
         onAction={vi.fn()}
+        onElapsedTimeEdit={vi.fn()}
       />,
     );
 
@@ -131,7 +135,82 @@ describe("TaskWorkTimerComponent", () => {
     expect(hours).toHaveTextContent("00");
     expect(minutes).toHaveTextContent("02");
     expect(seconds).toHaveTextContent("05");
+    expect(screen.queryByRole("button", { name: /imposta inizio lavorazione/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /metti in pausa/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /termina lavorazione/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /azzera/i })).not.toBeInTheDocument();
+    // L'icona di modifica manuale del tempo resta disponibile anche su un
+    // task chiuso (non ancora fatturato): l'utente può essersi dimenticato
+    // di avviare/fermare il timer anche su un task già completato.
+    expect(screen.getByRole("button", { name: /modifica tempo/i })).toBeInTheDocument();
+  });
+
+  it("nasconde anche l'icona di modifica tempo quando il task è fatturato (disabled)", () => {
+    render(
+      <TaskWorkTimerComponent
+        status="completed"
+        taskTitle="Task di prova"
+        workStartedAt={null}
+        workAccumulatedSeconds={125}
+        workEndedAt="2026-01-01T00:02:05.000Z"
+        onAction={vi.fn()}
+        onElapsedTimeEdit={vi.fn()}
+        disabled
+      />,
+    );
+
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("apre il popover di modifica, corregge i segmenti e invoca onElapsedTimeEdit con il totale in secondi", () => {
+    const onElapsedTimeEdit = vi.fn();
+    render(
+      <TaskWorkTimerComponent
+        status="progress"
+        taskTitle="Task di prova"
+        workStartedAt={null}
+        workAccumulatedSeconds={125}
+        workEndedAt={null}
+        onAction={vi.fn()}
+        onElapsedTimeEdit={onElapsedTimeEdit}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /modifica tempo/i }));
+
+    const hoursField = screen.getByRole("textbox", { name: /^ore$/i });
+    fireEvent.focus(hoursField);
+    fireEvent.change(hoursField, { target: { value: "3" } });
+
+    fireEvent.click(screen.getByRole("button", { name: /salva/i }));
+
+    // workAccumulatedSeconds=125 => 00 00:02:05 di partenza: ore portate a 3
+    // dà 3*3600 + 2*60 + 5 = 10925 secondi.
+    expect(onElapsedTimeEdit).toHaveBeenCalledWith(10925);
+    expect(screen.queryByRole("textbox", { name: /^ore$/i })).not.toBeInTheDocument();
+  });
+
+  it("Annulla chiude il popover senza invocare onElapsedTimeEdit", () => {
+    const onElapsedTimeEdit = vi.fn();
+    render(
+      <TaskWorkTimerComponent
+        status="progress"
+        taskTitle="Task di prova"
+        workStartedAt={null}
+        workAccumulatedSeconds={125}
+        workEndedAt={null}
+        onAction={vi.fn()}
+        onElapsedTimeEdit={onElapsedTimeEdit}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /modifica tempo/i }));
+    const hoursField = screen.getByRole("textbox", { name: /^ore$/i });
+    fireEvent.change(hoursField, { target: { value: "3" } });
+    fireEvent.click(screen.getByRole("button", { name: /annulla/i }));
+
+    expect(onElapsedTimeEdit).not.toHaveBeenCalled();
+    expect(screen.queryByRole("textbox", { name: /^ore$/i })).not.toBeInTheDocument();
   });
 
   it("dopo Termina lavorazione mostra solo Play e Reset, non Pausa/Termina", () => {
@@ -143,6 +222,7 @@ describe("TaskWorkTimerComponent", () => {
         workAccumulatedSeconds={90}
         workEndedAt="2026-01-01T00:01:30.000Z"
         onAction={vi.fn()}
+        onElapsedTimeEdit={vi.fn()}
       />,
     );
 

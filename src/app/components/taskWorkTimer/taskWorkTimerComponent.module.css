@@ -111,3 +111,158 @@
     transition: none;
   }
 }
+
+/* position: fixed con top/left impostati via JS (vedi
+   taskWorkTimerComponent.tsx): stesso motivo di .panel in
+   notificationBellComponent.module.css, il pannello è in portal su
+   document.body per non farsi tagliare da un antenato con overflow non
+   "visible" (cella di tabella o card kanban). Contenuto fisso (4 campi + 2
+   bottoni, mai variabile come la lista di NotificationBell): niente
+   min-width/max-width, la larghezza segue il contenuto (width:auto di un
+   position:fixed senza left+right è già shrink-to-fit). */
+.editPanel {
+  position: fixed;
+  z-index: 20;
+  padding: var(--p-sm);
+  border-radius: var(--radious-md);
+  background-color: var(--bg-surface);
+  box-shadow: var(--shadow-popover);
+  animation: editPanelPopIn 140ms ease both;
+}
+
+.editForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-sm);
+}
+
+/* Riga superiore allineata "a inizio" (non center): i separatori ":" non
+   hanno l'etichetta gg/hh/mm/ss sotto, quindi con align-items: center la
+   loro altezza minore li farebbe scendere verso il centro del blocco
+   input+etichetta invece di restare a fianco delle cifre. flex-start allinea
+   il top del ":" al top dell'input in ogni campo, indipendentemente
+   dall'etichetta sottostante. */
+.editFields {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--m-xs);
+}
+
+.editField {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--m-xs);
+}
+
+/* Stesso distacco visivo di .daySegment nel badge sopra (margin, non spazio
+   testuale) per marcare il confine tra il campo giorni e il blocco
+   ore:minuti:secondi. Valore in px invece di em qui perché non c'è un unico
+   font-size di riferimento nel campo (input e didascalia ne usano due
+   diversi); var(--m-md) è il token più vicino allo 0.4em usato là. */
+.editFieldDay {
+  margin-right: var(--m-md);
+}
+
+.editInput {
+  width: 2.4em;
+  padding: var(--p-xs) var(--p-sm);
+  border-radius: var(--radious-sm);
+  background-color: var(--bg-field);
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.editInput:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+/* Stessa ricetta tipografica di .legend nel badge sopra (colore muted, testo
+   minuscolo, nessun uppercase) ma in piccolo sotto ogni singolo campo invece
+   che come didascalia unica dell'intero blocco: qui serve a distinguere i 4
+   input tra loro, non a spiegare il formato nel suo insieme. */
+.editFieldLabel {
+  color: var(--text-muted);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+}
+
+/* padding verticale identico a .editInput: fa coincidere l'altezza del box
+   (e quindi il centraggio del glifo ":" al suo interno) con quella
+   dell'input, così il separatore appare alla stessa quota delle cifre
+   accanto invece che spostato dal flex-start della riga. */
+.editSeparator {
+  display: flex;
+  align-items: center;
+  padding: var(--p-xs) 0;
+  color: var(--text-muted);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.editActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--m-xs);
+}
+
+.editCancelButton,
+.editSaveButton {
+  padding: var(--p-xs) var(--p-sm);
+  border-radius: var(--radious-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.editCancelButton {
+  color: var(--text-muted);
+}
+
+.editCancelButton:hover {
+  background-color: var(--bg-field);
+}
+
+.editSaveButton {
+  background-color: var(--bg-primary);
+  color: var(--text-on-primary);
+}
+
+.editSaveButton:hover {
+  background-color: color-mix(in srgb, var(--bg-primary) 85%, black 15%);
+}
+
+.editCancelButton:focus-visible,
+.editSaveButton:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+/* Stessa animazione/valori di .panel in notificationBellComponent.module.css:
+   CSS Modules scoping locale ai file (i nomi di @keyframes non sono
+   condivisibili tra moduli come le classi con composes), quindi qui è una
+   ridefinizione identica con nome locale, non una divergenza voluta. Stesso
+   pattern già in uso altrove nel progetto per popover diversi con lo stesso
+   effetto (es. popoverPopIn in taskCommentsPanelComponent.module.css). */
+@keyframes editPanelPopIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editPanel {
+    animation: none;
+  }
+}

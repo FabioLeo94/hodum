@@ -34,6 +34,7 @@ interface TaskKanbanBoardComponentProps {
   employees: User[];
   onAssigneesChange: (taskId: string, userIds: string[]) => void;
   onWorkTimerAction: (taskId: string, action: WorkTimerAction) => void;
+  onElapsedTimeEdit: (taskId: string, seconds: number) => void;
   /** True quando la toolbar di ricerca/filtri di taskList.tsx ha almeno un
    * criterio attivo: distingue "colonna vuota perché non ci sono task in
    * questo stato" da "colonna vuota perché i filtri hanno escluso tutto". */
@@ -52,6 +53,7 @@ function TaskKanbanBoardComponent({
   employees,
   onAssigneesChange,
   onWorkTimerAction,
+  onElapsedTimeEdit,
   hasActiveFilters = false,
 }: TaskKanbanBoardComponentProps) {
   const { t } = useTranslation();
@@ -193,6 +195,7 @@ function TaskKanbanBoardComponent({
                         workAccumulatedSeconds={task.workAccumulatedSeconds}
                         workEndedAt={task.workEndedAt}
                         onAction={(action) => onWorkTimerAction(task.id, action)}
+                        onElapsedTimeEdit={(seconds) => onElapsedTimeEdit(task.id, seconds)}
                         disabled={isLocked}
                       />
                     </div>

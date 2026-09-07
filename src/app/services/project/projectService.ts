@@ -279,6 +279,27 @@ export async function updateTaskWorkTimer(
   return toTask(task);
 }
 
+export async function updateTaskElapsedSeconds(
+  projectId: string,
+  taskId: string,
+  workAccumulatedSeconds: number,
+): Promise<Task> {
+  const response = await authFetch(
+    `${API_BASE_URL}/projects/${projectId}/tasks/${taskId}/work-timer/elapsed-seconds`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...authHeader() },
+      body: JSON.stringify({ workAccumulatedSeconds }),
+    },
+  );
+  if (!response.ok) {
+    const message = await readErrorMessage(response);
+    throw new Error(message ?? "Impossibile aggiornare il tempo di lavorazione.");
+  }
+  const task = (await response.json()) as TaskDto;
+  return toTask(task);
+}
+
 interface TaskCommentDto {
   id: string;
   taskId: string;

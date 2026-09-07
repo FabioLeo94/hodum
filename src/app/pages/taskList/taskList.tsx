@@ -9,6 +9,7 @@ import {
   getProjectById,
   updateTask,
   updateTaskAssignees,
+  updateTaskElapsedSeconds,
   updateTaskPriority,
   updateTaskStatus,
   updateTaskWorkTimer,
@@ -444,6 +445,22 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
     }
   }
 
+  async function handleElapsedTimeEdit(taskId: string, workAccumulatedSeconds: number) {
+    try {
+      const updatedTask = await updateTaskElapsedSeconds(progettoId, taskId, workAccumulatedSeconds);
+      setProject((current) =>
+        current ? replaceTaskInProject(current, updatedTask) : current,
+      );
+      setInlineUpdateError("");
+    } catch (error) {
+      setInlineUpdateError(
+        error instanceof Error
+          ? error.message
+          : t("pages.taskList.elapsedTimeUpdateError"),
+      );
+    }
+  }
+
   // Drag & drop di un dot su un altro giorno nella vista Calendario (vedi
   // onDueDateChange in TaskCalendarComponent): riusa updateTask, lo stesso
   // endpoint della modale di modifica, non ce n'è uno dedicato alla sola
@@ -749,6 +766,7 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
             employees={employees}
             onAssigneesChange={handleAssigneesChange}
             onWorkTimerAction={handleWorkTimerAction}
+            onElapsedTimeEdit={handleElapsedTimeEdit}
             hasActiveFilters={hasActiveFilters}
           />
         ) : viewMode === "calendar" ? (
@@ -938,6 +956,9 @@ function TaskListContent({ progettoId }: TaskListContentProps) {
                                         workAccumulatedSeconds={task.workAccumulatedSeconds}
                                         workEndedAt={task.workEndedAt}
                                         onAction={(action) => handleWorkTimerAction(task.id, action)}
+                                        onElapsedTimeEdit={(seconds) =>
+                                          handleElapsedTimeEdit(task.id, seconds)
+                                        }
                                         disabled={isLocked}
                                       />
                                     </td>

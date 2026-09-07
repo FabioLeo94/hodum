@@ -5,6 +5,7 @@ import type { Task, TaskStatus } from '../models/task';
 import {
   createTask,
   deleteTask,
+  isValidAccumulatedSeconds,
   isValidDueDate,
   isValidPriority,
   isValidTaskStatus,
@@ -15,6 +16,7 @@ import {
   TaskLockedError,
   TaskNotFoundError,
   updateTask,
+  updateTaskElapsedTime,
   updateTaskPriority,
   updateTaskStatus,
   updateTaskWorkTimer,
@@ -49,6 +51,10 @@ export interface UpdateTaskPriorityRequest {
 
 export interface UpdateTaskWorkTimerRequest {
   action: WorkTimerAction;
+}
+
+export interface UpdateTaskElapsedTimeRequest {
+  workAccumulatedSeconds: number;
 }
 
 export interface UpdateTaskRequest {
@@ -278,6 +284,44 @@ export class TaskController extends Controller {
     try {
       await assertProjectAccessible(projectId, user);
       return await updateTaskWorkTimer(projectId, taskId, body.action, user.companyId);
+    } catch (err) {
+      if (err instanceof TaskNotFoundError || err instanceof ProjectNotFoundError) {
+        this.setStatus(404);
+        return { message: err.message };
+      }
+      const lockedResponse = this.mapTaskLockedError(err);
+      if (lockedResponse) {
+        return lockedResponse;
+      }
+      throw err;
+    }
+  }
+
+  // Correzione manuale del tempo accumulato, distinta da work-timer sopra:
+  // quest'ultimo applica un comando relativo (start/pause/stop/reset), qui il
+  // client impone direttamente il valore finale (per rimediare a un timer
+  // dimenticato). Vedi commento su taskService.updateTaskElapsedTime per il
+  // comportamento quando il timer è in esecuzione.
+  @Patch('{projectId}/tasks/{taskId}/work-timer/elapsed-seconds')
+  @Security('jwt')
+  @Response<TaskErrorResponse>(404, 'Project o task non trovato')
+  @Response<TaskErrorResponse>(409, 'Task già fatturato: lockato per sempre')
+  @Response<TaskErrorResponse>(422, 'workAccumulatedSeconds non valido')
+  public async updateTaskElapsedTime(
+    @Path() projectId: string,
+    @Path() taskId: string,
+    @Body() body: UpdateTaskElapsedTimeRequest,
+    @Request() request: ExRequest,
+  ): Promise<Task | TaskErrorResponse> {
+    if (!isValidAccumulatedSeconds(body.workAccumulatedSeconds)) {
+      this.setStatus(422);
+      return { message: 'workAccumulatedSeconds deve essere un intero tra 0 e 8639999 (99 giorni 23:59:59)' };
+    }
+
+    const user = getAuthenticatedUser(request);
+    try {
+      await assertProjectAccessible(projectId, user);
+      return await updateTaskElapsedTime(projectId, taskId, body.workAccumulatedSeconds, user.companyId);
     } catch (err) {
       if (err instanceof TaskNotFoundError || err instanceof ProjectNotFoundError) {
         this.setStatus(404);
