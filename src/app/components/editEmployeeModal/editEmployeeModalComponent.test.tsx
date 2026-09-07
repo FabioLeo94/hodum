@@ -12,6 +12,7 @@ function renderModal(overrides: Partial<Parameters<typeof EditEmployeeModalCompo
       currentLastName="Cognome"
       currentPronoun={null}
       currentRole="employee"
+      currentEmail="dipendente1@example.com"
       currentCreatedAt="2026-01-01T00:00:00.000Z"
       currentLastLoginAt={null}
       onSave={() => {}}

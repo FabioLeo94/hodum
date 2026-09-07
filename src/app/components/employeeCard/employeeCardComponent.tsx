@@ -1,9 +1,20 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { EllipsisVertical } from "lucide-react";
+import {
+  ArrowLeft,
+  EllipsisVertical,
+  FolderPlus,
+  Pencil,
+  Trash2,
+  UserCheck,
+  UserX,
+} from "lucide-react";
 import AvatarComponent from "../avatar/avatarComponent";
 import type { User } from "../../services/auth/authService";
 import { getDisplayName } from "../../../shared/utils/displayName";
+import { listProjectsSummary, type ProjectSummary } from "../../services/project/projectService";
+import { getAssignedProjectIds, setAssignedProjects } from "../../services/user/userService";
+import { notifyError, notifySuccess } from "../../services/notify/notifyService";
 import styles from "./employeeCardComponent.module.css";
 
 interface Prop {
@@ -15,7 +26,6 @@ interface Prop {
   canAssignProjects: boolean;
   onEdit: (employee: User) => void;
   onToggleDisable: (employee: User) => void;
-  onAssign: (employee: User) => void;
   onDelete: (employee: User) => void;
 }
 
@@ -25,14 +35,76 @@ function EmployeeCardComponent({
   canAssignProjects,
   onEdit,
   onToggleDisable,
-  onAssign,
   onDelete,
 }: Prop) {
   const { t } = useTranslation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [assignView, setAssignView] = useState(false);
+  const [projects, setProjects] = useState<ProjectSummary[]>([]);
+  const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
+  const [isLoadingProjects, setIsLoadingProjects] = useState(false);
+  const [projectsLoadError, setProjectsLoadError] = useState("");
   const menuId = useId();
   const kebabContainerRef = useRef<HTMLDivElement>(null);
   const kebabButtonRef = useRef<HTMLButtonElement>(null);
+  const assignBackButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Il popover si può chiudere da tre punti diversi (click fuori, Escape,
+  // toggle del bottone kebab) mentre il pannello di assegnazione è aperto:
+  // invece di aggiungere selectedProjectIds/isLoadingProjects/
+  // projectsLoadError alle dipendenze dell'effect sottostante (che
+  // ristaccherebbe i listener a ogni click su una checkbox e rubrebbe il
+  // focus), teniamo un ref sempre aggiornato che le chiusure leggono al
+  // momento della chiusura effettiva.
+  const assignStateRef = useRef({ assignView: false, selectedProjectIds: [] as string[], canSave: false });
+  useEffect(() => {
+    assignStateRef.current = {
+      assignView,
+      selectedProjectIds,
+      canSave: !isLoadingProjects && !projectsLoadError,
+    };
+  }, [assignView, selectedProjectIds, isLoadingProjects, projectsLoadError]);
+
+  // Carica progetti e assegnazioni correnti ogni volta che il pannello si
+  // apre, stesso pattern (Promise.all + cancel flag) della vecchia modale.
+  useEffect(() => {
+    if (!assignView) return;
+    let cancelled = false;
+
+    Promise.all([listProjectsSummary(), getAssignedProjectIds(employee.id)])
+      .then(([allProjects, assignedIds]) => {
+        if (cancelled) return;
+        setProjects(allProjects);
+        setSelectedProjectIds(assignedIds);
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setProjectsLoadError(
+            error instanceof Error ? error.message : t("pages.employees.assignPanel.loadError"),
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingProjects(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [assignView, employee.id, t]);
+
+  // Invia un'unica chiamata con la selezione corrente quando si lascia il
+  // pannello di assegnazione (tornando al menu o chiudendo il popover), non
+  // a ogni checkbox: niente da salvare se il caricamento non è mai riuscito.
+  const finishAssigning = useCallback(() => {
+    const state = assignStateRef.current;
+    if (!state.assignView || !state.canSave) return;
+    setAssignedProjects(employee.id, state.selectedProjectIds)
+      .then(() => notifySuccess(t("pages.employees.assignSuccess")))
+      .catch((error: unknown) => {
+        notifyError(error instanceof Error ? error.message : t("pages.employees.assignError"));
+      });
+  }, [employee.id, t]);
 
   useEffect(() => {
     if (!isMenuOpen) return;
@@ -41,25 +113,35 @@ function EmployeeCardComponent({
     // dipendono tutte dalla stessa guardia), quindi il focus iniziale va
     // cercato nel DOM invece che fissato su un ref specifico: non si può
     // sapere in anticipo quale sarà la prima voce effettivamente renderizzata.
-    const firstMenuItem = kebabContainerRef.current?.querySelector<HTMLButtonElement>(
-      '[role="menuitem"]',
-    );
-    firstMenuItem?.focus();
+    // Rifatto anche al ritorno dal pannello di assegnazione al menu
+    // (assignView torna false a isMenuOpen invariato).
+    const elementToFocus = assignView
+      ? assignBackButtonRef.current
+      : kebabContainerRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]');
+    elementToFocus?.focus();
 
     function handlePointerDown(event: PointerEvent) {
       if (
         kebabContainerRef.current &&
         !kebabContainerRef.current.contains(event.target as Node)
       ) {
+        finishAssigning();
         setIsMenuOpen(false);
+        setAssignView(false);
       }
     }
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setIsMenuOpen(false);
-        kebabButtonRef.current?.focus();
+      if (event.key !== "Escape") return;
+      finishAssigning();
+      if (assignView) {
+        // Un livello alla volta: Escape nel sub-pannello torna al menu,
+        // esattamente come il bottone "indietro".
+        setAssignView(false);
+        return;
       }
+      setIsMenuOpen(false);
+      kebabButtonRef.current?.focus();
     }
 
     document.addEventListener("pointerdown", handlePointerDown);
@@ -68,7 +150,7 @@ function EmployeeCardComponent({
       document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isMenuOpen]);
+  }, [isMenuOpen, assignView, finishAssigning]);
 
   const employeeDisplayName = getDisplayName(employee);
   const isDisabled = employee.disabledAt !== null;
@@ -85,9 +167,36 @@ function EmployeeCardComponent({
     onToggleDisable(employee);
   }
 
-  function handleAssign() {
-    setIsMenuOpen(false);
-    onAssign(employee);
+  function handleAssignClick() {
+    // Reset qui (evento, non nel body dell'effect) di isLoadingProjects e
+    // projectsLoadError: il sub-pannello non si rimonta come faceva la
+    // vecchia modale (key sull'employee), quindi senza questo reset
+    // riaprirlo dopo un caricamento fallito mostrerebbe di nuovo l'errore
+    // per un istante prima che l'effect (keyed su assignView) riparta.
+    setIsLoadingProjects(true);
+    setProjectsLoadError("");
+    setAssignView(true);
+  }
+
+  function handleBackFromAssign() {
+    finishAssigning();
+    setAssignView(false);
+  }
+
+  function handleKebabButtonClick() {
+    if (isMenuOpen) {
+      finishAssigning();
+    }
+    setIsMenuOpen((current) => !current);
+    setAssignView(false);
+  }
+
+  function toggleProject(projectId: string) {
+    setSelectedProjectIds((current) =>
+      current.includes(projectId)
+        ? current.filter((id) => id !== projectId)
+        : [...current, projectId],
+    );
   }
 
   function handleDelete() {
@@ -127,14 +236,61 @@ function EmployeeCardComponent({
             type="button"
             className={styles.kebabButton}
             aria-label={t("pages.employees.otherActionsLabel", { employeeDisplayName })}
-            aria-haspopup="menu"
+            aria-haspopup={assignView ? "dialog" : "menu"}
             aria-expanded={isMenuOpen}
             aria-controls={menuId}
-            onClick={() => setIsMenuOpen((current) => !current)}
+            onClick={handleKebabButtonClick}
           >
             <EllipsisVertical size={18} aria-hidden="true" />
           </button>
-          {isMenuOpen && (
+          {isMenuOpen && assignView && (
+            <div id={menuId} className={`${styles.popoverMenu} ${styles.assignPanel}`}>
+              <div className={styles.assignHeader}>
+                <button
+                  ref={assignBackButtonRef}
+                  type="button"
+                  className={styles.assignBackButton}
+                  aria-label={t("pages.employees.assignPanel.backLabel")}
+                  onClick={handleBackFromAssign}
+                >
+                  <ArrowLeft size={16} aria-hidden="true" />
+                </button>
+                <span className={styles.assignTitle}>
+                  {t("pages.employees.assignPanel.title")}
+                </span>
+              </div>
+              {isLoadingProjects ? (
+                <p className={styles.assignStatusText} role="status">
+                  {t("pages.employees.assignPanel.loading")}
+                </p>
+              ) : projectsLoadError ? (
+                <p role="alert" className={styles.assignStatusText}>
+                  {projectsLoadError}
+                </p>
+              ) : projects.length === 0 ? (
+                <p className={styles.assignStatusText}>
+                  {t("pages.employees.assignPanel.empty")}
+                </p>
+              ) : (
+                <ul className={styles.assignProjectList}>
+                  {projects.map((project) => (
+                    <li key={project.id}>
+                      <label className={styles.assignProjectLabel}>
+                        <input
+                          type="checkbox"
+                          className={styles.assignCheckbox}
+                          checked={selectedProjectIds.includes(project.id)}
+                          onChange={() => toggleProject(project.id)}
+                        />
+                        {project.name}
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+          {isMenuOpen && !assignView && (
             <div id={menuId} role="menu" className={styles.popoverMenu}>
               {canManageEmployees && (
                 <button
@@ -143,6 +299,7 @@ function EmployeeCardComponent({
                   className={styles.popoverItem}
                   onClick={handleEdit}
                 >
+                  <Pencil size={14} aria-hidden="true" />
                   {t("pages.employees.menu.edit")}
                 </button>
               )}
@@ -153,6 +310,11 @@ function EmployeeCardComponent({
                   className={styles.popoverItem}
                   onClick={handleToggleDisable}
                 >
+                  {isDisabled ? (
+                    <UserCheck size={14} aria-hidden="true" />
+                  ) : (
+                    <UserX size={14} aria-hidden="true" />
+                  )}
                   {t(isDisabled ? "pages.employees.menu.enable" : "pages.employees.menu.disable")}
                 </button>
               )}
@@ -165,8 +327,9 @@ function EmployeeCardComponent({
                   type="button"
                   role="menuitem"
                   className={styles.popoverItem}
-                  onClick={handleAssign}
+                  onClick={handleAssignClick}
                 >
+                  <FolderPlus size={14} aria-hidden="true" />
                   {t("pages.employees.menu.assign")}
                 </button>
               )}
@@ -179,6 +342,7 @@ function EmployeeCardComponent({
                     className={`${styles.popoverItem} ${styles.popoverItemDanger}`}
                     onClick={handleDelete}
                   >
+                    <Trash2 size={14} aria-hidden="true" />
                     {t("pages.employees.menu.delete")}
                   </button>
                 </>

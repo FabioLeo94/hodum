@@ -5,7 +5,9 @@ import type { Invoice } from '../models/invoice';
 import { CustomerNotFoundError } from '../services/customerService';
 import {
   type BillableTask,
+  cancelInvoice as cancelInvoiceService,
   generateInvoice,
+  InvoiceAlreadyCancelledError,
   InvoiceGenerationInProgressError,
   InvoiceNotFoundError,
   type InvoiceWithItems,
@@ -38,6 +40,10 @@ function companyNotFoundResponse(id: string): InvoiceErrorResponse {
 
 function invoiceNotFoundResponse(id: string): InvoiceErrorResponse {
   return { message: `Invoice con id ${id} non trovata` };
+}
+
+function invoiceAlreadyCancelledResponse(id: string): InvoiceErrorResponse {
+  return { message: `Invoice con id ${id} è già stata annullata` };
 }
 
 export interface GenerateInvoiceTaskSelection {
@@ -190,6 +196,38 @@ export class InvoiceController extends Controller {
       if (err instanceof InvoiceNotFoundError) {
         this.setStatus(404);
         return invoiceNotFoundResponse(invoiceId);
+      }
+      throw err;
+    }
+  }
+
+  // Azione di stato (annulla), non una DELETE: la pre-fattura resta nello
+  // storico (vedi commento su cancelInvoice in invoiceService.ts), stesso
+  // principio di '{id}/backups/{backupId}/restore' in backupController.ts
+  // per un'azione che non è un semplice CRUD.
+  @Post('{invoiceId}/cancel')
+  @Security('owner')
+  @Response<InvoiceErrorResponse>(404, 'Pre-fattura non trovata')
+  @Response<InvoiceErrorResponse>(409, 'Pre-fattura già annullata')
+  public async cancelInvoice(
+    @Path() invoiceId: string,
+    @Request() request: ExRequest,
+  ): Promise<Invoice | InvoiceErrorResponse> {
+    const requester = getAuthenticatedUser(request);
+    if (requester.companyId === null) {
+      this.setStatus(404);
+      return invoiceNotFoundResponse(invoiceId);
+    }
+    try {
+      return await cancelInvoiceService(invoiceId, requester.companyId);
+    } catch (err) {
+      if (err instanceof InvoiceNotFoundError) {
+        this.setStatus(404);
+        return invoiceNotFoundResponse(invoiceId);
+      }
+      if (err instanceof InvoiceAlreadyCancelledError) {
+        this.setStatus(409);
+        return invoiceAlreadyCancelledResponse(invoiceId);
       }
       throw err;
     }

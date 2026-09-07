@@ -142,6 +142,13 @@
     "modalBase": {
       "closeButton": "Close"
     },
+    "profileHeader": {
+      "createdAtLabel": "Created on",
+      "lastLoginLabel": "Last login",
+      "lastLoginNever": "Never",
+      "copyEmailHint": "Click to copy the email",
+      "emailCopied": "Email copied"
+    },
     "createEmployeeModal": {
       "titleEmployee": "New employee",
       "titleManager": "New project manager",
@@ -178,9 +185,6 @@
       "submitting": "Saving...",
       "submit": "Save",
       "cancel": "Cancel",
-      "createdAtLabel": "Created on",
-      "lastLoginLabel": "Last login",
-      "lastLoginNever": "Never",
       "firstNameLabel": "First name",
       "firstNamePlaceholder": "First name",
       "lastNameLabel": "Last name",
@@ -285,21 +289,11 @@
         }
       }
     },
-    "assignProjectsModal": {
-      "title": "Assign projects to {{employeeDisplayName}}",
-      "submitting": "Saving...",
-      "submit": "Save",
-      "cancel": "Cancel",
-      "loading": "Loading projects...",
-      "loadError": "Unable to load projects.",
-      "empty": "No projects available in the company."
-    },
     "editAccountModal": {
       "title": "Edit account",
       "submitting": "Saving...",
       "submit": "Save",
       "cancel": "Cancel",
-      "createdAtLabel": "Created on",
       "firstNameLabel": "First name",
       "firstNamePlaceholder": "First name",
       "lastNameLabel": "Last name",
@@ -403,14 +397,22 @@
       "columnInclude": "Include",
       "columnTask": "Task",
       "columnProject": "Project",
-      "columnHours": "Hours",
+      "columnWorkedTime": "Worked time",
       "columnNonBillable": "Non-billable",
       "includeLabel": "Include {{title}} in the pre-invoice",
       "nonBillableLabel": "Mark {{title}} as non-billable",
-      "generate": "Generate pre-invoice",
-      "generating": "Generating...",
-      "generateError": "Unable to generate the pre-invoice.",
-      "generateSuccess": "Pre-invoice generated."
+      "generate": "Generate pre-invoice"
+    },
+    "generateInvoicePreviewModal": {
+      "title": "Pre-invoice preview",
+      "loading": "Generating preview...",
+      "loadError": "Unable to generate the pre-invoice preview.",
+      "frameTitle": "Pre-invoice PDF preview",
+      "edit": "Edit",
+      "confirm": "Confirm pre-invoice",
+      "confirming": "Generating...",
+      "confirmError": "Unable to generate the pre-invoice.",
+      "confirmSuccess": "Pre-invoice generated."
     },
     "invoicePreview": {
       "title": "Pre-invoice preview",
@@ -418,6 +420,13 @@
       "loadError": "Unable to load the pre-invoice PDF.",
       "frameTitle": "Pre-invoice PDF",
       "close": "Close"
+    },
+    "cancelInvoiceModal": {
+      "title": "Cancel pre-invoice",
+      "description": "You're about to cancel pre-invoice #{{number}}. It will stay in the history as cancelled, but the linked tasks will immediately become billable again. This does not generate a new number.",
+      "submit": "Cancel pre-invoice",
+      "submitting": "Cancelling...",
+      "cancel": "Back"
     },
     "backupHistoryItem": {
       "triggerLabels": {
@@ -512,11 +521,15 @@
       "panelLabel": "Employees assignable to {{taskTitle}}",
       "noEmployees": "No employees available"
     },
+    "elapsedDurationBadge": {
+      "tooltip": "days: {{days}}\nhours: {{hours}}\nminutes: {{minutes}}\nseconds: {{seconds}}"
+    },
     "taskWorkTimer": {
       "playLabel": "Set work start for {{taskTitle}}",
       "pauseLabel": "Pause the timer for {{taskTitle}}",
       "stopLabel": "End work on {{taskTitle}}",
-      "resetLabel": "Reset the timer for {{taskTitle}}"
+      "resetLabel": "Reset the timer for {{taskTitle}}",
+      "timeLegend": "dd hh:mm:ss"
     },
     "taskDetailModal": {
       "title": "{{projectName}} · Task detail",
@@ -812,6 +825,13 @@
         "enable": "Re-enable",
         "delete": "Delete"
       },
+      "assignPanel": {
+        "title": "Assign projects",
+        "backLabel": "Back to menu",
+        "loading": "Loading projects...",
+        "loadError": "Unable to load projects.",
+        "empty": "No projects available in the company."
+      },
       "createButtonLabel": "Create new employee",
       "invalidSession": "Invalid session. Please sign in again.",
       "createError": "Unable to create the employee.",
@@ -943,9 +963,13 @@
       "columnNumber": "Number",
       "columnDate": "Date",
       "columnCustomer": "Customer",
-      "columnHours": "Hours",
+      "columnWorkedTime": "Worked time",
       "columnAmount": "Amount",
+      "columnActions": "Actions",
       "numberPrefix": "#{{number}}",
+      "cancelAction": "Cancel pre-invoice #{{number}}",
+      "cancelledAmountLabel": "Cancelled pre-invoice",
+      "cancelError": "Unable to cancel the pre-invoice.",
       "meta": {
         "title": "Invoices"
       }

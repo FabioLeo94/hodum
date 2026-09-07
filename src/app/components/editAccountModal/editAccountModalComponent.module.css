@@ -2,24 +2,12 @@
   composes: fields from "../../../shared/styles/employeeForm.module.css";
 }
 
+.fieldRow {
+  composes: fieldRow from "../../../shared/styles/employeeForm.module.css";
+}
+
 .passwordGroup {
   composes: passwordGroup from "../../../shared/styles/employeeForm.module.css";
-}
-
-.metaInfo {
-  composes: metaInfo from "../../../shared/styles/modalForm.module.css";
-}
-
-.metaRow {
-  composes: metaRow from "../../../shared/styles/modalForm.module.css";
-}
-
-.metaLabel {
-  composes: metaLabel from "../../../shared/styles/modalForm.module.css";
-}
-
-.metaValue {
-  composes: metaValue from "../../../shared/styles/modalForm.module.css";
 }
 
 .submitError {
@@ -28,15 +16,6 @@
 
 .cancelButton {
   composes: cancelButton from "../../../shared/styles/modalForm.module.css";
-}
-
-.exportRow {
-  margin-top: var(--m-lg);
-}
-
-.exportButton {
-  composes: cancelButton from "../../../shared/styles/modalForm.module.css";
-  padding-left: 0;
 }
 
 .dangerZone {

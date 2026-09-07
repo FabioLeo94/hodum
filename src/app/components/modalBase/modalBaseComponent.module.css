@@ -15,6 +15,10 @@
   display: flex;
 }
 
+.dialogBase[data-size="medium"] {
+  width: min(600px, 92vw);
+}
+
 .dialogBase[data-size="wide"] {
   width: min(880px, 95vw);
 }
@@ -112,6 +116,16 @@
   flex-shrink: 0;
   padding: var(--p-md) var(--p-xl);
   border-top: 1px solid var(--bg-field);
+}
+
+.bottomBar[data-has-leading="true"] {
+  justify-content: space-between;
+}
+
+.bottomBarActions {
+  display: flex;
+  align-items: center;
+  gap: var(--m-md);
 }
 
 @media (prefers-reduced-motion: reduce) {

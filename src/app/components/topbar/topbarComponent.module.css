@@ -343,6 +343,9 @@
 }
 
 .menuItem {
+  display: flex;
+  align-items: center;
+  gap: var(--m-sm);
   padding: var(--p-sm) var(--p-md);
   border-radius: var(--radious-sm);
   color: var(--text-primary);
@@ -350,6 +353,10 @@
   text-align: left;
   cursor: pointer;
   transition: background-color 150ms ease;
+}
+
+.menuItem svg {
+  flex-shrink: 0;
 }
 
 .menuItem:hover {

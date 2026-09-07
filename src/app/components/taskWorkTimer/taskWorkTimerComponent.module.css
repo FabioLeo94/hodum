@@ -1,7 +1,18 @@
-/* Badge compatto (tempo + bottoni icona) pensato per convivere sia in una
-   cella di tabella (colonna Timer di taskList.tsx) sia nel footer di una
-   card kanban: nessuna larghezza fissa, si adatta al contenitore. */
+/* Badge compatto (tempo + bottoni icona + didascalia) pensato per convivere
+   sia in una cella di tabella (colonna Timer di taskList.tsx, 12% di
+   larghezza) sia nel footer di una card kanban: nessuna larghezza fissa, si
+   adatta al contenitore. Colonna anziché riga singola: la didascalia sta
+   sotto tempo+azioni, non affiancata, per non allargare ulteriormente un
+   badge già stretto in orizzontale. */
 .timer {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--m-xs);
+  min-width: 0;
+}
+
+.timerRow {
   display: inline-flex;
   align-items: center;
   gap: var(--m-sm);
@@ -9,11 +20,50 @@
 }
 
 .time {
+  display: inline-flex;
+  align-items: baseline;
   font-variant-numeric: tabular-nums;
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   color: var(--text-primary);
+  white-space: nowrap;
+}
+
+/* Un segmento (giorni/ore/minuti/secondi) resta sempre a due cifre e
+   sempre presente: solo l'enfasi cambia in base al valore, non la sua
+   visibilità (vedi .segmentMuted). */
+.segment {
+  color: inherit;
+}
+
+/* Distacco visivo tra giorni e blocco ore:minuti:secondi: un margin, non uno
+   spazio testuale (vedi commento in taskWorkTimerComponent.tsx sul perché).
+   0.4em è deliberatamente più largo dello spazio tra i segmenti separati da
+   ":" per non confondere "00 00" con due cifre di una stessa unità. */
+.daySegment {
+  margin-right: 0.4em;
+}
+
+/* Stesso linguaggio "presente ma secondario" di .dot[data-dimmed] in
+   taskCalendarComponent.module.css: qui segnala un'unità di tempo a zero,
+   non un dato filtrato, ma il principio è lo stesso — resta leggibile,
+   solo meno enfatizzato del resto del valore. */
+.segmentMuted {
+  opacity: 0.4;
+}
+
+/* Didascalia fissa "gg hh:mm:ss" (vedi traduzione): stessa ricetta tipografica
+   di .donutCenterLabel in projectComponent.module.css (valore numerico +
+   etichetta minuscola sotto), tranne l'uppercase, qui volutamente assente
+   perché il testo imita il formato hh:mm:ss e maiuscolarlo lo renderebbe
+   meno riconoscibile come tale. */
+.legend {
+  color: var(--text-muted);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
   white-space: nowrap;
 }
 

@@ -1,21 +1,9 @@
-.metaInfo {
-  composes: metaInfo from "../../../shared/styles/modalForm.module.css";
-}
-
-.metaRow {
-  composes: metaRow from "../../../shared/styles/modalForm.module.css";
-}
-
-.metaLabel {
-  composes: metaLabel from "../../../shared/styles/modalForm.module.css";
-}
-
-.metaValue {
-  composes: metaValue from "../../../shared/styles/modalForm.module.css";
-}
-
 .fields {
   composes: fields from "../../../shared/styles/employeeForm.module.css";
+}
+
+.fieldRow {
+  composes: fieldRow from "../../../shared/styles/employeeForm.module.css";
 }
 
 .roleField {

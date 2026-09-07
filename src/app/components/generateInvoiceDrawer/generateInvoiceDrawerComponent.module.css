@@ -96,9 +96,9 @@
 
 /* Il reset globale (src/index.css) azzera appearance/border/background su
    ogni input: la checkbox va ricostruita a mano, stesso pattern già usato da
-   assignProjectsModalComponent tramite `composes`. */
+   employeeCardComponent tramite `composes`. */
 /* A differenza delle altre checkbox che riusano checkboxBase (authForm,
-   assignProjectsModal, il filtro "mostra fatturati" di taskList), qui non
+   employeeCardComponent, il filtro "mostra fatturati" di taskList), qui non
    c'è una <label> che le avvolge da cui far scattare l'hover via discendente
    (sono celle nude di una tabella): l'hover va quindi dichiarato local su
    .checkbox stessa invece che sul contenitore. */

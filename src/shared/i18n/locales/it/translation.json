@@ -142,6 +142,13 @@
     "modalBase": {
       "closeButton": "Chiudi"
     },
+    "profileHeader": {
+      "createdAtLabel": "Creato il",
+      "lastLoginLabel": "Ultimo accesso",
+      "lastLoginNever": "Mai",
+      "copyEmailHint": "Clicca per copiare l'email",
+      "emailCopied": "Email copiata"
+    },
     "createEmployeeModal": {
       "titleEmployee": "Nuovo dipendente",
       "titleManager": "Nuovo project manager",
@@ -178,9 +185,6 @@
       "submitting": "Salvataggio in corso...",
       "submit": "Salva",
       "cancel": "Annulla",
-      "createdAtLabel": "Creato il",
-      "lastLoginLabel": "Ultimo accesso",
-      "lastLoginNever": "Mai",
       "firstNameLabel": "Nome",
       "firstNamePlaceholder": "Nome",
       "lastNameLabel": "Cognome",
@@ -285,21 +289,11 @@
         }
       }
     },
-    "assignProjectsModal": {
-      "title": "Assegna progetti a {{employeeDisplayName}}",
-      "submitting": "Salvataggio in corso...",
-      "submit": "Salva",
-      "cancel": "Annulla",
-      "loading": "Caricamento dei progetti...",
-      "loadError": "Impossibile caricare i progetti.",
-      "empty": "Nessun progetto disponibile in azienda."
-    },
     "editAccountModal": {
       "title": "Modifica account",
       "submitting": "Salvataggio in corso...",
       "submit": "Salva",
       "cancel": "Annulla",
-      "createdAtLabel": "Creato il",
       "firstNameLabel": "Nome",
       "firstNamePlaceholder": "Nome",
       "lastNameLabel": "Cognome",
@@ -403,14 +397,22 @@
       "columnInclude": "Includi",
       "columnTask": "Task",
       "columnProject": "Progetto",
-      "columnHours": "Ore",
+      "columnWorkedTime": "Tempo lavorato",
       "columnNonBillable": "Non fatturabile",
       "includeLabel": "Includi {{title}} nella pre-fattura",
       "nonBillableLabel": "Segna {{title}} come non fatturabile",
-      "generate": "Genera pre-fattura",
-      "generating": "Generazione in corso...",
-      "generateError": "Impossibile generare la pre-fattura.",
-      "generateSuccess": "Pre-fattura generata."
+      "generate": "Genera pre-fattura"
+    },
+    "generateInvoicePreviewModal": {
+      "title": "Anteprima pre-fattura",
+      "loading": "Generazione dell'anteprima...",
+      "loadError": "Impossibile generare l'anteprima della pre-fattura.",
+      "frameTitle": "Anteprima PDF della pre-fattura",
+      "edit": "Modifica",
+      "confirm": "Conferma pre-fattura",
+      "confirming": "Generazione in corso...",
+      "confirmError": "Impossibile generare la pre-fattura.",
+      "confirmSuccess": "Pre-fattura generata."
     },
     "invoicePreview": {
       "title": "Anteprima pre-fattura",
@@ -418,6 +420,13 @@
       "loadError": "Impossibile caricare il PDF della pre-fattura.",
       "frameTitle": "PDF della pre-fattura",
       "close": "Chiudi"
+    },
+    "cancelInvoiceModal": {
+      "title": "Annulla pre-fattura",
+      "description": "Stai per annullare la pre-fattura #{{number}}. Resterà nello storico come annullata, ma i task collegati torneranno immediatamente fatturabili. L'operazione non genera una nuova numerazione.",
+      "submit": "Annulla pre-fattura",
+      "submitting": "Annullamento in corso...",
+      "cancel": "Indietro"
     },
     "backupHistoryItem": {
       "triggerLabels": {
@@ -512,11 +521,15 @@
       "panelLabel": "Dipendenti assegnabili a {{taskTitle}}",
       "noEmployees": "Nessun dipendente disponibile"
     },
+    "elapsedDurationBadge": {
+      "tooltip": "giorni: {{days}}\nore: {{hours}}\nminuti: {{minutes}}\nsecondi: {{seconds}}"
+    },
     "taskWorkTimer": {
       "playLabel": "Imposta inizio lavorazione per {{taskTitle}}",
       "pauseLabel": "Metti in pausa il timer di {{taskTitle}}",
       "stopLabel": "Termina lavorazione di {{taskTitle}}",
-      "resetLabel": "Azzera il timer di {{taskTitle}}"
+      "resetLabel": "Azzera il timer di {{taskTitle}}",
+      "timeLegend": "gg hh:mm:ss"
     },
     "taskDetailModal": {
       "title": "{{projectName}} · Dettaglio task",
@@ -812,6 +825,13 @@
         "enable": "Riabilita",
         "delete": "Elimina"
       },
+      "assignPanel": {
+        "title": "Assegna progetti",
+        "backLabel": "Torna al menu",
+        "loading": "Caricamento dei progetti...",
+        "loadError": "Impossibile caricare i progetti.",
+        "empty": "Nessun progetto disponibile in azienda."
+      },
       "createButtonLabel": "Crea nuovo dipendente",
       "invalidSession": "Sessione non valida. Effettua nuovamente l'accesso.",
       "createError": "Impossibile creare il dipendente.",
@@ -943,9 +963,13 @@
       "columnNumber": "Numero",
       "columnDate": "Data",
       "columnCustomer": "Cliente",
-      "columnHours": "Ore",
+      "columnWorkedTime": "Tempo lavorato",
       "columnAmount": "Importo",
+      "columnActions": "Azioni",
       "numberPrefix": "#{{number}}",
+      "cancelAction": "Annulla pre-fattura #{{number}}",
+      "cancelledAmountLabel": "Pre-fattura annullata",
+      "cancelError": "Impossibile annullare la pre-fattura.",
       "meta": {
         "title": "Fatture"
       }

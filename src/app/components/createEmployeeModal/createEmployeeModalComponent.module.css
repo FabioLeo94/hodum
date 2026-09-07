@@ -6,6 +6,10 @@
   composes: fields from "../../../shared/styles/employeeForm.module.css";
 }
 
+.fieldRow {
+  composes: fieldRow from "../../../shared/styles/employeeForm.module.css";
+}
+
 .roleField {
   composes: roleField from "../../../shared/styles/employeeForm.module.css";
 }

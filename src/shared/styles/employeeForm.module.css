@@ -17,6 +17,19 @@
   gap: var(--m-lg);
 }
 
+/* Coppie di campi affiancati (nome/cognome, username/pronome): l'app è
+   pensata per schermi medio-grandi, sotto i quali tornano impilati (vedi
+   media query sotto) invece di stringersi troppo. */
+.fieldRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--m-lg);
+}
+
+.fieldRow > * {
+  min-width: 0;
+}
+
 .roleField {
   display: flex;
   flex-direction: column;
@@ -36,12 +49,23 @@
   cursor: pointer;
 }
 
-/* Coppia password/conferma: gap interno più stretto per leggerle come
-   un'unica unità, più un margine sopra che somma al gap di .fields
-   (16px + 8px = 24px) per staccarla dai campi anagrafici. */
+/* Coppia password/conferma affiancata come .fieldRow, ma con gap interno più
+   stretto per leggerle come un'unica unità, più un margine sopra che somma
+   al gap di .fields (16px + 8px = 24px) per staccarla dai campi anagrafici. */
 .passwordGroup {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: var(--m-md);
   margin-top: var(--m-md);
+}
+
+.passwordGroup > * {
+  min-width: 0;
+}
+
+@media (max-width: 480px) {
+  .fieldRow,
+  .passwordGroup {
+    grid-template-columns: 1fr;
+  }
 }

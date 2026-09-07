@@ -38,11 +38,15 @@ export interface Task {
   workStartedAt: string | null;
   workAccumulatedSeconds: number;
   workEndedAt: string | null;
-  // Pre-fatturazione (migration 0038): non-null significa "lockato per
-  // sempre", scritto una sola volta al momento della generazione di una
-  // pre-fattura e mai più riaggiornato dopo (nessuna "sfattura" in questa
-  // fase). La verifica di lock vive in taskService.assertTaskNotLocked,
-  // richiamata da ogni funzione mutante prima di qualunque UPDATE/DELETE.
+  // Pre-fatturazione (migration 0038): non-null significa "lockato", scritto
+  // al momento della generazione di una pre-fattura. La verifica di lock vive
+  // in taskService.assertTaskNotLocked, richiamata da ogni funzione mutante
+  // ORDINARIA (update/delete/assegnazione/timer) prima di qualunque
+  // UPDATE/DELETE: quella via resta bloccata per sempre. L'UNICA via di
+  // sblocco è l'annullamento della pre-fattura stessa (migration 0042,
+  // invoiceService.cancelInvoice), che riporta invoice_id a NULL — non una
+  // mutazione ordinaria del task, ma un effetto collaterale dell'annullamento
+  // a livello di invoice.
   invoiceId: string | null;
 }
 

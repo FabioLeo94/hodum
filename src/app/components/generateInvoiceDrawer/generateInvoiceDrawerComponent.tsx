@@ -1,14 +1,14 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ButtonComponent from "../button/buttonComponent";
 import DrawerBaseComponent from "../drawerBase/drawerBaseComponent";
+import ElapsedDurationBadgeComponent from "../elapsedDurationBadge/elapsedDurationBadgeComponent";
+import GenerateInvoicePreviewModalComponent from "../generateInvoicePreviewModal/generateInvoicePreviewModalComponent";
 import { listCustomerSummaries } from "../../services/customer/customerService";
 import type { CustomerSummary } from "../../services/customer/customerService";
-import { generateInvoice, listBillableTasks } from "../../services/invoice/invoiceService";
-import { notifySuccess } from "../../services/notify/notifyService";
+import { listBillableTasks } from "../../services/invoice/invoiceService";
+import type { TaskSelection } from "../../services/invoice/invoiceService";
 import type { BillableTask } from "../../../shared/types/invoice";
-import { useAsyncSubmit } from "../../../shared/hooks/useAsyncSubmit";
-import { formatElapsedDuration } from "../../../shared/utils/formatElapsedDuration";
 import styles from "./generateInvoiceDrawerComponent.module.css";
 
 interface Prop {
@@ -16,7 +16,7 @@ interface Prop {
   onClose: () => void;
   // Notifica il chiamante dopo una generazione riuscita, così la pagina
   // invoices.tsx può ricaricare la lista: il drawer si chiude da sé (vedi
-  // handleGenerate), non è responsabilità del chiamante.
+  // handleConfirmed), non è responsabilità del chiamante.
   onGenerated: () => void;
 }
 
@@ -47,8 +47,13 @@ function GenerateInvoiceDrawerComponent({ isOpen, onClose, onGenerated }: Prop) 
   const [includedIds, setIncludedIds] = useState<Set<string>>(new Set());
   const [nonFatturabileIds, setNonFatturabileIds] = useState<Set<string>>(new Set());
 
-  const [submitError, setSubmitError] = useState("");
-  const { isSubmitting, submit } = useAsyncSubmit();
+  // Selezione "congelata" al momento dell'apertura della preview (non
+  // ricalcolata ad ogni render da includedIds/nonFatturabileIds): passata
+  // così a GenerateInvoicePreviewModalComponent, la cui identità stabile
+  // permette all'effect di caricamento PDF lì di dipendere direttamente da
+  // taskSelections senza ricaricare ad ogni render del drawer.
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewSelections, setPreviewSelections] = useState<TaskSelection[]>([]);
 
   // Reset completo ad ogni (ri)apertura, aggiustato durante il render (non in
   // un effect): stesso pattern "confronta col valore precedente" già usato da
@@ -58,8 +63,8 @@ function GenerateInvoiceDrawerComponent({ isOpen, onClose, onGenerated }: Prop) 
     setPrevIsOpen(isOpen);
     if (isOpen) {
       setSelectedCustomerId("");
-      setSubmitError("");
       setCustomersError("");
+      setIsPreviewOpen(false);
     }
   }
 
@@ -128,144 +133,146 @@ function GenerateInvoiceDrawerComponent({ isOpen, onClose, onGenerated }: Prop) 
     setNonFatturabileIds((current) => toggleInSet(current, taskId));
   }
 
-  async function handleGenerate() {
-    setSubmitError("");
+  // Non genera più direttamente (spostato in GenerateInvoicePreviewModalComponent,
+  // dietro il passaggio di anteprima): congela la selezione corrente e apre
+  // la preview. Il drawer resta montato sotto, la generazione vera e propria
+  // avviene solo alla conferma nella modale.
+  function handleOpenPreview() {
     const taskSelections = tasks
       .filter((task) => includedIds.has(task.id))
       .map((task) => ({ taskId: task.id, nonFatturabile: nonFatturabileIds.has(task.id) }));
     if (taskSelections.length === 0 || selectedCustomerId === "") return;
-
-    await submit(async () => {
-      try {
-        await generateInvoice(selectedCustomerId, taskSelections);
-        notifySuccess(t("components.generateInvoiceDrawer.generateSuccess"));
-        onClose();
-        onGenerated();
-      } catch (error) {
-        setSubmitError(
-          error instanceof Error ? error.message : t("components.generateInvoiceDrawer.generateError"),
-        );
-        throw error;
-      }
-    });
+    setPreviewSelections(taskSelections);
+    setIsPreviewOpen(true);
   }
 
-  const canGenerate = includedIds.size > 0 && !isSubmitting;
+  function handleConfirmed() {
+    setIsPreviewOpen(false);
+    onClose();
+    onGenerated();
+  }
+
+  const canGenerate = includedIds.size > 0;
 
   return (
-    <DrawerBaseComponent
-      isOpen={isOpen}
-      onClose={onClose}
-      title={t("components.generateInvoiceDrawer.title")}
-      closeLabel={t("components.generateInvoiceDrawer.closeLabel")}
-      size="wide"
-    >
-      <div className={styles.content}>
-        <label className={styles.field}>
-          <span className={styles.fieldLabel}>{t("components.generateInvoiceDrawer.customerLabel")}</span>
-          <select
-            className={styles.select}
-            value={selectedCustomerId}
-            onChange={(event) => setSelectedCustomerId(event.target.value)}
-          >
-            <option value="">{t("components.generateInvoiceDrawer.selectCustomerPlaceholder")}</option>
-            {customers.map((customer) => (
-              <option key={customer.id} value={customer.id}>
-                {customer.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        {customersError && (
-          <p role="alert" className={styles.errorBanner}>
-            {customersError}
-          </p>
-        )}
+    <Fragment>
+      <DrawerBaseComponent
+        isOpen={isOpen}
+        onClose={onClose}
+        title={t("components.generateInvoiceDrawer.title")}
+        closeLabel={t("components.generateInvoiceDrawer.closeLabel")}
+        size="wide"
+      >
+        <div className={styles.content}>
+          <label className={styles.field}>
+            <span className={styles.fieldLabel}>{t("components.generateInvoiceDrawer.customerLabel")}</span>
+            <select
+              className={styles.select}
+              value={selectedCustomerId}
+              onChange={(event) => setSelectedCustomerId(event.target.value)}
+            >
+              <option value="">{t("components.generateInvoiceDrawer.selectCustomerPlaceholder")}</option>
+              {customers.map((customer) => (
+                <option key={customer.id} value={customer.id}>
+                  {customer.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {customersError && (
+            <p role="alert" className={styles.errorBanner}>
+              {customersError}
+            </p>
+          )}
 
-        {selectedCustomerId !== "" && (
-          <div className={styles.tasksSection}>
-            {tasksError ? (
-              <p role="alert" className={styles.errorBanner}>
-                {tasksError}
-              </p>
-            ) : tasksLoading ? (
-              <p role="status" className={styles.hint}>
-                {t("components.generateInvoiceDrawer.loadingTasks")}
-              </p>
-            ) : tasks.length === 0 ? (
-              <p className={styles.hint}>{t("components.generateInvoiceDrawer.noBillableTasks")}</p>
-            ) : (
-              <table className={styles.tasksTable}>
-                <caption className={styles.srOnly}>
-                  {t("components.generateInvoiceDrawer.tableCaption")}
-                </caption>
-                <thead>
-                  <tr>
-                    <th scope="col">
-                      <span className={styles.srOnly}>
-                        {t("components.generateInvoiceDrawer.columnInclude")}
-                      </span>
-                    </th>
-                    <th scope="col">{t("components.generateInvoiceDrawer.columnTask")}</th>
-                    <th scope="col">{t("components.generateInvoiceDrawer.columnProject")}</th>
-                    <th scope="col">{t("components.generateInvoiceDrawer.columnHours")}</th>
-                    <th scope="col">{t("components.generateInvoiceDrawer.columnNonBillable")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tasks.map((task) => {
-                    const included = includedIds.has(task.id);
-                    return (
-                      <tr key={task.id}>
-                        <td>
-                          <input
-                            type="checkbox"
-                            className={styles.checkbox}
-                            aria-label={t("components.generateInvoiceDrawer.includeLabel", {
-                              title: task.title,
-                            })}
-                            checked={included}
-                            onChange={() => toggleIncluded(task.id)}
-                          />
-                        </td>
-                        <td>{task.title}</td>
-                        <td>{task.projectName}</td>
-                        <td>{formatElapsedDuration(task.workAccumulatedSeconds)}</td>
-                        <td>
-                          <input
-                            type="checkbox"
-                            className={styles.checkbox}
-                            aria-label={t("components.generateInvoiceDrawer.nonBillableLabel", {
-                              title: task.title,
-                            })}
-                            checked={nonFatturabileIds.has(task.id)}
-                            disabled={!included}
-                            onChange={() => toggleNonFatturabile(task.id)}
-                          />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
-          </div>
-        )}
-      </div>
+          {selectedCustomerId !== "" && (
+            <div className={styles.tasksSection}>
+              {tasksError ? (
+                <p role="alert" className={styles.errorBanner}>
+                  {tasksError}
+                </p>
+              ) : tasksLoading ? (
+                <p role="status" className={styles.hint}>
+                  {t("components.generateInvoiceDrawer.loadingTasks")}
+                </p>
+              ) : tasks.length === 0 ? (
+                <p className={styles.hint}>{t("components.generateInvoiceDrawer.noBillableTasks")}</p>
+              ) : (
+                <table className={styles.tasksTable}>
+                  <caption className={styles.srOnly}>
+                    {t("components.generateInvoiceDrawer.tableCaption")}
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">
+                        <span className={styles.srOnly}>
+                          {t("components.generateInvoiceDrawer.columnInclude")}
+                        </span>
+                      </th>
+                      <th scope="col">{t("components.generateInvoiceDrawer.columnTask")}</th>
+                      <th scope="col">{t("components.generateInvoiceDrawer.columnProject")}</th>
+                      <th scope="col">{t("components.generateInvoiceDrawer.columnWorkedTime")}</th>
+                      <th scope="col">{t("components.generateInvoiceDrawer.columnNonBillable")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tasks.map((task) => {
+                      const included = includedIds.has(task.id);
+                      return (
+                        <tr key={task.id}>
+                          <td>
+                            <input
+                              type="checkbox"
+                              className={styles.checkbox}
+                              aria-label={t("components.generateInvoiceDrawer.includeLabel", {
+                                title: task.title,
+                              })}
+                              checked={included}
+                              onChange={() => toggleIncluded(task.id)}
+                            />
+                          </td>
+                          <td>{task.title}</td>
+                          <td>{task.projectName}</td>
+                          <td>
+                            <ElapsedDurationBadgeComponent totalSeconds={task.workAccumulatedSeconds} />
+                          </td>
+                          <td>
+                            <input
+                              type="checkbox"
+                              className={styles.checkbox}
+                              aria-label={t("components.generateInvoiceDrawer.nonBillableLabel", {
+                                title: task.title,
+                              })}
+                              checked={nonFatturabileIds.has(task.id)}
+                              disabled={!included}
+                              onChange={() => toggleNonFatturabile(task.id)}
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
+        </div>
 
-      <div className={styles.footer}>
-        <ButtonComponent onClick={handleGenerate} disabled={!canGenerate}>
-          {isSubmitting
-            ? t("components.generateInvoiceDrawer.generating")
-            : t("components.generateInvoiceDrawer.generate")}
-        </ButtonComponent>
-        {submitError && (
-          <p role="alert" className={styles.errorBanner}>
-            {submitError}
-          </p>
-        )}
-      </div>
-    </DrawerBaseComponent>
+        <div className={styles.footer}>
+          <ButtonComponent onClick={handleOpenPreview} disabled={!canGenerate}>
+            {t("components.generateInvoiceDrawer.generate")}
+          </ButtonComponent>
+        </div>
+      </DrawerBaseComponent>
+
+      <GenerateInvoicePreviewModalComponent
+        isOpen={isPreviewOpen}
+        customerId={selectedCustomerId}
+        taskSelections={previewSelections}
+        onEdit={() => setIsPreviewOpen(false)}
+        onConfirmed={handleConfirmed}
+      />
+    </Fragment>
   );
 }
 

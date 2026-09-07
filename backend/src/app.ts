@@ -14,7 +14,17 @@ import {
   UserDisabledError,
 } from './middleware/authentication';
 import { RegisterRoutes } from './routes/routes';
-import { getInvoicePdfPath, InvoiceNotFoundError, regenerateMissingInvoicePdf } from './services/invoiceService';
+import {
+  CustomerNotFoundError,
+  getInvoicePdfPath,
+  InvoiceNotFoundError,
+  MissingRateError,
+  NoTasksSelectedError,
+  previewInvoicePdf,
+  regenerateMissingInvoicePdf,
+  TaskNotBillableError,
+  type TaskSelectionInput,
+} from './services/invoiceService';
 import { InvalidSessionTokenError } from './services/tokenService';
 import { ValidationError } from './utils/validation';
 
@@ -220,6 +230,65 @@ export async function createApp(): Promise<Express> {
         // globale a QUATTRO parametri sotto (401/403/428/500 a seconda del
         // tipo): stesso ciclo di gestione di ogni rotta tsoa, non un ramo
         // separato che dovrebbe reimplementarne la logica qui.
+        next(err);
+      });
+  });
+
+  // Anteprima PDF di una pre-fattura NON ancora generata (task 13 del
+  // backlog UI): stesso motivo fuori-da-tsoa della rotta GET .../pdf sopra
+  // (Buffer, non JSON), ma POST perché la selezione dei task viaggia nel
+  // body, esattamente come CustomerInvoiceController.generateInvoice in
+  // invoiceController.ts (di cui questa rotta è la sorella "sola lettura,
+  // niente persistenza"). req.body è già disponibile qui: express.json()
+  // globale (sopra, limite 1mb) gira prima di questa rotta.
+  app.post('/customers/:customerId/invoices/preview', (req: Request, res: Response, next: NextFunction) => {
+    const customerId = req.params.customerId;
+    if (typeof customerId !== 'string') {
+      res.status(404).json({ message: 'Customer non trovato' });
+      return;
+    }
+    expressAuthentication(req, 'owner')
+      .then(async (user) => {
+        if (user.companyId === null) {
+          res.status(404).json({ message: `Customer con id ${customerId} non trovato` });
+          return;
+        }
+        // Stessa validazione "non vuoto" del controller generateInvoice
+        // (tsoa valida solo la forma, non il dominio): qui non c'è tsoa a
+        // valorizzare req.body dal DTO, va letto e controllato a mano.
+        const body = req.body as { taskSelections?: unknown };
+        if (!Array.isArray(body.taskSelections) || body.taskSelections.length === 0) {
+          res.status(422).json({ message: 'Seleziona almeno un task da fatturare' });
+          return;
+        }
+        const selections: TaskSelectionInput[] = (body.taskSelections as Array<Record<string, unknown>>).map(
+          (s) => ({
+            taskId: String(s.taskId ?? ''),
+            nonFatturabile: s.nonFatturabile === true,
+          }),
+        );
+
+        const buffer = await previewInvoicePdf(user.companyId, customerId, selections);
+        res.type('application/pdf');
+        res.setHeader('Content-Disposition', 'inline; filename="anteprima-pre-fattura.pdf"');
+        res.send(buffer);
+      })
+      .catch((err: unknown) => {
+        if (err instanceof CustomerNotFoundError) {
+          res.status(404).json({ message: err.message });
+          return;
+        }
+        if (err instanceof MissingRateError || err instanceof NoTasksSelectedError) {
+          res.status(422).json({ message: err.message });
+          return;
+        }
+        if (err instanceof TaskNotBillableError) {
+          res.status(409).json({ message: err.message });
+          return;
+        }
+        // Stesso principio del .catch della rotta PDF sopra: qualunque altro
+        // errore (incluso AuthenticationError/AuthorizationError) passa
+        // dall'error handler globale a quattro parametri.
         next(err);
       });
   });

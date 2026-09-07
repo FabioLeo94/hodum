@@ -1,9 +1,10 @@
 /* Il reset globale (src/index.css) azzera appearance/border/background su
    ogni input: la checkbox va ricostruita a mano. Condivisa da
-   authFormComponent ("Resta connesso") e assignProjectsModalComponent
-   (selezione progetti) tramite `composes`. L'hover che tinge il bordo resta
-   locale a ciascun modulo perché scatta sull'intera label che lo contiene
-   (nome di classe diverso in ogni chiamante), non sulla checkbox da sola. */
+   authFormComponent ("Resta connesso") e employeeCardComponent (selezione
+   progetti nel sub-pannello del popover kebab) tramite `composes`. L'hover
+   che tinge il bordo resta locale a ciascun modulo perché scatta sull'intera
+   label che lo contiene (nome di classe diverso in ogni chiamante), non
+   sulla checkbox da sola. */
 .checkboxBase {
   position: relative;
   width: 1.1rem;

@@ -1,12 +1,13 @@
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ModalBaseComponent from "../modalBase/modalBaseComponent";
+import ProfileHeaderComponent from "../profileHeader/profileHeaderComponent";
 import InputComponent from "../input/inputComponent";
 import ButtonComponent from "../button/buttonComponent";
 import type { EmployeeRole } from "../../services/auth/authService";
 import { validatePassword } from "../../services/validation/validationService";
 import { useAsyncSubmit } from "../../../shared/hooks/useAsyncSubmit";
-import { formatDate, formatDateTime } from "../../../shared/utils/formatDate";
+import { getDisplayName } from "../../../shared/utils/displayName";
 import styles from "./editEmployeeModalComponent.module.css";
 
 export interface EditEmployeeFormValues {
@@ -36,6 +37,7 @@ interface Prop {
   currentRole: EmployeeRole;
   // Sola lettura (task "Modifica account"): l'owner le vede ma non può
   // cambiarle, da qui fuori dallo state del form sotto.
+  currentEmail: string;
   currentCreatedAt: string;
   currentLastLoginAt: string | null;
   onSave: (values: EditEmployeeFormValues) => void | Promise<void>;
@@ -50,6 +52,7 @@ function EditEmployeeModalComponent({
   currentLastName,
   currentPronoun,
   currentRole,
+  currentEmail,
   currentCreatedAt,
   currentLastLoginAt,
   onSave,
@@ -144,6 +147,7 @@ function EditEmployeeModalComponent({
           ? t("components.editEmployeeModal.titleManager")
           : t("components.editEmployeeModal.titleEmployee")
       }
+      size="medium"
       onSubmit={handleSave}
       primaryAction={
         <ButtonComponent onClick={() => {}} disabled={isSubmitting}>
@@ -162,70 +166,66 @@ function EditEmployeeModalComponent({
         </button>
       }
     >
-      <div className={styles.metaInfo}>
-        <p className={styles.metaRow}>
-          <span className={styles.metaLabel}>
-            {t("components.editEmployeeModal.createdAtLabel")}
-          </span>
-          <span className={styles.metaValue}>{formatDate(currentCreatedAt)}</span>
-        </p>
-        <p className={styles.metaRow}>
-          <span className={styles.metaLabel}>
-            {t("components.editEmployeeModal.lastLoginLabel")}
-          </span>
-          <span className={styles.metaValue}>
-            {currentLastLoginAt
-              ? formatDateTime(currentLastLoginAt)
-              : t("components.editEmployeeModal.lastLoginNever")}
-          </span>
-        </p>
-      </div>
+      <ProfileHeaderComponent
+        displayName={getDisplayName({
+          username: currentUsername,
+          firstName: currentFirstName,
+          lastName: currentLastName,
+        })}
+        email={currentEmail}
+        createdAt={currentCreatedAt}
+        lastLoginAt={currentLastLoginAt}
+      />
       <div className={styles.fields}>
-        <InputComponent
-          type="text"
-          name="firstName"
-          label={t("components.editEmployeeModal.firstNameLabel")}
-          placeholder={t("components.editEmployeeModal.firstNamePlaceholder")}
-          value={firstName}
-          onChange={(event) => setFirstName(event.target.value)}
-          autoComplete="off"
-          autoFocus
-          required
-          error={firstNameError}
-          showLabel
-        />
-        <InputComponent
-          type="text"
-          name="lastName"
-          label={t("components.editEmployeeModal.lastNameLabel")}
-          placeholder={t("components.editEmployeeModal.lastNamePlaceholder")}
-          value={lastName}
-          onChange={(event) => setLastName(event.target.value)}
-          autoComplete="off"
-          required
-          error={lastNameError}
-          showLabel
-        />
-        <InputComponent
-          type="text"
-          name="username"
-          label={t("components.editEmployeeModal.usernameLabel")}
-          placeholder={t("components.editEmployeeModal.usernamePlaceholder")}
-          value={username}
-          onChange={(event) => setUsername(event.target.value)}
-          autoComplete="off"
-          showLabel
-        />
-        <InputComponent
-          type="text"
-          name="pronoun"
-          label={t("components.editEmployeeModal.pronounLabel")}
-          placeholder={t("components.editEmployeeModal.pronounPlaceholder")}
-          value={pronoun}
-          onChange={(event) => setPronoun(event.target.value)}
-          autoComplete="off"
-          showLabel
-        />
+        <div className={styles.fieldRow}>
+          <InputComponent
+            type="text"
+            name="firstName"
+            label={t("components.editEmployeeModal.firstNameLabel")}
+            placeholder={t("components.editEmployeeModal.firstNamePlaceholder")}
+            value={firstName}
+            onChange={(event) => setFirstName(event.target.value)}
+            autoComplete="off"
+            autoFocus
+            required
+            error={firstNameError}
+            showLabel
+          />
+          <InputComponent
+            type="text"
+            name="lastName"
+            label={t("components.editEmployeeModal.lastNameLabel")}
+            placeholder={t("components.editEmployeeModal.lastNamePlaceholder")}
+            value={lastName}
+            onChange={(event) => setLastName(event.target.value)}
+            autoComplete="off"
+            required
+            error={lastNameError}
+            showLabel
+          />
+        </div>
+        <div className={styles.fieldRow}>
+          <InputComponent
+            type="text"
+            name="username"
+            label={t("components.editEmployeeModal.usernameLabel")}
+            placeholder={t("components.editEmployeeModal.usernamePlaceholder")}
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
+            autoComplete="off"
+            showLabel
+          />
+          <InputComponent
+            type="text"
+            name="pronoun"
+            label={t("components.editEmployeeModal.pronounLabel")}
+            placeholder={t("components.editEmployeeModal.pronounPlaceholder")}
+            value={pronoun}
+            onChange={(event) => setPronoun(event.target.value)}
+            autoComplete="off"
+            showLabel
+          />
+        </div>
         <div className={styles.roleField}>
           <label className={styles.roleLabel} htmlFor={roleFieldId}>
             {t("components.editEmployeeModal.roleLabel")}

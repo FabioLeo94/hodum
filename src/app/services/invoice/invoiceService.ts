@@ -45,6 +45,61 @@ export async function generateInvoice(
   return (await response.json()) as Invoice;
 }
 
+// 404 pre-fattura non trovata (o di un'altra company), 409 già annullata:
+// stesso schema di generateInvoice sopra, messaggi di default solo come
+// fallback.
+export async function cancelInvoice(invoiceId: string): Promise<Invoice> {
+  const response = await authFetch(`${API_BASE_URL}/invoices/${invoiceId}/cancel`, {
+    method: "POST",
+    headers: authHeader(),
+  });
+  if (!response.ok) {
+    const message = await readErrorMessage(response);
+    if (response.status === 404) {
+      throw new Error(message ?? "Pre-fattura non trovata.");
+    }
+    if (response.status === 409) {
+      throw new Error(message ?? "La pre-fattura è già stata annullata.");
+    }
+    throw new Error(message ?? "Impossibile annullare la pre-fattura.");
+  }
+  return (await response.json()) as Invoice;
+}
+
+// Anteprima PDF di una pre-fattura NON ancora generata: POST (la selezione
+// viaggia nel body, come generateInvoice) verso una rotta raw Express (non
+// tsoa/JSON, stesso motivo di getInvoicePdfBlobUrl sotto), nessuna
+// persistenza lato server. Stesso contratto di getInvoicePdfBlobUrl: il
+// chiamante è responsabile di revocare l'URL con URL.revokeObjectURL quando
+// non serve più.
+export async function previewInvoicePdfBlobUrl(
+  customerId: string,
+  taskSelections: TaskSelection[],
+): Promise<string> {
+  const response = await authFetch(`${API_BASE_URL}/customers/${customerId}/invoices/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    body: JSON.stringify({ taskSelections }),
+  });
+  if (!response.ok) {
+    const message = await readErrorMessage(response);
+    if (response.status === 404) {
+      throw new Error(message ?? "Cliente non trovato.");
+    }
+    if (response.status === 409) {
+      throw new Error(message ?? "Un task selezionato non è più fatturabile.");
+    }
+    if (response.status === 422) {
+      throw new Error(
+        message ?? "Seleziona almeno un task e verifica che al cliente sia impostata una tariffa.",
+      );
+    }
+    throw new Error(message ?? "Impossibile generare l'anteprima della pre-fattura.");
+  }
+  const blob = await response.blob();
+  return URL.createObjectURL(blob);
+}
+
 export async function listBillableTasks(customerId: string): Promise<BillableTask[]> {
   const response = await authFetch(
     `${API_BASE_URL}/customers/${customerId}/invoices/billable-tasks`,

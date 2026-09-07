@@ -271,6 +271,9 @@
 }
 
 .popoverItem {
+  display: flex;
+  align-items: center;
+  gap: var(--m-sm);
   padding: var(--p-sm) var(--p-md);
   border-radius: var(--radious-sm);
   color: var(--text-primary);
@@ -280,6 +283,10 @@
   transition: background-color 150ms ease;
 }
 
+.popoverItem svg {
+  flex-shrink: 0;
+}
+
 .popoverItem:hover {
   background-color: var(--bg-surface);
 }
@@ -287,6 +294,15 @@
 .popoverItem:focus-visible {
   outline: 2px solid var(--bg-primary);
   outline-offset: -2px;
+}
+
+.popoverItemDanger {
+  color: var(--color-danger);
+}
+
+.popoverItemDanger:hover {
+  background-color: var(--color-danger);
+  color: var(--text-on-primary);
 }
 
 .popoverSeparator {

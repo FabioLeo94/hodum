@@ -16,4 +16,9 @@ export interface Invoice {
   // invoice_items, coerente con il commento sulla colonna in 0036.
   totaleSecondi: number;
   totaleImporto: number;
+  // Annullamento (migration 0042): null finché la pre-fattura è attiva. Un
+  // annullamento non elimina la riga né libera `numero` (vedi commento nella
+  // migration): resta nello storico, sola lettura, i task coinvolti tornano
+  // fatturabili (invoiceService.cancelInvoice).
+  cancelledAt: string | null;
 }

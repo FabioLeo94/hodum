@@ -1,18 +1,19 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, Plus } from "lucide-react";
+import { ArrowLeft, Ban, Plus, XCircle } from "lucide-react";
 import TopbarComponent from "../../components/topbar/topbarComponent";
 import GenerateInvoiceDrawerComponent from "../../components/generateInvoiceDrawer/generateInvoiceDrawerComponent";
 import InvoicePreviewComponent from "../../components/invoicePreview/invoicePreviewComponent";
+import CancelInvoiceModalComponent from "../../components/cancelInvoiceModal/cancelInvoiceModalComponent";
 import MessageCardComponent from "../../components/messageCard/messageCardComponent";
-import { listCompanyInvoices } from "../../services/invoice/invoiceService";
+import ElapsedDurationBadgeComponent from "../../components/elapsedDurationBadge/elapsedDurationBadgeComponent";
+import { cancelInvoice, listCompanyInvoices } from "../../services/invoice/invoiceService";
 import { listCustomerSummaries } from "../../services/customer/customerService";
 import type { CustomerSummary } from "../../services/customer/customerService";
 import type { Invoice } from "../../../shared/types/invoice";
 import { getUser, isAuthenticated, logout, useAuthUser } from "../../services/auth/authService";
 import { formatDate, resolveDateLocale } from "../../../shared/utils/formatDate";
-import { formatElapsedDuration } from "../../../shared/utils/formatElapsedDuration";
 import { usePageMeta } from "../../../shared/hooks/usePageMeta";
 import styles from "./invoices.module.css";
 
@@ -57,6 +58,12 @@ function Invoices() {
   // vedere le fatture, la colonna cliente degrada mostrando l'id.
   const [customers, setCustomers] = useState<CustomerSummary[]>([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  // Fattura per cui è aperta la modale di conferma annullamento: null =
+  // modale chiusa. Tenere l'intera Invoice (non solo l'id) evita un secondo
+  // giro di dati solo per mostrare il numero nel testo della modale.
+  const [cancellingInvoice, setCancellingInvoice] = useState<Invoice | null>(null);
+  const [cancelError, setCancelError] = useState("");
 
   // ?invoiceId=... apre direttamente l'anteprima di quella fattura: usato dal
   // bottone "Visualizza fattura" di un task lockato (taskFormModalComponent/
@@ -127,6 +134,19 @@ function Invoices() {
     loadInvoices();
   }
 
+  async function handleCancelConfirm() {
+    if (!cancellingInvoice) return;
+    setCancelError("");
+    try {
+      await cancelInvoice(cancellingInvoice.id);
+      setCancellingInvoice(null);
+      loadInvoices();
+    } catch (error) {
+      setCancelError(error instanceof Error ? error.message : t("pages.invoices.cancelError"));
+      throw error;
+    }
+  }
+
   return (
     <Fragment>
       <TopbarComponent onLogout={handleLogout} />
@@ -178,28 +198,77 @@ function Invoices() {
                   <th scope="col">{t("pages.invoices.columnNumber")}</th>
                   <th scope="col">{t("pages.invoices.columnDate")}</th>
                   <th scope="col">{t("pages.invoices.columnCustomer")}</th>
-                  <th scope="col">{t("pages.invoices.columnHours")}</th>
+                  <th scope="col">{t("pages.invoices.columnWorkedTime")}</th>
                   <th scope="col">{t("pages.invoices.columnAmount")}</th>
+                  <th scope="col">
+                    <span className={styles.srOnly}>{t("pages.invoices.columnActions")}</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {invoices.map((invoice) => (
-                  <tr key={invoice.id} className={styles.invoiceRow}>
-                    <td>
-                      <button
-                        type="button"
-                        className={styles.invoiceNumberButton}
-                        onClick={() => openPreview(invoice.id)}
-                      >
-                        {t("pages.invoices.numberPrefix", { number: invoice.numero })}
-                      </button>
-                    </td>
-                    <td>{formatDate(invoice.dataGenerazione)}</td>
-                    <td>{customerNameById.get(invoice.customerId) ?? invoice.customerId}</td>
-                    <td>{formatElapsedDuration(invoice.totaleSecondi)}</td>
-                    <td>{formatCurrency(invoice.totaleImporto)}</td>
-                  </tr>
-                ))}
+                {invoices.map((invoice) => {
+                  const isCancelled = invoice.cancelledAt !== null;
+                  return (
+                    <tr key={invoice.id} className={styles.invoiceRow}>
+                      <td>
+                        <button
+                          type="button"
+                          className={styles.invoiceNumberButton}
+                          onClick={() => openPreview(invoice.id)}
+                        >
+                          <span className={isCancelled ? styles.cancelledText : undefined}>
+                            {t("pages.invoices.numberPrefix", { number: invoice.numero })}
+                          </span>
+                        </button>
+                      </td>
+                      <td>
+                        <span className={isCancelled ? styles.cancelledText : undefined}>
+                          {formatDate(invoice.dataGenerazione)}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={isCancelled ? styles.cancelledText : undefined}>
+                          {customerNameById.get(invoice.customerId) ?? invoice.customerId}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={isCancelled ? styles.cancelledText : undefined}>
+                          <ElapsedDurationBadgeComponent totalSeconds={invoice.totaleSecondi} />
+                        </span>
+                      </td>
+                      <td>
+                        {isCancelled ? (
+                          <span
+                            className={styles.cancelledIcon}
+                            role="img"
+                            aria-label={t("pages.invoices.cancelledAmountLabel")}
+                            title={t("pages.invoices.cancelledAmountLabel")}
+                          >
+                            <XCircle size={18} aria-hidden="true" />
+                          </span>
+                        ) : (
+                          formatCurrency(invoice.totaleImporto)
+                        )}
+                      </td>
+                      <td>
+                        {!isCancelled && (
+                          <button
+                            type="button"
+                            className={styles.cancelActionButton}
+                            aria-label={t("pages.invoices.cancelAction", { number: invoice.numero })}
+                            title={t("pages.invoices.cancelAction", { number: invoice.numero })}
+                            onClick={() => {
+                              setCancelError("");
+                              setCancellingInvoice(invoice);
+                            }}
+                          >
+                            <Ban size={16} aria-hidden="true" />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -219,6 +288,14 @@ function Invoices() {
           onClose={closePreview}
         />
       )}
+
+      <CancelInvoiceModalComponent
+        isOpen={cancellingInvoice !== null}
+        onClose={() => setCancellingInvoice(null)}
+        invoiceNumber={cancellingInvoice?.numero ?? 0}
+        onConfirm={handleCancelConfirm}
+        submitError={cancelError}
+      />
     </Fragment>
   );
 }

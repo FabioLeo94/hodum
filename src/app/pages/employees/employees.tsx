@@ -7,7 +7,6 @@ import CreateEmployeeModalComponent from "../../components/createEmployeeModal/c
 import type { CreateEmployeeFormValues } from "../../components/createEmployeeModal/createEmployeeModalComponent";
 import EditEmployeeModalComponent from "../../components/editEmployeeModal/editEmployeeModalComponent";
 import type { EditEmployeeFormValues } from "../../components/editEmployeeModal/editEmployeeModalComponent";
-import AssignProjectsModalComponent from "../../components/assignProjectsModal/assignProjectsModalComponent";
 import DeleteEmployeeModalComponent from "../../components/deleteEmployeeModal/deleteEmployeeModalComponent";
 import DisableEmployeeModalComponent from "../../components/disableEmployeeModal/disableEmployeeModalComponent";
 import type { AssistantLayoutContext } from "../../components/protectedLayout/protectedLayoutComponent";
@@ -16,7 +15,6 @@ import MessageCardComponent from "../../components/messageCard/messageCardCompon
 import {
   listUsers,
   updateEmployee,
-  setAssignedProjects,
   deleteEmployee,
   disableEmployee,
   enableEmployee,
@@ -45,8 +43,6 @@ function Employees() {
   const [createError, setCreateError] = useState("");
   const [editingEmployee, setEditingEmployee] = useState<User | null>(null);
   const [editError, setEditError] = useState("");
-  const [assigningEmployee, setAssigningEmployee] = useState<User | null>(null);
-  const [assignError, setAssignError] = useState("");
   const [deletingEmployee, setDeletingEmployee] = useState<User | null>(null);
   const [deleteError, setDeleteError] = useState("");
   const [disablingEmployee, setDisablingEmployee] = useState<User | null>(null);
@@ -240,29 +236,6 @@ function Employees() {
     }
   }
 
-  function openAssignModal(employee: User) {
-    setAssignError("");
-    setAssigningEmployee(employee);
-  }
-
-  function closeAssignModal() {
-    setAssignError("");
-    setAssigningEmployee(null);
-  }
-
-  async function handleAssignProjects(projectIds: string[]) {
-    if (!assigningEmployee) return;
-    try {
-      await setAssignedProjects(assigningEmployee.id, projectIds);
-      notifySuccess(t("pages.employees.assignSuccess"));
-      closeAssignModal();
-    } catch (error) {
-      setAssignError(
-        error instanceof Error ? error.message : t("pages.employees.assignError"),
-      );
-    }
-  }
-
   return (
     <Fragment>
       <TopbarComponent onLogout={handleLogout} />
@@ -314,7 +287,6 @@ function Employees() {
                 canAssignProjects={canAssignProjects}
                 onEdit={openEditModal}
                 onToggleDisable={openDisableModal}
-                onAssign={openAssignModal}
                 onDelete={openDeleteModal}
               />
             ))}
@@ -350,6 +322,7 @@ function Employees() {
                 currentLastName={editingEmployee.lastName}
                 currentPronoun={editingEmployee.pronoun}
                 currentRole={editingEmployee.role === "manager" ? "manager" : "employee"}
+                currentEmail={editingEmployee.email}
                 currentCreatedAt={editingEmployee.createdAt}
                 currentLastLoginAt={editingEmployee.lastLoginAt}
                 onSave={handleEditEmployee}
@@ -380,18 +353,6 @@ function Employees() {
               />
             )}
           </Fragment>
-        )}
-
-        {assigningEmployee && (
-          <AssignProjectsModalComponent
-            key={assigningEmployee.id}
-            isOpen={assigningEmployee !== null}
-            onClose={closeAssignModal}
-            employeeId={assigningEmployee.id}
-            employeeDisplayName={getDisplayName(assigningEmployee)}
-            onSave={handleAssignProjects}
-            submitError={assignError}
-          />
         )}
       </div>
     </Fragment>

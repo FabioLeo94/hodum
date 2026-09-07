@@ -128,6 +128,7 @@ function CreateEmployeeModalComponent({
           ? t("components.createEmployeeModal.titleManager")
           : t("components.createEmployeeModal.titleEmployee")
       }
+      size="medium"
       onSubmit={handleCreate}
       primaryAction={
         <ButtonComponent onClick={() => {}} disabled={isSubmitting}>
@@ -150,51 +151,55 @@ function CreateEmployeeModalComponent({
         {t("components.createEmployeeModal.description")}
       </p>
       <div className={styles.fields}>
-        <InputComponent
-          type="text"
-          name="firstName"
-          label={t("components.createEmployeeModal.firstNameLabel")}
-          placeholder={t("components.createEmployeeModal.firstNamePlaceholder")}
-          value={firstName}
-          onChange={(event) => setFirstName(event.target.value)}
-          autoComplete="off"
-          autoFocus
-          required
-          error={firstNameError}
-          showLabel
-        />
-        <InputComponent
-          type="text"
-          name="lastName"
-          label={t("components.createEmployeeModal.lastNameLabel")}
-          placeholder={t("components.createEmployeeModal.lastNamePlaceholder")}
-          value={lastName}
-          onChange={(event) => setLastName(event.target.value)}
-          autoComplete="off"
-          required
-          error={lastNameError}
-          showLabel
-        />
-        <InputComponent
-          type="text"
-          name="username"
-          label={t("components.createEmployeeModal.usernameLabel")}
-          placeholder={t("components.createEmployeeModal.usernamePlaceholder")}
-          value={username}
-          onChange={(event) => setUsername(event.target.value)}
-          autoComplete="off"
-          showLabel
-        />
-        <InputComponent
-          type="text"
-          name="pronoun"
-          label={t("components.createEmployeeModal.pronounLabel")}
-          placeholder={t("components.createEmployeeModal.pronounPlaceholder")}
-          value={pronoun}
-          onChange={(event) => setPronoun(event.target.value)}
-          autoComplete="off"
-          showLabel
-        />
+        <div className={styles.fieldRow}>
+          <InputComponent
+            type="text"
+            name="firstName"
+            label={t("components.createEmployeeModal.firstNameLabel")}
+            placeholder={t("components.createEmployeeModal.firstNamePlaceholder")}
+            value={firstName}
+            onChange={(event) => setFirstName(event.target.value)}
+            autoComplete="off"
+            autoFocus
+            required
+            error={firstNameError}
+            showLabel
+          />
+          <InputComponent
+            type="text"
+            name="lastName"
+            label={t("components.createEmployeeModal.lastNameLabel")}
+            placeholder={t("components.createEmployeeModal.lastNamePlaceholder")}
+            value={lastName}
+            onChange={(event) => setLastName(event.target.value)}
+            autoComplete="off"
+            required
+            error={lastNameError}
+            showLabel
+          />
+        </div>
+        <div className={styles.fieldRow}>
+          <InputComponent
+            type="text"
+            name="username"
+            label={t("components.createEmployeeModal.usernameLabel")}
+            placeholder={t("components.createEmployeeModal.usernamePlaceholder")}
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
+            autoComplete="off"
+            showLabel
+          />
+          <InputComponent
+            type="text"
+            name="pronoun"
+            label={t("components.createEmployeeModal.pronounLabel")}
+            placeholder={t("components.createEmployeeModal.pronounPlaceholder")}
+            value={pronoun}
+            onChange={(event) => setPronoun(event.target.value)}
+            autoComplete="off"
+            showLabel
+          />
+        </div>
         <InputComponent
           type="email"
           name="email"

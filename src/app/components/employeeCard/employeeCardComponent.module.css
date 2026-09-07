@@ -128,6 +128,7 @@
   z-index: 3;
   display: flex;
   flex-direction: column;
+  width: max-content;
   min-width: 160px;
   padding: var(--p-sm);
   border-radius: var(--radious-md);
@@ -137,13 +138,21 @@
 }
 
 .popoverItem {
+  display: flex;
+  align-items: center;
+  gap: var(--m-sm);
   padding: var(--p-sm) var(--p-md);
   border-radius: var(--radious-sm);
   color: var(--text-primary);
   font-size: 0.9rem;
   text-align: left;
+  white-space: nowrap;
   cursor: pointer;
   transition: background-color 150ms ease;
+}
+
+.popoverItem svg {
+  flex-shrink: 0;
 }
 
 .popoverItem:hover {
@@ -169,6 +178,100 @@
   margin: var(--p-xs) var(--p-sm);
   background-color: var(--bg-surface);
   opacity: 0.6;
+}
+
+/* Sub-pannello "Assegna progetti": stesso popover del menu kebab (.popoverMenu),
+   solo più largo per ospitare i nomi progetto accanto alla checkbox. */
+.assignPanel {
+  min-width: 220px;
+  max-width: 280px;
+}
+
+.assignHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--m-sm);
+  padding: var(--p-xs) var(--p-sm) var(--p-sm);
+  margin-bottom: var(--p-xs);
+  border-bottom: 1px solid var(--bg-surface);
+}
+
+.assignBackButton {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--radious-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.assignBackButton:hover {
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.assignBackButton:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+.assignTitle {
+  overflow: hidden;
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.assignStatusText {
+  padding: var(--p-sm) var(--p-md);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.assignProjectList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-xs);
+  max-height: 12rem;
+  overflow-y: auto;
+}
+
+.assignProjectLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--m-sm);
+  padding: var(--p-xs) var(--p-sm);
+  border-radius: var(--radious-sm);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.assignProjectLabel:hover {
+  background-color: var(--bg-surface);
+}
+
+.assignCheckbox {
+  composes: checkboxBase from "../../../shared/styles/checkboxBase.module.css";
+}
+
+.assignProjectLabel:hover .assignCheckbox {
+  border-color: var(--bg-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .assignBackButton {
+    transition: none;
+  }
 }
 
 @keyframes popoverPopIn {

@@ -95,9 +95,9 @@ export async function getAllCompanyTasks(): Promise<TaskWithProject[]> {
 }
 
 // Solo id e nome di tutti i progetti della company, senza i task: usata dalla
-// checklist di assegnazione progetti (AssignProjectsModalComponent), che non
-// ha bisogno dei task e altrimenti pagherebbe la fetchProjectTasks per
-// progetto già fatta da getAllProjects.
+// checklist di assegnazione progetti (sub-pannello del popover kebab in
+// EmployeeCardComponent), che non ha bisogno dei task e altrimenti
+// pagherebbe la fetchProjectTasks per progetto già fatta da getAllProjects.
 export interface ProjectSummary {
   id: string;
   name: string;

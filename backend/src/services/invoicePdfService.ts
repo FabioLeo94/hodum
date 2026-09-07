@@ -35,15 +35,28 @@ function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString('it-IT');
 }
 
+// Solo i campi che questa funzione legge davvero (taskTitle, secondiFatturati,
+// tariffaOrariaSnapshot, nonFatturabile): invoiceService.previewInvoicePdf
+// costruisce righe non ancora persistite (nessun id/invoiceId/projectId reali,
+// la pre-fattura non esiste ancora) e non deve inventare valori fittizi per
+// soddisfare un tipo più largo del necessario. I due chiamanti che passano
+// InvoiceItem[] completi restano compatibili: è un sottoinsieme strutturale.
+type InvoicePdfItem = Pick<InvoiceItem, 'taskTitle' | 'secondiFatturati' | 'tariffaOrariaSnapshot' | 'nonFatturabile'>;
+
 // Documento semplice, non un layout fiscale: intestazione azienda/cliente,
 // tabella dei task inclusi, totali, e l'etichetta obbligatoria "non fiscale"
 // (vedi piano feature) ben visibile in testa, non in un footer che potrebbe
 // passare inosservato.
+//
+// `preview`: usata da invoiceService.previewInvoicePdf per l'anteprima
+// pre-conferma (task 13 del backlog UI) — nessuna invoice persistita ancora,
+// quindi niente numero/data di generazione reali da stampare in intestazione.
 export async function renderInvoicePdf(
   invoice: Invoice,
-  items: InvoiceItem[],
+  items: InvoicePdfItem[],
   company: Company,
   customer: Customer,
+  options?: { preview?: boolean },
 ): Promise<Buffer> {
   const doc = new PDFDocument({ margin: 50 });
   const chunks: Buffer[] = [];
@@ -63,8 +76,13 @@ export async function renderInvoicePdf(
     .fillColor('black');
   doc.moveDown();
 
-  doc.fontSize(18).text(`Pre-fattura n. ${invoice.numero}`, { align: 'left' });
-  doc.fontSize(10).text(`Generata il ${formatDateTime(invoice.dataGenerazione)}`);
+  if (options?.preview) {
+    doc.fontSize(18).text('Anteprima pre-fattura', { align: 'left' });
+    doc.fontSize(10).text(`Documento generato il ${formatDateTime(new Date().toISOString())} — non ancora confermato`);
+  } else {
+    doc.fontSize(18).text(`Pre-fattura n. ${invoice.numero}`, { align: 'left' });
+    doc.fontSize(10).text(`Generata il ${formatDateTime(invoice.dataGenerazione)}`);
+  }
   doc.moveDown();
 
   doc.fontSize(12).text(company.name, { continued: false });

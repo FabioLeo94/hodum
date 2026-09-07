@@ -1,7 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, LogOut, Pencil } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { updateStoredUser, useAuthUser } from "../../services/auth/authService";
 import { useCompanyName } from "../../services/company/companyService";
@@ -514,6 +514,7 @@ function TopbarComponent({ onLogout }: Prop) {
                 className={styles.menuItem}
                 onClick={handleEditAccountClick}
               >
+                <Pencil size={14} aria-hidden="true" />
                 {t("components.topbar.account.editAccount")}
               </button>
               <button
@@ -523,6 +524,7 @@ function TopbarComponent({ onLogout }: Prop) {
                 className={styles.menuItem}
                 onClick={handleLogoutClick}
               >
+                <LogOut size={14} aria-hidden="true" />
                 {t("components.topbar.account.logout")}
               </button>
               {/* Non più legato al ruolo (a differenza della vecchia posizione
@@ -563,6 +565,7 @@ function TopbarComponent({ onLogout }: Prop) {
           currentPronoun={authUser.pronoun}
           currentEmail={authUser.email}
           currentCreatedAt={authUser.createdAt}
+          currentLastLoginAt={authUser.lastLoginAt}
           isOwner={isOwner}
           onSave={handleSaveAccount}
           onExport={handleExportAccount}

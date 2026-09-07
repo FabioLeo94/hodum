@@ -11,6 +11,10 @@ export interface Invoice {
   dataGenerazione: string;
   totaleSecondi: number;
   totaleImporto: number;
+  // Annullamento (vedi backend/migrations/0042): null finché la pre-fattura è
+  // attiva. Un annullamento non elimina l'invoice né libera `numero`, resta
+  // nello storico in sola lettura.
+  cancelledAt: string | null;
 }
 
 export interface InvoiceItem {

@@ -54,11 +54,15 @@ import { renderInvoicePdf, writeInvoicePdfToDisk } from './invoicePdfService';
 import type { Company } from '../models/company';
 import type { Customer } from '../models/customer';
 import {
+  cancelInvoice,
   generateInvoice,
   getBillableTasksSummary,
   getInvoicesSummary,
+  InvoiceAlreadyCancelledError,
   InvoiceGenerationInProgressError,
+  InvoiceNotFoundError,
   NoTasksSelectedError,
+  previewInvoicePdf,
   resolveRateForCustomer,
   TaskNotBillableError,
 } from './invoiceService';
@@ -375,6 +379,151 @@ describe('generateInvoice', () => {
     expect(getTasksByIdsMock).toHaveBeenCalledTimes(1);
     expect(getTasksByIdsMock).toHaveBeenCalledWith([TASK_A, TASK_B]);
     expect(emitTaskUpdated).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('cancelInvoice', () => {
+  it('rifiuta con InvoiceNotFoundError per un id non valido, senza aprire una connessione', async () => {
+    await expect(cancelInvoice('not-a-uuid', COMPANY_ID)).rejects.toBeInstanceOf(InvoiceNotFoundError);
+    expect(poolConnect).not.toHaveBeenCalled();
+  });
+
+  it('annulla la pre-fattura, sblocca i task collegati e notifica in realtime', async () => {
+    const client = makeLockClient();
+    poolConnect.mockResolvedValue(client as never);
+    const invoiceId = '11111111-1111-1111-1111-111111111111';
+    const baseRow = {
+      id: invoiceId,
+      company_id: COMPANY_ID,
+      customer_id: CUSTOMER_ID,
+      numero: 5,
+      data_generazione: new Date('2026-02-01T10:00:00.000Z'),
+      totale_secondi: 5400,
+      totale_importo: '40.00',
+      pdf_path: 'invoice.pdf',
+    };
+
+    client.query
+      .mockResolvedValueOnce({}) // 1: BEGIN
+      .mockResolvedValueOnce({ rows: [{ ...baseRow, cancelled_at: null }] }) // 2: SELECT ... FOR UPDATE
+      .mockResolvedValueOnce({
+        rows: [{ ...baseRow, cancelled_at: new Date('2026-03-01T12:00:00.000Z') }],
+      }) // 3: UPDATE invoices SET cancelled_at RETURNING
+      .mockResolvedValueOnce({ rows: [{ id: TASK_A }, { id: TASK_B }] }) // 4: UPDATE tasks SET invoice_id = NULL RETURNING id
+      .mockResolvedValueOnce({}); // 5: COMMIT
+
+    getTasksByIdsMock.mockResolvedValue([{ id: TASK_A }, { id: TASK_B }] as never);
+
+    const invoice = await cancelInvoice(invoiceId, COMPANY_ID);
+
+    expect(invoice.cancelledAt).toBe('2026-03-01T12:00:00.000Z');
+    // I task tornano fatturabili: invoice_id -> NULL sui soli task ancora
+    // agganciati a QUESTA invoice.
+    expect(client.query).toHaveBeenNthCalledWith(
+      4,
+      expect.stringContaining('UPDATE tasks SET invoice_id = NULL'),
+      [invoiceId],
+    );
+    expect(client.query).toHaveBeenNthCalledWith(5, 'COMMIT');
+    expect(client.query).toHaveBeenCalledTimes(5);
+    expect(client.release).toHaveBeenCalled();
+    // Notifica realtime DOPO il commit, stesso principio del passo 10 di
+    // generateInvoice.
+    expect(getTasksByIdsMock).toHaveBeenCalledWith([TASK_A, TASK_B]);
+    expect(emitTaskUpdated).toHaveBeenCalledTimes(2);
+  });
+
+  it("rifiuta con InvoiceNotFoundError e fa ROLLBACK se la fattura non esiste o è di un'altra company", async () => {
+    const client = makeLockClient();
+    poolConnect.mockResolvedValue(client as never);
+    const invoiceId = '22222222-2222-2222-2222-222222222222';
+    client.query
+      .mockResolvedValueOnce({}) // BEGIN
+      .mockResolvedValueOnce({ rows: [] }) // SELECT ... FOR UPDATE: nessuna riga
+      .mockResolvedValueOnce({}); // ROLLBACK
+
+    await expect(cancelInvoice(invoiceId, COMPANY_ID)).rejects.toBeInstanceOf(InvoiceNotFoundError);
+    expect(client.query).toHaveBeenNthCalledWith(3, 'ROLLBACK');
+    expect(client.release).toHaveBeenCalled();
+    expect(getTasksByIdsMock).not.toHaveBeenCalled();
+  });
+
+  it('rifiuta con InvoiceAlreadyCancelledError se già annullata, senza toccare i task', async () => {
+    const client = makeLockClient();
+    poolConnect.mockResolvedValue(client as never);
+    const invoiceId = '33333333-3333-3333-3333-333333333333';
+    client.query
+      .mockResolvedValueOnce({}) // BEGIN
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: invoiceId,
+            company_id: COMPANY_ID,
+            customer_id: CUSTOMER_ID,
+            numero: 5,
+            data_generazione: new Date('2026-02-01T10:00:00.000Z'),
+            totale_secondi: 5400,
+            totale_importo: '40.00',
+            pdf_path: 'invoice.pdf',
+            cancelled_at: new Date('2026-02-05T00:00:00.000Z'),
+          },
+        ],
+      }) // SELECT ... FOR UPDATE: già annullata
+      .mockResolvedValueOnce({}); // ROLLBACK
+
+    await expect(cancelInvoice(invoiceId, COMPANY_ID)).rejects.toBeInstanceOf(InvoiceAlreadyCancelledError);
+    expect(client.query).toHaveBeenCalledTimes(3);
+    expect(getTasksByIdsMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('previewInvoicePdf', () => {
+  it('genera il PDF di anteprima senza alcuna transazione, lock o scrittura su disco', async () => {
+    getCustomerByIdMock.mockResolvedValue(makeCustomer({ tariffaOraria: null }));
+    getCompanyByIdMock.mockResolvedValue(makeCompany({ tariffaOraria: 40 }));
+    poolQuery.mockResolvedValueOnce({
+      rows: [
+        { id: TASK_A, title: 'Task A', work_accumulated_seconds: 3600 },
+        { id: TASK_B, title: 'Task B', work_accumulated_seconds: 1800 },
+      ],
+    } as never);
+
+    const buffer = await previewInvoicePdf(COMPANY_ID, CUSTOMER_ID, [
+      { taskId: TASK_A, nonFatturabile: false },
+      { taskId: TASK_B, nonFatturabile: true },
+    ]);
+
+    expect(buffer).toEqual(Buffer.from('pdf'));
+    // Sola lettura: nessuna connessione dedicata (niente lock advisory, FOR
+    // UPDATE, INSERT/UPDATE) e nessuna scrittura del PDF su disco.
+    expect(poolConnect).not.toHaveBeenCalled();
+    expect(writeInvoicePdfToDiskMock).not.toHaveBeenCalled();
+    expect(renderInvoicePdfMock).toHaveBeenCalledWith(
+      expect.objectContaining({ totaleSecondi: 5400, totaleImporto: 40 }),
+      [
+        { taskTitle: 'Task A', secondiFatturati: 3600, tariffaOrariaSnapshot: 40, nonFatturabile: false },
+        { taskTitle: 'Task B', secondiFatturati: 1800, tariffaOrariaSnapshot: 40, nonFatturabile: true },
+      ],
+      expect.anything(),
+      expect.anything(),
+      { preview: true },
+    );
+  });
+
+  it('propaga TaskNotBillableError se un task selezionato non risulta fatturabile', async () => {
+    getCustomerByIdMock.mockResolvedValue(makeCustomer());
+    poolQuery.mockResolvedValueOnce({ rows: [] } as never);
+
+    await expect(
+      previewInvoicePdf(COMPANY_ID, CUSTOMER_ID, [{ taskId: TASK_A, nonFatturabile: false }]),
+    ).rejects.toBeInstanceOf(TaskNotBillableError);
+  });
+
+  it('rifiuta con NoTasksSelectedError senza interrogare il DB', async () => {
+    getCustomerByIdMock.mockResolvedValue(makeCustomer());
+
+    await expect(previewInvoicePdf(COMPANY_ID, CUSTOMER_ID, [])).rejects.toBeInstanceOf(NoTasksSelectedError);
+    expect(poolQuery).not.toHaveBeenCalled();
   });
 });
 

@@ -1,0 +1,19 @@
+.previewArea {
+  composes: previewArea from "../invoicePreview/invoicePreviewComponent.module.css";
+}
+
+.pdfFrame {
+  composes: pdfFrame from "../invoicePreview/invoicePreviewComponent.module.css";
+}
+
+.statusText {
+  composes: statusText from "../invoicePreview/invoicePreviewComponent.module.css";
+}
+
+.errorBanner {
+  composes: errorBanner from "../invoicePreview/invoicePreviewComponent.module.css";
+}
+
+.editButton {
+  composes: cancelButton from "../../../shared/styles/modalForm.module.css";
+}

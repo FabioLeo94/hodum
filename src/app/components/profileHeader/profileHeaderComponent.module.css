@@ -1,0 +1,77 @@
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--m-xs);
+  margin-bottom: var(--m-lg);
+  text-align: center;
+}
+
+.name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.emailButton {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+
+.emailButton:hover,
+.emailButton:focus-visible {
+  color: var(--text-primary);
+}
+
+.emailButton:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+  border-radius: var(--radious-sm);
+}
+
+.copyFeedback {
+  min-height: 1em;
+  color: var(--color-success);
+  font-size: 0.75rem;
+}
+
+.metaRow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: var(--m-sm);
+  color: var(--text-muted);
+  opacity: 0.75;
+  font-size: 0.75rem;
+}
+
+.metaLabel {
+  opacity: 0.85;
+}
+
+.metaValue {
+  font-weight: 600;
+}
+
+.metaSeparator {
+  opacity: 0.6;
+}
+
+.divider {
+  width: 100%;
+  margin-top: var(--m-lg);
+  border-top: 1px solid var(--bg-field);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .emailButton {
+    transition: none;
+  }
+}

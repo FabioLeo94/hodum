@@ -9,12 +9,18 @@ interface Prop {
   onClose: () => void;
   title: string;
   variant?: "generic" | "error" | "info" | "success";
-  // "wide" ospita layout a due colonne (es. modifica task + pannello
-  // commenti): la larghezza resta gestita nel CSS module, qui solo la scelta.
-  size?: "default" | "wide";
+  // "medium" ospita form con campi affiancati a coppie (es. editAccountModal,
+  // editEmployeeModal); "wide" ospita layout a due colonne (es. modifica task
+  // + pannello commenti). La larghezza resta gestita nel CSS module, qui solo
+  // la scelta.
+  size?: "default" | "medium" | "wide";
   showCloseButton?: boolean;
   primaryAction: ReactNode;
   secondaryActions?: ReactNode;
+  // Azione secondaria isolata all'estremo opposto della bottom bar rispetto a
+  // secondaryActions/primaryAction (es. "Esporta i miei dati"): assente,
+  // la bottom bar resta allineata a destra come prima.
+  leadingAction?: ReactNode;
   onSubmit?: () => void;
   children: ReactNode;
 }
@@ -28,6 +34,7 @@ function ModalBaseComponent({
   showCloseButton = true,
   primaryAction,
   secondaryActions,
+  leadingAction,
   onSubmit,
   children,
 }: Prop) {
@@ -49,9 +56,19 @@ function ModalBaseComponent({
   const body = (
     <>
       <div className={styles.content}>{children}</div>
-      <div className={styles.bottomBar}>
-        {secondaryActions}
-        {primaryAction}
+      <div className={styles.bottomBar} data-has-leading={leadingAction ? "true" : undefined}>
+        {leadingAction && <div className={styles.bottomBarLeading}>{leadingAction}</div>}
+        {leadingAction ? (
+          <div className={styles.bottomBarActions}>
+            {secondaryActions}
+            {primaryAction}
+          </div>
+        ) : (
+          <>
+            {secondaryActions}
+            {primaryAction}
+          </>
+        )}
       </div>
     </>
   );

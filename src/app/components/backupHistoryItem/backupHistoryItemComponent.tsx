@@ -1,5 +1,5 @@
 import { useId, useLayoutEffect, useRef, useState } from "react";
-import { Check, EllipsisVertical } from "lucide-react";
+import { Check, EllipsisVertical, RotateCcw, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { BackupRecord } from "../../services/backup/backupService";
 import { formatDateTime } from "../../../shared/utils/formatDate";
@@ -149,6 +149,7 @@ function BackupHistoryItemComponent({ backup, selected, onToggleSelect, onReques
               className={styles.popoverItem}
               onClick={handleRestoreClick}
             >
+              <RotateCcw size={14} aria-hidden="true" />
               {t("components.backupHistoryItem.restore")}
             </button>
             <button
@@ -157,6 +158,7 @@ function BackupHistoryItemComponent({ backup, selected, onToggleSelect, onReques
               className={styles.popoverItemDanger}
               onClick={handleDeleteClick}
             >
+              <Trash2 size={14} aria-hidden="true" />
               {t("components.backupHistoryItem.delete")}
             </button>
           </div>

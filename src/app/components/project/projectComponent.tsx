@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useId, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { EllipsisVertical } from "lucide-react";
+import { Download, EllipsisVertical, Pencil, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Project } from "../../../shared/types/project";
 import EditProjectModalComponent, {
@@ -311,14 +311,16 @@ function ProjectComponent({
                   className={styles.popoverItem}
                   onClick={openEditModal}
                 >
+                  <Pencil size={14} aria-hidden="true" />
                   {t("components.project.edit")}
                 </button>
                 <button
                   type="button"
                   role="menuitem"
-                  className={styles.popoverItem}
+                  className={`${styles.popoverItem} ${styles.popoverItemDanger}`}
                   onClick={openDeleteModal}
                 >
+                  <Trash2 size={14} aria-hidden="true" />
                   {t("components.project.delete")}
                 </button>
                 <div className={styles.popoverSeparator} role="separator" />
@@ -328,6 +330,7 @@ function ProjectComponent({
                   className={styles.popoverItem}
                   onClick={openDownloadModal}
                 >
+                  <Download size={14} aria-hidden="true" />
                   {t("components.project.download")}
                 </button>
               </div>

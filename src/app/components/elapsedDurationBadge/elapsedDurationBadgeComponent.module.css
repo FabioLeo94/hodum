@@ -1,0 +1,32 @@
+/* Stessa ricetta tipografica di .time in taskWorkTimerComponent.module.css:
+   badge a 4 segmenti pensato per una cella di tabella, nessuna larghezza
+   fissa. */
+.time {
+  display: inline-flex;
+  align-items: baseline;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.segment {
+  color: inherit;
+}
+
+/* Distacco visivo tra giorni e blocco ore:minuti:secondi: un margin, non uno
+   spazio testuale (un elemento fatto di solo spazio bianco viene azzerato dal
+   browser, vedi lo stesso problema documentato in
+   taskWorkTimerComponent.tsx). */
+.daySegment {
+  margin-right: 0.4em;
+}
+
+/* Stesso linguaggio "presente ma secondario" di .segmentMuted in
+   taskWorkTimerComponent.module.css: un'unità di tempo a zero resta
+   leggibile, solo meno enfatizzata del resto del valore. */
+.segmentMuted {
+  opacity: 0.4;
+}

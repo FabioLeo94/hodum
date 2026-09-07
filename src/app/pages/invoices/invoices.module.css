@@ -155,9 +155,53 @@
   composes: srOnly from "../../../shared/styles/fieldBase.module.css";
 }
 
+/* Applicata a uno <span> che avvolge SOLO il testo di ogni cella (mai a <td>/
+   <tr>): l'icona della cella importo (.cancelledIcon sotto) vive in un ramo
+   JSX separato, non eredita mai questa classe, quindi non c'è rischio che la
+   riga attraversi anche lei. */
+.cancelledText {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+/* display:inline-flex + align-items:center: senza, l'icona (un <svg> inline
+   di default) segue la baseline del testo e appare leggermente "calata"
+   rispetto al centro verticale della riga invece di starci allineata. */
+.cancelledIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-danger);
+}
+
+.cancelActionButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--icon-button-size-sm);
+  height: var(--icon-button-size-sm);
+  border-radius: var(--radious-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.cancelActionButton:hover {
+  background-color: var(--bg-field);
+  color: var(--color-danger);
+}
+
+.cancelActionButton:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .generateButton,
-  .invoiceRow {
+  .invoiceRow,
+  .cancelActionButton {
     transition: none;
   }
 

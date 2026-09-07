@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import ModalBaseComponent from "../modalBase/modalBaseComponent";
+import ProfileHeaderComponent from "../profileHeader/profileHeaderComponent";
 import InputComponent from "../input/inputComponent";
 import ButtonComponent from "../button/buttonComponent";
 import { validateEmail, validatePassword } from "../../services/validation/validationService";
 import { useAsyncSubmit } from "../../../shared/hooks/useAsyncSubmit";
-import { formatDate } from "../../../shared/utils/formatDate";
+import { getDisplayName } from "../../../shared/utils/displayName";
 import styles from "./editAccountModalComponent.module.css";
 
 export interface EditAccountFormValues {
@@ -33,6 +34,9 @@ interface Prop {
   currentPronoun: string | null;
   currentEmail: string;
   currentCreatedAt: string;
+  // Assente quando il chiamante non lo conosce ancora, null quando l'utente
+  // non ha ancora effettuato un accesso: vedi ProfileHeaderComponent.
+  currentLastLoginAt?: string | null;
   // L'owner non ha un percorso di cancellazione self-service (vincolo FK
   // companies.owner_id/users.company_id, vedi deleteCompanyModalComponent):
   // deve passare dalla cancellazione azienda. Solo per decidere se mostrare
@@ -58,6 +62,7 @@ function EditAccountModalComponent({
   currentPronoun,
   currentEmail,
   currentCreatedAt,
+  currentLastLoginAt,
   isOwner,
   onSave,
   onExport,
@@ -163,6 +168,7 @@ function EditAccountModalComponent({
       isOpen={isOpen}
       onClose={handleClose}
       title={t("components.editAccountModal.title")}
+      size="medium"
       onSubmit={handleSave}
       primaryAction={
         <ButtonComponent onClick={() => {}} disabled={isSubmitting}>
@@ -176,61 +182,79 @@ function EditAccountModalComponent({
           {t("components.editAccountModal.cancel")}
         </button>
       }
+      leadingAction={
+        <button
+          type="button"
+          className={styles.cancelButton}
+          onClick={handleExport}
+          disabled={isExporting}
+        >
+          {isExporting
+            ? t("components.editAccountModal.exporting")
+            : t("components.editAccountModal.exportButton")}
+        </button>
+      }
     >
-      <div className={styles.metaInfo}>
-        <p className={styles.metaRow}>
-          <span className={styles.metaLabel}>
-            {t("components.editAccountModal.createdAtLabel")}
-          </span>
-          <span className={styles.metaValue}>{formatDate(currentCreatedAt)}</span>
-        </p>
-      </div>
+      <ProfileHeaderComponent
+        displayName={getDisplayName({
+          username: currentUsername,
+          firstName: currentFirstName,
+          lastName: currentLastName,
+        })}
+        email={currentEmail}
+        createdAt={currentCreatedAt}
+        lastLoginAt={currentLastLoginAt}
+      />
       <div className={styles.fields}>
-        <InputComponent
-          type="text"
-          name="firstName"
-          label={t("components.editAccountModal.firstNameLabel")}
-          placeholder={t("components.editAccountModal.firstNamePlaceholder")}
-          value={firstName}
-          onChange={(event) => setFirstName(event.target.value)}
-          autoComplete="off"
-          autoFocus
-          required
-          error={firstNameError}
-          showLabel
-        />
-        <InputComponent
-          type="text"
-          name="lastName"
-          label={t("components.editAccountModal.lastNameLabel")}
-          placeholder={t("components.editAccountModal.lastNamePlaceholder")}
-          value={lastName}
-          onChange={(event) => setLastName(event.target.value)}
-          autoComplete="off"
-          required
-          error={lastNameError}
-          showLabel
-        />
-        <InputComponent
-          type="text"
-          name="username"
-          label={t("components.editAccountModal.usernameLabel")}
-          placeholder={t("components.editAccountModal.usernamePlaceholder")}
-          value={username}
-          onChange={(event) => setUsername(event.target.value)}
-          autoComplete="off"
-          showLabel
-        />
-        <InputComponent
-          type="text"
-          name="pronoun"
-          label={t("components.editAccountModal.pronounLabel")}
-          placeholder={t("components.editAccountModal.pronounPlaceholder")}
-          value={pronoun}
-          onChange={(event) => setPronoun(event.target.value)}
-          autoComplete="off"
-          showLabel
-        />
+        <div className={styles.fieldRow}>
+          <InputComponent
+            type="text"
+            name="firstName"
+            label={t("components.editAccountModal.firstNameLabel")}
+            placeholder={t("components.editAccountModal.firstNamePlaceholder")}
+            value={firstName}
+            onChange={(event) => setFirstName(event.target.value)}
+            autoComplete="off"
+            autoFocus
+            required
+            error={firstNameError}
+            showLabel
+          />
+          <InputComponent
+            type="text"
+            name="lastName"
+            label={t("components.editAccountModal.lastNameLabel")}
+            placeholder={t("components.editAccountModal.lastNamePlaceholder")}
+            value={lastName}
+            onChange={(event) => setLastName(event.target.value)}
+            autoComplete="off"
+            required
+            error={lastNameError}
+            showLabel
+          />
+        </div>
+        <div className={styles.fieldRow}>
+          <InputComponent
+            type="text"
+            name="username"
+            label={t("components.editAccountModal.usernameLabel")}
+            placeholder={t("components.editAccountModal.usernamePlaceholder")}
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
+            autoComplete="off"
+            showLabel
+          />
+          <InputComponent
+            type="text"
+            name="pronoun"
+            label={t("components.editAccountModal.pronounLabel")}
+            placeholder={t("components.editAccountModal.pronounPlaceholder")}
+            value={pronoun}
+            onChange={(event) => setPronoun(event.target.value)}
+            autoComplete="off"
+            showLabel
+          />
+        </div>
         <InputComponent
           type="email"
           name="email"
@@ -269,18 +293,6 @@ function EditAccountModalComponent({
         </div>
       </div>
 
-      <div className={styles.exportRow}>
-        <button
-          type="button"
-          className={styles.exportButton}
-          onClick={handleExport}
-          disabled={isExporting}
-        >
-          {isExporting
-            ? t("components.editAccountModal.exporting")
-            : t("components.editAccountModal.exportButton")}
-        </button>
-      </div>
       {exportError && (
         <p role="alert" className={styles.submitError}>
           {exportError}

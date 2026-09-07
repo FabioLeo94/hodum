@@ -63,4 +63,39 @@ describe("EditAccountModalComponent", () => {
     renderModal({ exportError: "Impossibile esportare i dati." });
     expect(screen.getByText("Impossibile esportare i dati.")).toBeInTheDocument();
   });
+
+  it("shows the profile header with display name, email and creation date", () => {
+    renderModal();
+    expect(screen.getByText("mario.rossi")).toBeInTheDocument();
+    expect(screen.getByText("mario@example.com")).toBeInTheDocument();
+    expect(screen.getByText("Creato il")).toBeInTheDocument();
+  });
+
+  it("shows the last login when present, and hides it when not provided", () => {
+    const { rerender } = renderModal({ currentLastLoginAt: "2026-02-15T09:30:00.000Z" });
+    expect(screen.getByText("Ultimo accesso")).toBeInTheDocument();
+
+    rerender(
+      <EditAccountModalComponent
+        isOpen
+        onClose={() => {}}
+        currentUsername="mario.rossi"
+        currentFirstName="Mario"
+        currentLastName="Rossi"
+        currentPronoun={null}
+        currentEmail="mario@example.com"
+        currentCreatedAt="2026-01-01T00:00:00.000Z"
+        isOwner={false}
+        onSave={() => {}}
+        onExport={() => {}}
+        onRequestDelete={() => {}}
+      />,
+    );
+    expect(screen.queryByText("Ultimo accesso")).not.toBeInTheDocument();
+  });
+
+  it("shows 'Mai' when the account never logged in", () => {
+    renderModal({ currentLastLoginAt: null });
+    expect(screen.getByText("Mai")).toBeInTheDocument();
+  });
 });

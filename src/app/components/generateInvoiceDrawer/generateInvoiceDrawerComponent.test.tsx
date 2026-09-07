@@ -1,6 +1,6 @@
 import type { ComponentProps } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import GenerateInvoiceDrawerComponent from "./generateInvoiceDrawerComponent";
 
 vi.mock("../../services/customer/customerService", () => ({
@@ -8,12 +8,17 @@ vi.mock("../../services/customer/customerService", () => ({
 }));
 
 vi.mock("../../services/invoice/invoiceService", () => ({
-  generateInvoice: vi.fn(),
   listBillableTasks: vi.fn(),
+  generateInvoice: vi.fn(),
+  previewInvoicePdfBlobUrl: vi.fn(),
+}));
+
+vi.mock("../../services/notify/notifyService", () => ({
+  notifySuccess: vi.fn(),
 }));
 
 import { listCustomerSummaries } from "../../services/customer/customerService";
-import { generateInvoice, listBillableTasks } from "../../services/invoice/invoiceService";
+import { listBillableTasks, previewInvoicePdfBlobUrl } from "../../services/invoice/invoiceService";
 
 function renderDrawer(props: Partial<ComponentProps<typeof GenerateInvoiceDrawerComponent>> = {}) {
   return render(
@@ -30,7 +35,7 @@ async function selectCustomer() {
 beforeEach(() => {
   vi.mocked(listCustomerSummaries).mockReset();
   vi.mocked(listBillableTasks).mockReset();
-  vi.mocked(generateInvoice).mockReset();
+  vi.mocked(previewInvoicePdfBlobUrl).mockReset();
   vi.mocked(listCustomerSummaries).mockResolvedValue([{ id: "customer-1", name: "Cliente Uno" }]);
   vi.mocked(listBillableTasks).mockResolvedValue([
     {
@@ -41,6 +46,10 @@ beforeEach(() => {
       projectName: "Progetto Uno",
     },
   ]);
+  // Mai risolta di default: le anteprime restano "in caricamento" finché un
+  // test non la valorizza esplicitamente, così i test che verificano solo
+  // l'APERTURA della preview non dipendono dall'esito del suo caricamento.
+  vi.mocked(previewInvoicePdfBlobUrl).mockReturnValue(new Promise(() => {}));
 });
 
 describe("GenerateInvoiceDrawerComponent", () => {
@@ -56,7 +65,14 @@ describe("GenerateInvoiceDrawerComponent", () => {
     await selectCustomer();
 
     expect(screen.getByText("Progetto Uno")).toBeInTheDocument();
-    expect(screen.getByText("1:00:00")).toBeInTheDocument();
+    // ElapsedDurationBadgeComponent spezza il valore in segmenti separati
+    // (00 01:00:00): 3600s = 1 ora esatta, il segmento ore è "01".
+    // getByTitle normalizza gli spazi bianchi ("\n" -> " "), quindi qui si
+    // legge l'attributo title grezzo per verificare gli a-capo del tooltip.
+    expect(document.querySelector("[title]")).toHaveAttribute(
+      "title",
+      "giorni: 0\nore: 1\nminuti: 0\nsecondi: 0",
+    );
   });
 
   it("disabilita 'Genera pre-fattura' e la checkbox non fatturabile finché il task non è incluso", async () => {
@@ -72,48 +88,33 @@ describe("GenerateInvoiceDrawerComponent", () => {
     expect(screen.getByLabelText("Segna Task Uno come non fatturabile")).toBeEnabled();
   });
 
-  it("genera la pre-fattura con la selezione corrente, chiude il drawer e notifica il chiamante", async () => {
-    const onClose = vi.fn();
-    const onGenerated = vi.fn();
-    vi.mocked(generateInvoice).mockResolvedValue({
-      id: "invoice-1",
-      companyId: "company-1",
-      customerId: "customer-1",
-      numero: 1,
-      dataGenerazione: "2026-01-01T00:00:00.000Z",
-      totaleSecondi: 3600,
-      totaleImporto: 50,
-    });
-
-    renderDrawer({ onClose, onGenerated });
+  it("apre l'anteprima con la selezione corrente invece di generare direttamente", async () => {
+    renderDrawer();
     await selectCustomer();
     fireEvent.click(screen.getByLabelText("Includi Task Uno nella pre-fattura"));
     fireEvent.click(screen.getByLabelText("Segna Task Uno come non fatturabile"));
 
     fireEvent.click(screen.getByRole("button", { name: "Genera pre-fattura" }));
 
-    await waitFor(() => {
-      expect(generateInvoice).toHaveBeenCalledWith("customer-1", [
-        { taskId: "task-1", nonFatturabile: true },
-      ]);
-    });
-    expect(onClose).toHaveBeenCalled();
-    expect(onGenerated).toHaveBeenCalled();
+    expect(await screen.findByRole("heading", { name: "Anteprima pre-fattura" })).toBeInTheDocument();
+    expect(previewInvoicePdfBlobUrl).toHaveBeenCalledWith("customer-1", [
+      { taskId: "task-1", nonFatturabile: true },
+    ]);
   });
 
-  it("mostra l'errore del backend senza chiudere il drawer se la generazione fallisce", async () => {
+  it("'Modifica' chiude la preview e riporta al drawer senza chiudere né notificare il chiamante", async () => {
     const onClose = vi.fn();
-    vi.mocked(generateInvoice).mockRejectedValue(
-      new Error("Generazione già in corso per l'azienda."),
-    );
-
-    renderDrawer({ onClose });
+    const onGenerated = vi.fn();
+    renderDrawer({ onClose, onGenerated });
     await selectCustomer();
     fireEvent.click(screen.getByLabelText("Includi Task Uno nella pre-fattura"));
-
     fireEvent.click(screen.getByRole("button", { name: "Genera pre-fattura" }));
+    await screen.findByRole("heading", { name: "Anteprima pre-fattura" });
 
-    expect(await screen.findByText("Generazione già in corso per l'azienda.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Modifica" }));
+
+    expect(screen.queryByRole("heading", { name: "Anteprima pre-fattura" })).not.toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
+    expect(onGenerated).not.toHaveBeenCalled();
   });
 });

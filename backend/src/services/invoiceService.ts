@@ -31,6 +31,16 @@ export class InvoiceNotFoundError extends Error {
   }
 }
 
+// L'invoice esiste ed è della company giusta, ma è già stata annullata: un
+// secondo annullamento (doppio click, due tab) deve fallire in modo esplicito
+// invece di rimarcare silenziosamente cancelled_at con un now() più recente.
+export class InvoiceAlreadyCancelledError extends Error {
+  constructor(public readonly id: string) {
+    super(`Invoice con id ${id} è già stata annullata`);
+    this.name = 'InvoiceAlreadyCancelledError';
+  }
+}
+
 // Un taskId selezionato lato client non è (più) fatturabile al momento della
 // rivalidazione dentro la transazione: stato cambiato, tempo azzerato, già
 // fatturato da un'altra richiesta concorrente, o il task non appartiene al
@@ -98,10 +108,11 @@ interface InvoiceRow {
   // Customer.tariffaOraria in customerService.ts.
   totale_importo: string;
   pdf_path: string;
+  cancelled_at: Date | null;
 }
 
 const INVOICE_COLUMNS =
-  'id, company_id, customer_id, numero, data_generazione, totale_secondi, totale_importo, pdf_path';
+  'id, company_id, customer_id, numero, data_generazione, totale_secondi, totale_importo, pdf_path, cancelled_at';
 
 // Sentinel scritto in pdf_path (colonna NOT NULL, niente NULL possibile senza
 // una migration) finché il PDF non è ancora stato scritto su disco: sia
@@ -120,6 +131,7 @@ function toInvoice(row: InvoiceRow): Invoice {
     dataGenerazione: row.data_generazione.toISOString(),
     totaleSecondi: row.totale_secondi,
     totaleImporto: Number(row.totale_importo),
+    cancelledAt: row.cancelled_at ? row.cancelled_at.toISOString() : null,
   };
 }
 
@@ -624,6 +636,174 @@ export async function generateInvoice(
   }
 
   return invoice;
+}
+
+// Annulla una pre-fattura già generata: sblocca i task coinvolti (invoice_id
+// -> NULL, tornano fatturabili con la stessa query di listBillableTasksForCustomer/
+// generateInvoice, che filtrano già su invoice_id IS NULL) ma NON elimina né
+// la invoice né i suoi invoice_items, che restano nello storico come
+// riferimento (vedi commento sulla colonna in 0042). A differenza di
+// generateInvoice non serve il lock advisory di company (che protegge solo la
+// numerazione progressiva, mai toccata qui): il row-lock FOR UPDATE sulla
+// singola invoice più il fatto che i task da sbloccare sono già "posseduti"
+// da questa invoice (invoice_id = $1) bastano contro le race — un
+// generateInvoice concorrente non può ri-lockare quegli stessi task finché
+// questa transazione non ha fatto commit (il suo FOR UPDATE OF t filtra su
+// invoice_id IS NULL, non ancora vero prima del commit di qui).
+export async function cancelInvoice(invoiceId: string, companyId: string): Promise<Invoice> {
+  if (!isValidUuid(invoiceId)) {
+    throw new InvoiceNotFoundError(invoiceId);
+  }
+
+  const client = await pool.connect();
+  let invoice!: Invoice;
+  let unlockedTaskIds!: string[];
+  try {
+    await client.query('BEGIN');
+
+    const rowResult = await client.query<InvoiceRow>(
+      `SELECT ${INVOICE_COLUMNS} FROM invoices WHERE id = $1 AND company_id = $2 FOR UPDATE`,
+      [invoiceId, companyId],
+    );
+    const row = rowResult.rows[0];
+    if (!row) {
+      throw new InvoiceNotFoundError(invoiceId);
+    }
+    if (row.cancelled_at !== null) {
+      throw new InvoiceAlreadyCancelledError(invoiceId);
+    }
+
+    const updatedResult = await client.query<InvoiceRow>(
+      `UPDATE invoices SET cancelled_at = now() WHERE id = $1 RETURNING ${INVOICE_COLUMNS}`,
+      [invoiceId],
+    );
+    invoice = toInvoice(updatedResult.rows[0]);
+
+    const unlockedResult = await client.query<{ id: string }>(
+      'UPDATE tasks SET invoice_id = NULL WHERE invoice_id = $1 RETURNING id',
+      [invoiceId],
+    );
+    unlockedTaskIds = unlockedResult.rows.map((r) => r.id);
+
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {
+      // Stesso motivo del ROLLBACK innocuo in generateInvoice: non deve
+      // mascherare l'errore originale (es. BEGIN mai raggiunto).
+    });
+    throw err;
+  } finally {
+    client.release();
+  }
+
+  // Notifica realtime DOPO il commit, stesso principio del passo 10 di
+  // generateInvoice: un fallimento qui non deve far percepire come "non
+  // riuscito" un annullamento già committato (i task sono già sbloccati sul
+  // DB, solo la UI in tempo reale di eventuali altri client resterebbe
+  // disallineata finché non ricaricano).
+  try {
+    if (unlockedTaskIds.length > 0) {
+      const tasks = await getTasksByIds(unlockedTaskIds);
+      for (const task of tasks) {
+        emitTaskUpdated(task);
+      }
+    }
+  } catch (err) {
+    console.error(`Notifica realtime task:updated fallita dopo l'annullamento (invoice ${invoice.id})`, err);
+  }
+
+  return invoice;
+}
+
+// Genera il PDF che generateInvoice produrrebbe per QUESTA selezione, senza
+// alcuna scrittura (né transazione, né lock, né INSERT/UPDATE, né file su
+// disco): stessi passi 1-3 di generateInvoice sopra (customer, validazione
+// task, tariffa) ma in sola lettura, poi lo stesso ciclo di calcolo righe/
+// totali (arrotondato riga per riga, stesso motivo del commento lì). Usata
+// dalla rotta raw POST /customers/:customerId/invoices/preview in app.ts
+// (stesso motivo delle altre rotte PDF raw: streaming binario, non JSON).
+// Propaga gli stessi errori di generateInvoice (CustomerNotFoundError,
+// MissingRateError, NoTasksSelectedError, TaskNotBillableError): il chiamante
+// li mappa allo stesso modo.
+export async function previewInvoicePdf(
+  companyId: string,
+  customerId: string,
+  taskSelections: TaskSelectionInput[],
+): Promise<Buffer> {
+  const customer = await getCustomerById(customerId, companyId);
+
+  const uniqueTaskIds = [...new Set(taskSelections.map((s) => s.taskId))];
+  if (uniqueTaskIds.length === 0) {
+    throw new NoTasksSelectedError();
+  }
+  const invalidId = uniqueTaskIds.find((id) => !isValidUuid(id));
+  if (invalidId) {
+    throw new TaskNotBillableError(invalidId);
+  }
+  const nonFatturabileByTaskId = new Map(taskSelections.map((s) => [s.taskId, s.nonFatturabile]));
+
+  const rowsResult = await pool.query<{
+    id: string;
+    title: string;
+    work_accumulated_seconds: number;
+  }>(
+    `SELECT t.id, t.title, t.work_accumulated_seconds
+     FROM tasks t
+     JOIN task_status ts ON ts.id = t.status
+     JOIN projects p ON p.id = t.project_id
+     WHERE t.id = ANY($1::uuid[])
+       AND p.customer_id = $2
+       AND p.company_id = $3
+       AND ts.name IN ('completed', 'rejected')
+       AND t.work_accumulated_seconds > 0
+       AND t.invoice_id IS NULL`,
+    [uniqueTaskIds, customerId, companyId],
+  );
+  const foundIds = new Set(rowsResult.rows.map((row) => row.id));
+  const missingId = uniqueTaskIds.find((id) => !foundIds.has(id));
+  if (missingId) {
+    throw new TaskNotBillableError(missingId);
+  }
+
+  const company = await getCompanyById(companyId);
+  if (!company) {
+    throw new Error(`Company con id ${companyId} non trovata durante l'anteprima della pre-fattura`);
+  }
+  const tariffa = resolveRate(customer, company);
+
+  let totaleSecondi = 0;
+  let totaleImporto = 0;
+  const items = rowsResult.rows.map((row) => {
+    const nonFatturabile = nonFatturabileByTaskId.get(row.id) ?? false;
+    totaleSecondi += row.work_accumulated_seconds;
+    if (!nonFatturabile) {
+      totaleImporto += roundToCents((row.work_accumulated_seconds / 3600) * tariffa);
+    }
+    return {
+      taskTitle: row.title,
+      secondiFatturati: row.work_accumulated_seconds,
+      tariffaOrariaSnapshot: tariffa,
+      nonFatturabile,
+    };
+  });
+  totaleImporto = roundToCents(totaleImporto);
+
+  // Invoice fittizia solo per portare totaleSecondi/totaleImporto a
+  // renderInvoicePdf (letti anche nel ramo preview): numero/dataGenerazione
+  // non hanno significato prima della conferma, il ramo preview del renderer
+  // non li stampa (vedi invoicePdfService.renderInvoicePdf).
+  const draftInvoice: Invoice = {
+    id: '',
+    companyId,
+    customerId,
+    numero: 0,
+    dataGenerazione: new Date().toISOString(),
+    totaleSecondi,
+    totaleImporto,
+    cancelledAt: null,
+  };
+
+  return renderInvoicePdf(draftInvoice, items, company, customer, { preview: true });
 }
 
 export async function listInvoicesByCompany(companyId: string): Promise<Invoice[]> {
