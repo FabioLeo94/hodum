@@ -59,11 +59,34 @@
   gap: var(--m-sm);
 }
 
+/* La toolbar compare solo a selezione avviata (>=1 elemento): niente
+   checkbox "seleziona tutto" fluttuante accanto al titolo quando la lista è
+   in semplice consultazione, per non introdurre un controllo di massa prima
+   che l'utente abbia espresso l'intento di agire su più elementi. */
 .selectionToolbar {
   display: flex;
+  flex-wrap: wrap;
   flex-shrink: 0;
   align-items: center;
   gap: var(--m-sm);
+}
+
+/* Checkbox e conteggio sono un'unica unità percettiva ("cosa e quanto è
+   selezionato"), quindi un gap più stretto di quello che separa la toolbar
+   dai bottoni azione (Annulla/Elimina): la spaziatura comunica il
+   raggruppamento senza bisogno di un bordo o uno sfondo separati. */
+.selectionStatus {
+  display: flex;
+  align-items: center;
+  gap: var(--p-xs);
+}
+
+.selectAllCheckbox {
+  composes: checkboxBase from "../../../shared/styles/checkboxBase.module.css";
+}
+
+.selectAllCheckbox:hover:not(:disabled) {
+  border-color: var(--bg-primary);
 }
 
 .selectionCount {

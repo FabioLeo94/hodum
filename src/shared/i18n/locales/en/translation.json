@@ -477,6 +477,7 @@
       "saveError": "Unable to save settings.",
       "history": {
         "sectionTitle": "History",
+        "selectAllLabel": "Select all backups",
         "selectedCount_one": "{{count}} selected",
         "selectedCount_other": "{{count}} selected",
         "cancel": "Cancel",

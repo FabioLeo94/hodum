@@ -243,6 +243,15 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
     });
   }
 
+  // Stesso pattern di allIncluded/someIncluded in GenerateInvoiceDrawerComponent:
+  // stato pieno/parziale/vuoto riflesso sulla checkbox nativa via checked/indeterminate.
+  const allSelected = history.length > 0 && selectedIds.size === history.length;
+  const someSelected = selectedIds.size > 0 && !allSelected;
+
+  function toggleSelectAll() {
+    setSelectedIds(allSelected ? new Set() : new Set(history.map((backup) => backup.id)));
+  }
+
   // Niente rethrow (come ProjectComponent.handleDelete): l'errore resta nello
   // state actionError, il submit della modale (useAsyncSubmit) lo considera
   // comunque concluso e riabilita il bottone senza bisogno di propagarlo.
@@ -431,11 +440,23 @@ function BackupSettingsDrawerComponent({ isOpen, onClose, companyId }: Prop) {
                 </h3>
                 {selectedIds.size > 0 && (
                   <div className={styles.selectionToolbar}>
-                    <span className={styles.selectionCount}>
-                      {t("components.backupSettingsDrawer.history.selectedCount", {
-                        count: selectedIds.size,
-                      })}
-                    </span>
+                    <div className={styles.selectionStatus}>
+                      <input
+                        type="checkbox"
+                        className={styles.selectAllCheckbox}
+                        aria-label={t("components.backupSettingsDrawer.history.selectAllLabel")}
+                        checked={allSelected}
+                        ref={(element) => {
+                          if (element) element.indeterminate = someSelected;
+                        }}
+                        onChange={toggleSelectAll}
+                      />
+                      <span className={styles.selectionCount}>
+                        {t("components.backupSettingsDrawer.history.selectedCount", {
+                          count: selectedIds.size,
+                        })}
+                      </span>
+                    </div>
                     <button
                       type="button"
                       className={styles.cancelButton}

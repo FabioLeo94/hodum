@@ -477,6 +477,7 @@
       "saveError": "Impossibile salvare le impostazioni.",
       "history": {
         "sectionTitle": "Storico",
+        "selectAllLabel": "Seleziona tutti i backup",
         "selectedCount_one": "{{count}} selezionato",
         "selectedCount_other": "{{count}} selezionati",
         "cancel": "Annulla",
