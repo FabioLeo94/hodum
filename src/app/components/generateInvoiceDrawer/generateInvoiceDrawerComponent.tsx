@@ -133,6 +133,16 @@ function GenerateInvoiceDrawerComponent({ isOpen, onClose, onGenerated }: Prop) 
     setNonFatturabileIds((current) => toggleInSet(current, taskId));
   }
 
+  // Non tocca nonFatturabileIds: stessa scelta di toggleIncluded, che lascia
+  // un task escluso nel set "non fatturabile" finché non viene ri-incluso
+  // (la sua checkbox resta comunque disabled e ininfluente su handleOpenPreview).
+  const allIncluded = tasks.length > 0 && includedIds.size === tasks.length;
+  const someIncluded = includedIds.size > 0 && !allIncluded;
+
+  function toggleAllIncluded() {
+    setIncludedIds(allIncluded ? new Set() : new Set(tasks.map((task) => task.id)));
+  }
+
   // Non genera più direttamente (spostato in GenerateInvoicePreviewModalComponent,
   // dietro il passaggio di anteprima): congela la selezione corrente e apre
   // la preview. Il drawer resta montato sotto, la generazione vera e propria
@@ -205,9 +215,16 @@ function GenerateInvoiceDrawerComponent({ isOpen, onClose, onGenerated }: Prop) 
                   <thead>
                     <tr>
                       <th scope="col">
-                        <span className={styles.srOnly}>
-                          {t("components.generateInvoiceDrawer.columnInclude")}
-                        </span>
+                        <input
+                          type="checkbox"
+                          className={styles.checkbox}
+                          aria-label={t("components.generateInvoiceDrawer.selectAllLabel")}
+                          checked={allIncluded}
+                          ref={(element) => {
+                            if (element) element.indeterminate = someIncluded;
+                          }}
+                          onChange={toggleAllIncluded}
+                        />
                       </th>
                       <th scope="col">{t("components.generateInvoiceDrawer.columnTask")}</th>
                       <th scope="col">{t("components.generateInvoiceDrawer.columnProject")}</th>

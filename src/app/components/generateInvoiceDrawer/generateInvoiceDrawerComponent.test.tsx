@@ -32,6 +32,23 @@ async function selectCustomer() {
   return screen.findByText("Task Uno");
 }
 
+const TWO_TASKS = [
+  {
+    id: "task-1",
+    title: "Task Uno",
+    workAccumulatedSeconds: 3600,
+    projectId: "project-1",
+    projectName: "Progetto Uno",
+  },
+  {
+    id: "task-2",
+    title: "Task Due",
+    workAccumulatedSeconds: 1800,
+    projectId: "project-1",
+    projectName: "Progetto Uno",
+  },
+];
+
 beforeEach(() => {
   vi.mocked(listCustomerSummaries).mockReset();
   vi.mocked(listBillableTasks).mockReset();
@@ -116,5 +133,32 @@ describe("GenerateInvoiceDrawerComponent", () => {
     expect(screen.queryByRole("heading", { name: "Anteprima pre-fattura" })).not.toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
     expect(onGenerated).not.toHaveBeenCalled();
+  });
+
+  it("la checkbox 'seleziona tutto' riflette lo stato pieno/parziale/vuoto e alterna la selezione", async () => {
+    vi.mocked(listBillableTasks).mockResolvedValue(TWO_TASKS);
+    renderDrawer();
+    await selectCustomer();
+    await screen.findByText("Task Due");
+
+    const selectAll = screen.getByLabelText("Seleziona tutti i task fatturabili") as HTMLInputElement;
+    expect(selectAll.checked).toBe(false);
+    expect(selectAll.indeterminate).toBe(false);
+
+    fireEvent.click(screen.getByLabelText("Includi Task Uno nella pre-fattura"));
+    expect(selectAll.checked).toBe(false);
+    expect(selectAll.indeterminate).toBe(true);
+
+    fireEvent.click(screen.getByLabelText("Includi Task Due nella pre-fattura"));
+    expect(selectAll.checked).toBe(true);
+    expect(selectAll.indeterminate).toBe(false);
+
+    fireEvent.click(selectAll);
+    expect(screen.getByLabelText("Includi Task Uno nella pre-fattura")).not.toBeChecked();
+    expect(screen.getByLabelText("Includi Task Due nella pre-fattura")).not.toBeChecked();
+
+    fireEvent.click(selectAll);
+    expect(screen.getByLabelText("Includi Task Uno nella pre-fattura")).toBeChecked();
+    expect(screen.getByLabelText("Includi Task Due nella pre-fattura")).toBeChecked();
   });
 });

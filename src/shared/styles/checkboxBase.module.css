@@ -33,6 +33,27 @@
   transform: rotate(45deg);
 }
 
+/* Stato "selezione parziale" (es. checkbox "seleziona tutto" di una tabella
+   multi-selezione): la proprietà DOM `indeterminate` va impostata via ref,
+   non esiste come attributo HTML, ma il selettore CSS :indeterminate la
+   intercetta comunque. Stesso trattamento cromatico di :checked, ma con un
+   trattino orizzontale al posto della spunta. */
+.checkboxBase:indeterminate {
+  background-color: var(--bg-primary);
+  border-color: var(--bg-primary);
+}
+
+.checkboxBase:indeterminate::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 2px;
+  background-color: var(--text-on-primary);
+  transform: translate(-50%, -50%);
+}
+
 .checkboxBase:focus-visible {
   outline: 2px solid var(--bg-primary);
   outline-offset: 2px;

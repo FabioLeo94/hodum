@@ -396,7 +396,7 @@
       "loadTasksError": "Impossibile caricare i task fatturabili.",
       "noBillableTasks": "Nessun task fatturabile per questo cliente.",
       "tableCaption": "Task fatturabili del cliente selezionato",
-      "columnInclude": "Includi",
+      "selectAllLabel": "Seleziona tutti i task fatturabili",
       "columnTask": "Task",
       "columnProject": "Progetto",
       "columnWorkedTime": "Tempo lavorato",

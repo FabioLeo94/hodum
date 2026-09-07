@@ -396,7 +396,7 @@
       "loadTasksError": "Unable to load billable tasks.",
       "noBillableTasks": "No billable tasks for this customer.",
       "tableCaption": "Billable tasks for the selected customer",
-      "columnInclude": "Include",
+      "selectAllLabel": "Select all billable tasks",
       "columnTask": "Task",
       "columnProject": "Project",
       "columnWorkedTime": "Worked time",
