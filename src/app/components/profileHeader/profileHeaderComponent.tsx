@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Check, Copy } from "lucide-react";
 import AvatarComponent from "../avatar/avatarComponent";
 import { formatDate, formatDateTime } from "../../../shared/utils/formatDate";
 import styles from "./profileHeaderComponent.module.css";
@@ -45,6 +46,11 @@ function ProfileHeaderComponent({ displayName, email, createdAt, lastLoginAt }: 
         title={t("components.profileHeader.copyEmailHint")}
       >
         {email}
+        {copied ? (
+          <Check size={14} className={styles.emailButtonIcon} aria-hidden="true" />
+        ) : (
+          <Copy size={14} className={styles.emailButtonIcon} aria-hidden="true" />
+        )}
       </button>
       <span className={styles.copyFeedback} role="status" aria-live="polite">
         {copied ? t("components.profileHeader.emailCopied") : ""}

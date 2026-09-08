@@ -14,6 +14,9 @@
 }
 
 .emailButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--m-xs);
   background: none;
   border: none;
   padding: 0;
@@ -27,6 +30,11 @@
 .emailButton:hover,
 .emailButton:focus-visible {
   color: var(--text-primary);
+}
+
+.emailButtonIcon {
+  flex-shrink: 0;
+  opacity: 0.75;
 }
 
 .emailButton:focus-visible {
