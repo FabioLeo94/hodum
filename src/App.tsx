@@ -11,12 +11,17 @@ import TaskList from "./app/pages/taskList/taskList";
 import ProtectedRouteComponent from "./app/components/protectedRoute/protectedRouteComponent";
 import ProtectedLayoutComponent from "./app/components/protectedLayout/protectedLayoutComponent";
 import NotifyComponent from "./app/components/notify/notifyComponent";
+import MobileBlockComponent from "./app/components/mobileBlock/mobileBlockComponent";
 function App() {
   return (
     <BrowserRouter>
       {/* Fuori da <Routes>: deve restare montato su ogni rotta (auth incluso,
           es. errori di login), senza dipendere da quale pagina è attiva. */}
       <NotifyComponent />
+      {/* Overlay CSS-only sempre montato: vedi mobileBlockComponent.module.css
+          per la media query che lo mostra solo su smartphone, coprendo anche
+          auth/recover-password/change-password. */}
+      <MobileBlockComponent />
       <Routes>
         <Route path="" element={<Navigate to={"/auth"} />} />
         <Route path="auth" element={<Auth />} />

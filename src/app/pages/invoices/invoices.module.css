@@ -210,6 +210,14 @@
   }
 }
 
+/* Schermi medi (~1024-1439px): stesso alleggerimento di padding delle
+   altre pagine protette, vedi taskList.module.css. */
+@media (max-width: 1439px) {
+  .container {
+    padding: var(--p-lg);
+  }
+}
+
 @media (max-width: 400px) {
   .title {
     font-size: 1.5rem;

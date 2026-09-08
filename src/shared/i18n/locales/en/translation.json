@@ -667,6 +667,9 @@
     "notify": {
       "closeLabel": "Close notification"
     },
+    "mobileBlock": {
+      "message": "This application is designed for use on large screens: it is not available on small screens such as smartphones or tablets."
+    },
     "assistantDrawer": {
       "toggleOpen": "Open the assistant",
       "toggleClose": "Close the assistant",

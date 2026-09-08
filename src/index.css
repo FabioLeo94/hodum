@@ -77,6 +77,17 @@
   --fab-size: 56px;
 }
 
+/* Fascia "schermi medi" (laptop 13"/14" e tablet in landscape, ~1024-1439px):
+   il floor fisso di 300px nel clamp sopra lascia poco margine al contenuto
+   quando l'assistente resta aperto affiancato a viste dense (kanban, tabella
+   task): qui il floor scende a 260px così il pannello resta usabile senza
+   sottrarre più spazio del necessario. */
+@media (max-width: 1439px) {
+  :root {
+    --assistant-panel-width: clamp(260px, 26vw, 340px);
+  }
+}
+
 @media (max-width: 700px) {
   :root {
     --assistant-panel-width: 100vw;

@@ -260,6 +260,18 @@
   }
 }
 
+/* Su schermi medi (~1024-1439px) le colonne al floor di 260px lasciano
+   vedere sì e no due colonne e mezza prima dello scroll orizzontale: qui il
+   floor scende a 230px, abbastanza per far entrare una colonna in più senza
+   comprimere il contenuto delle card. */
+@media (max-width: 1439px) {
+  .column {
+    flex-basis: 230px;
+    min-width: 230px;
+    max-width: 300px;
+  }
+}
+
 @media (max-width: 400px) {
   .column {
     flex-basis: 220px;

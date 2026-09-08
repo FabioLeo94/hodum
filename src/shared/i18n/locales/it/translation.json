@@ -667,6 +667,9 @@
     "notify": {
       "closeLabel": "Chiudi notifica"
     },
+    "mobileBlock": {
+      "message": "Questa applicazione è pensata per l'uso su schermi grandi: non è disponibile su schermi piccoli come smartphone o tablet."
+    },
     "assistantDrawer": {
       "toggleOpen": "Apri l'assistente",
       "toggleClose": "Chiudi l'assistente",

@@ -1,0 +1,47 @@
+/* Nascosto di default: la media query sotto lo mostra solo sui dispositivi a
+   controllo touch (smartphone, tablet). z-index sopra qualunque altro
+   elemento dell'app (il massimo altrove è 1000, il container dei toast)
+   perché deve coprire davvero tutto, toast inclusi. */
+.container {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--m-lg);
+  padding: var(--p-xl);
+  background-color: var(--bg-main);
+  text-align: center;
+}
+
+.icon {
+  color: var(--bg-primary);
+}
+
+.message {
+  max-width: 40ch;
+  color: var(--text-primary);
+  font-size: 1.05rem;
+  line-height: 1.5;
+}
+
+/* pointer/hover invece di max-width: una soglia sulla larghezza scatta anche
+   restringendo la finestra di un normale browser desktop (Windows, mouse),
+   che non è mai il caso da bloccare. hover:none + pointer:coarse insieme
+   individuano un dispositivo il cui input primario è il tocco - vero per
+   smartphone e tablet, falso per desktop/laptop anche con finestra stretta
+   o con uno schermo touch secondario (mouse/trackpad restano il puntatore
+   primario). overflow: hidden su html/body evita che il contenuto
+   sottostante resti scrollabile dietro l'overlay. */
+@media (hover: none) and (pointer: coarse) {
+  .container {
+    display: flex;
+  }
+
+  :global(html),
+  :global(body) {
+    overflow: hidden;
+  }
+}

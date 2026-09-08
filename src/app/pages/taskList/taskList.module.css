@@ -589,6 +589,15 @@
   }
 }
 
+/* Schermi medi (~1024-1439px): il padding da --p-xl (24px) reclama qualche
+   px in più per la tabella/kanban sottostanti, gli elementi più sensibili
+   allo spazio orizzontale disponibile su questa pagina. */
+@media (max-width: 1439px) {
+  .taskListContainer {
+    padding: var(--p-lg);
+  }
+}
+
 @media (max-width: 400px) {
   .taskListTitle {
     font-size: 1.5rem;
