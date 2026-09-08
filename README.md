@@ -2,6 +2,8 @@
 
 Task manager full-stack con assistente AI integrato: React 19 + TypeScript + Vite sul frontend, Express 5 + TSOA su PostgreSQL sul backend, sincronizzazione realtime via Socket.IO.
 
+Per chi usa l'app (non solo per chi la installa), vedi la [guida utente](docs/guida-utente.md).
+
 ## Stack
 
 - **Frontend**: React 19, TypeScript, Vite 8, routing con `react-router` 8. Test con Vitest + React Testing Library.
@@ -168,6 +170,7 @@ tentato e si è rivelato inaffidabile (vedi `CLAUDE.md`, sezione Linting).
 - `backend/src/controllers|services/` — controller TSOA e logica di business (auth, progetti, task, assistente)
 - `backend/src/realtime/` — gateway Socket.IO
 - `backend/migrations/` — migration SQL numerate
+- `docs/` — guida utente e relativi screenshot
 
 ## Licenza
 
