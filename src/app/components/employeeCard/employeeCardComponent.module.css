@@ -1,7 +1,6 @@
 .employeeCard {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--m-md);
   padding: var(--p-lg);
   border-radius: var(--radious-lg);
@@ -9,8 +8,13 @@
   box-shadow: var(--shadow-card);
 }
 
+/* flex: 1 fa sì che questa colonna assorba sempre lo spazio residuo della
+   card: senza, la sua larghezza dipende dal testo di nome/email e badge,
+   stato e menu si spostano orizzontalmente da una card all'altra invece di
+   restare allineati sulla stessa colonna. */
 .employeeInfo {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: var(--m-xs);
   min-width: 0;
