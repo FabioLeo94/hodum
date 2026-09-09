@@ -2,6 +2,11 @@
 
 Task manager full-stack con assistente AI integrato: React 19 + TypeScript + Vite sul frontend, Express 5 + TSOA su PostgreSQL sul backend, sincronizzazione realtime via Socket.IO.
 
+> **Stato del progetto**: sviluppo attivo, non ancora completo. Mancano
+> funzionalità e alcune parti cambieranno. Bug report, segnalazioni e
+> richieste di funzionalità sono benvenuti — vedi
+> [`CONTRIBUTING.md`](./CONTRIBUTING.md) per come aprirli.
+
 Per chi usa l'app (non solo per chi la installa), vedi la [guida utente](docs/guida-utente.md).
 
 ## Stack

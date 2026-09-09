@@ -11,6 +11,7 @@ node_modules
 dist
 dist-ssr
 *.local
+CLAUDE.local.md
 
 # Variabili di docker-compose.yml (credenziali, JWT_SECRET): mai committato,
 # vedi .env.example.
