@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hodum per sviluppatori — stack, architettura e come contribuire</title>
+<meta name="description" content="Stack tecnico, scelte architetturali e convenzioni di Hodum: React 19 + TypeScript sul frontend, Express 5 + TSOA + PostgreSQL sul backend. Come contribuire al progetto." />
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="logo" href="index.html"><span>H</span>odum</a>
+    <nav>
+      <ul class="nav-links">
+        <li><a href="index.html">Prodotto</a></li>
+        <li><a href="sviluppatori.html" class="active">Per sviluppatori</a></li>
+        <li><a href="https://github.com/FabioLeo94/hodum" class="nav-cta">GitHub</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+  <section class="hero">
+    <div class="wrap">
+      <div>
+        <span class="eyebrow">Stack &middot; architettura &middot; contributi</span>
+        <h1>Sotto il cofano di <span class="accent">Hodum</span></h1>
+        <p class="lead">
+          Un task manager full-stack scritto in TypeScript da cima a fondo, con
+          API contract-first, sicurezza multi-tenant applicata manualmente in
+          ogni controller, e un assistente AI che gira in locale invece che su
+          un'API cloud a pagamento.
+        </p>
+        <div class="hero-ctas">
+          <a class="btn btn-primary" href="https://github.com/FabioLeo94/hodum">Apri il repository</a>
+          <a class="btn btn-ghost" href="https://github.com/FabioLeo94/hodum/blob/master/CONTRIBUTING.md">Come contribuire</a>
+        </div>
+        <p class="hero-note">In sviluppo attivo: issue e pull request mirate sono benvenute.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="tight">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Architettura, in breve</h2>
+        <p>Frontend SPA, backend REST contract-first, sincronizzazione realtime e un modello AI locale come sidecar.</p>
+      </div>
+      <div class="arch-diagram">
+        <div class="arch-box primary">
+          <div class="t">Frontend</div>
+          <div class="s">React 19 + TS + Vite</div>
+        </div>
+        <div class="arch-arrow">⇄</div>
+        <div class="arch-box primary">
+          <div class="t">Backend</div>
+          <div class="s">Express 5 + TSOA</div>
+        </div>
+        <div class="arch-arrow">⇄</div>
+        <div class="arch-box">
+          <div class="t">PostgreSQL</div>
+          <div class="s">dati applicativi</div>
+        </div>
+      </div>
+      <div class="arch-diagram" style="margin-top: 8px;">
+        <div class="arch-box">
+          <div class="t">Socket.IO</div>
+          <div class="s">sync realtime tra client</div>
+        </div>
+        <div class="arch-box">
+          <div class="t">Ollama (locale)</div>
+          <div class="s">assistente AI, nessuna API esterna</div>
+        </div>
+        <div class="arch-box">
+          <div class="t">pg_dump</div>
+          <div class="s">backup on-demand, owner-only</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <section>
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Stack tecnico</h2>
+        <p>TypeScript su entrambi i lati, con strumenti scelti per contratto esplicito più che per convenzione implicita.</p>
+      </div>
+      <div class="stack-grid">
+        <div class="stack-col">
+          <h3>Frontend</h3>
+          <p class="sub">src/, root del repo</p>
+          <ul>
+            <li><span class="name">React 19 + TypeScript</span><span class="why">componenti e pagine tipizzati end-to-end</span></li>
+            <li><span class="name">Vite 8</span><span class="why">dev server e build</span></li>
+            <li><span class="name">react-router 8</span><span class="why">routing SPA, rotte in <code>src/shared/routes.ts</code></span></li>
+            <li><span class="name">i18next</span><span class="why">interfaccia in italiano/inglese</span></li>
+            <li><span class="name">socket.io-client</span><span class="why">aggiornamenti realtime</span></li>
+            <li><span class="name">Vitest + Testing Library</span><span class="why">test co-locati con il codice, ambiente jsdom</span></li>
+            <li><span class="name">ESLint (typescript-eslint)</span><span class="why"><code>npm run lint</code> sul frontend</span></li>
+          </ul>
+        </div>
+        <div class="stack-col">
+          <h3>Backend</h3>
+          <p class="sub">backend/src/</p>
+          <ul>
+            <li><span class="name">Express 5</span><span class="why">HTTP layer</span></li>
+            <li><span class="name">TSOA</span><span class="why">controller contract-first: rotte e spec OpenAPI generate dai tipi</span></li>
+            <li><span class="name">PostgreSQL (pg)</span><span class="why">persistenza, migration SQL numerate</span></li>
+            <li><span class="name">Socket.IO</span><span class="why">gateway realtime lato server</span></li>
+            <li><span class="name">jsonwebtoken + bcryptjs</span><span class="why">autenticazione, password hashate</span></li>
+            <li><span class="name">helmet + express-rate-limit</span><span class="why">hardening HTTP di base</span></li>
+            <li><span class="name">Ollama (via HTTP locale)</span><span class="why">assistente AI, nessun dato inviato a terzi</span></li>
+            <li><span class="name">pdfkit</span><span class="why">generazione pre-fatture</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <section>
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Scelte che vale la pena spiegare</h2>
+        <p>Non solo cosa, ma perché — incluse le scelte scomode, documentate invece che nascoste.</p>
+      </div>
+      <div class="decision-list">
+        <div class="decision-card">
+          <h3>Sicurezza multi-tenant esplicita</h3>
+          <p>Ogni rotta che tocca una risorsa di un'azienda verifica <code>requester.companyId === risorsa.companyId</code> subito dopo l'autenticazione — è la difesa contro l'IDOR cross-tenant, applicata manualmente in ogni controller e documentata in <code>CLAUDE.md</code> come pattern obbligatorio.</p>
+        </div>
+        <div class="decision-card">
+          <h3>Niente logica nei controller</h3>
+          <p>I controller TSOA ricevono la request, chiamano il service, mappano il risultato sulla risposta HTTP. Qualunque validazione di dominio o accesso ai dati vive nei service, mai nel controller.</p>
+        </div>
+        <div class="decision-card">
+          <h3>AI locale, non un'API cloud</h3>
+          <p>L'assistente integrato invoca un modello Ollama in esecuzione sulla stessa rete, non un servizio esterno: coerente con il modello on-prem del prodotto, dati aziendali compresi quelli passati all'assistente non lasciano la rete locale.</p>
+        </div>
+        <div class="decision-card">
+          <h3>Modello più piccolo scelto per affidabilità, non per risparmiare risorse</h3>
+          <p>Il default è <code>qwen2.5:7b</code>, non un modello più grande. Test empirici ripetuti a parità di prompt e strumenti hanno mostrato che <code>qwen2.5:14b</code> dichiarava azioni riuscite senza aver mai chiamato il tool corrispondente (o dopo un suo fallimento), mentre il 7b ammetteva sempre l'errore o chiedeva conferma. Contro-intuitivo, ma verificato — vedi il commento sopra <code>MODEL</code> in <code>assistantService.ts</code>. Il modello resta comunque solo metà della difesa: il testo di conferma di ogni azione mutante è composto in codice dal risultato reale del tool (<code>buildMutationConfirmation()</code>), mai dal testo libero generato dal modello.</p>
+        </div>
+        <div class="decision-card">
+          <h3>Modello di rete on-prem dichiarato</h3>
+          <p>Hodum non è pensato per essere esposto direttamente su internet: l'accesso remoto passa da VPN aziendale. È un vincolo di design dichiarato nel README, non un dettaglio implicito da scoprire in produzione.</p>
+        </div>
+        <div class="decision-card">
+          <h3>Un limite noto, documentato invece che nascosto</h3>
+          <p>Il backend non ha uno script di lint dedicato: <code>typescript-eslint</code> non supporta ancora TypeScript 7, usato qui per <code>tsc -b</code>/<code>tsoa:gen</code>. Un workaround via override npm è stato tentato e si è rivelato inaffidabile — la scelta e il perché sono scritti in <code>CLAUDE.md</code>, non lasciati come un buco silenzioso.</p>
+        </div>
+        <div class="decision-card">
+          <h3>Licenza AGPL-3.0-or-later</h3>
+          <p>Qualunque versione modificata — anche offerta solo come servizio via rete — deve restare open source con la stessa licenza, e chi ci interagisce ha diritto al codice sorgente di quella versione. Protegge il progetto da fork proprietari offerti come SaaS.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <section class="tight">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Convenzioni di progetto</h2>
+        <p>Applicate in ogni contributo, umano o assistito da AI.</p>
+      </div>
+      <div class="value-strip">
+        <div class="value-item">
+          <div class="k">📁</div>
+          <h3>Componenti</h3>
+          <p><code>src/app/components/&lt;nome&gt;/</code>, con CSS co-locato e naming <code>NomeComponent</code>.</p>
+        </div>
+        <div class="value-item">
+          <div class="k">🗂️</div>
+          <h3>Pagine</h3>
+          <p><code>src/app/pages/&lt;nome&gt;/</code>, registrate nell'array <code>ROUTES</code> centrale.</p>
+        </div>
+        <div class="value-item">
+          <div class="k">🧪</div>
+          <h3>Test</h3>
+          <p>Co-locati col codice, import espliciti da <code>vitest</code>: niente globals.</p>
+        </div>
+        <div class="value-item">
+          <div class="k">🗃️</div>
+          <h3>Migration</h3>
+          <p>File SQL numerati in <code>backend/migrations/</code>, applicate con <code>npm run migrate:up</code>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="install-panel">
+        <div>
+          <h2 style="font-family: var(--font-display); font-size: 1.5rem; margin: 0 0 16px;">Avvio in locale per sviluppo</h2>
+          <ul class="install-list">
+            <li><span class="num">1</span> Frontend e backend hanno <code>package.json</code> separati: si installano e avviano indipendentemente.</li>
+            <li><span class="num">2</span> Il backend rigenera routes e spec TSOA a ogni avvio in watch mode, dai tipi dei controller.</li>
+            <li><span class="num">3</span> Serve un'istanza PostgreSQL raggiungibile e, per l'assistente, Ollama in esecuzione con il modello già scaricato.</li>
+            <li><span class="num">4</span> Prima di una pull request: <code>npm run lint</code>, <code>npm test</code> e <code>npm run build</code> su entrambe le cartelle.</li>
+          </ul>
+        </div>
+        <pre class="code"><span class="comment"># Frontend (root del repo)</span>
+npm install
+npm run dev
+
+<span class="comment"># Backend</span>
+cd backend
+npm install
+cp .env.example .env
+npm run migrate:up
+npm run dev</pre>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="cta-banner">
+        <h2>Vuoi contribuire o segnalare qualcosa?</h2>
+        <p>Bug, proposte di funzionalità e pull request mirate sono benvenute — vedi le linee guida prima di aprire una PR.</p>
+        <div class="cta-actions">
+          <a class="btn btn-primary" href="https://github.com/FabioLeo94/hodum/blob/master/CONTRIBUTING.md">Leggi CONTRIBUTING.md</a>
+          <a class="btn btn-ghost" href="https://github.com/FabioLeo94/hodum/issues">Apri una issue</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p>Hodum &middot; distribuito sotto licenza AGPL-3.0-or-later</p>
+    <ul class="footer-links">
+      <li><a href="index.html">Prodotto</a></li>
+      <li><a href="https://github.com/FabioLeo94/hodum">GitHub</a></li>
+    </ul>
+  </div>
+</footer>
+
+</body>
+</html>

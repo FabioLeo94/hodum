@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hodum — task manager self-hosted per la tua azienda</title>
+<meta name="description" content="Hodum è un task manager full-stack per aziende: progetti, timer, fatturazione, team e un assistente AI locale. Self-hosted, on-prem, open source (AGPL-3.0)." />
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="logo" href="index.html"><span>H</span>odum</a>
+    <nav>
+      <ul class="nav-links">
+        <li><a href="index.html" class="active">Prodotto</a></li>
+        <li><a href="sviluppatori.html">Per sviluppatori</a></li>
+        <li><a href="https://github.com/FabioLeo94/hodum" class="nav-cta">GitHub</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+  <section class="hero">
+    <div class="wrap">
+      <div>
+        <span class="eyebrow">Self-hosted &middot; open source &middot; AGPL-3.0</span>
+        <h1>Gestisci progetti, tempo e fatture <span class="accent">senza affidare i dati a nessun cloud</span>.</h1>
+        <p class="lead">
+          Hodum è un task manager pensato per piccoli studi e aziende: progetti,
+          task, timer, fatturazione e un assistente AI che gira in locale — tutto
+          installato sul tuo server, dentro la tua rete.
+        </p>
+        <div class="hero-ctas">
+          <a class="btn btn-primary" href="https://github.com/FabioLeo94/hodum">Vedi il codice su GitHub</a>
+          <a class="btn btn-ghost" href="sviluppatori.html">Com'è fatto tecnicamente</a>
+        </div>
+        <p class="hero-note">Progetto in sviluppo attivo — alcune funzionalità mancano ancora.</p>
+      </div>
+      <div class="hero-shot">
+        <img src="assets/screenshots/17-vista-kanban.png" alt="Vista Kanban di un progetto in Hodum, con task organizzati per stato: in corso, in review, completati, rifiutati" />
+      </div>
+    </div>
+  </section>
+
+  <section class="tight">
+    <div class="wrap">
+      <div class="value-strip">
+        <div class="value-item">
+          <div class="k">🔒</div>
+          <h3>I dati restano in azienda</h3>
+          <p>Nessun account su servizi terzi: il database vive sul tuo server, non su un cloud esterno.</p>
+        </div>
+        <div class="value-item">
+          <div class="k">💸</div>
+          <h3>Nessun abbonamento</h3>
+          <p>Software libero: lo installi e lo usi, senza costo per utente o per progetto.</p>
+        </div>
+        <div class="value-item">
+          <div class="k">🏠</div>
+          <h3>Pensato per la LAN/VPN</h3>
+          <p>Gira on-prem: accesso da remoto tramite VPN aziendale, mai esposto direttamente su internet.</p>
+        </div>
+        <div class="value-item">
+          <div class="k">📖</div>
+          <h3>Open source verificabile</h3>
+          <p>Licenza AGPL-3.0: puoi leggere, modificare e verificare esattamente cosa fa il software.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <section>
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Tutto quello che serve per gestire un'azienda di progetti</h2>
+        <p>Dalla creazione del task alla fattura, in un unico strumento.</p>
+      </div>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="icon">📋</div>
+          <h3>Progetti &amp; task</h3>
+          <p>Vista lista, Kanban o calendario per ogni progetto, con stato, priorità e assegnatari.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">⏱️</div>
+          <h3>Timer integrato</h3>
+          <p>Traccia il tempo lavorato direttamente sul task, con correzioni manuali quando serve.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">🧾</div>
+          <h3>Pre-fatture automatiche</h3>
+          <p>Genera pre-fatture a partire dal tempo lavorato sui task completati per un cliente.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">👥</div>
+          <h3>Team &amp; permessi</h3>
+          <p>Dipendenti, project manager e owner, con ruoli e assegnazione progetti dedicati.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">🤖</div>
+          <h3>Assistente AI locale</h3>
+          <p>Chat integrata che risponde su progetti e task, basata su un modello Ollama eseguito in locale.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">🔄</div>
+          <h3>Sync in tempo reale</h3>
+          <p>Aggiornamenti condivisi via Socket.IO: chi lavora sullo stesso progetto vede le stesse modifiche.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <section>
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Come si presenta, schermata per schermata</h2>
+        <p>Screenshot reali dell'applicazione, non mockup.</p>
+      </div>
+
+      <div class="showcase-row">
+        <div class="showcase-text">
+          <span class="tag">Vista lista</span>
+          <h3>Ogni task sotto controllo, raggruppato per stato</h3>
+          <p>Filtra per priorità, assegnatario o stato di fatturazione; riordina per priorità quando serve decidere cosa fare prima.</p>
+        </div>
+        <div class="showcase-img">
+          <img src="assets/screenshots/16-elenco-task.png" alt="Elenco task in vista lista, raggruppati per stato: in corso, in review, completati, rifiutati" />
+        </div>
+      </div>
+
+      <div class="showcase-row reverse">
+        <div class="showcase-text">
+          <span class="tag">Calendario</span>
+          <h3>Scadenze e carico di lavoro a colpo d'occhio</h3>
+          <p>La vista mensile mostra lo stato dei task in scadenza, cosi non serve controllare progetto per progetto.</p>
+        </div>
+        <div class="showcase-img">
+          <img src="assets/screenshots/18-vista-calendario.png" alt="Vista calendario mensile con i task distribuiti nei giorni del mese" />
+        </div>
+      </div>
+
+      <div class="showcase-row">
+        <div class="showcase-text">
+          <span class="tag">Timer</span>
+          <h3>Il tempo lavorato si traccia da dentro il task</h3>
+          <p>Avvia, ferma o correggi manualmente il timer di ogni task: è la base per generare la pre-fattura al cliente.</p>
+        </div>
+        <div class="showcase-img">
+          <img src="assets/screenshots/21-timer-avviato.png" alt="Task con timer avviato in vista Kanban" />
+        </div>
+      </div>
+
+      <div class="showcase-row reverse">
+        <div class="showcase-text">
+          <span class="tag">Fatturazione</span>
+          <h3>Dal tempo lavorato alla pre-fattura, in un click</h3>
+          <p>Hodum somma le ore sui task completati di un cliente e genera una pre-fattura pronta da rivedere.</p>
+        </div>
+        <div class="showcase-img">
+          <img src="assets/screenshots/45-elenco-fatture.png" alt="Elenco fatture con numero, data, cliente, tempo lavorato e importo" />
+        </div>
+      </div>
+
+      <div class="showcase-row">
+        <div class="showcase-text">
+          <span class="tag">Assistente AI</span>
+          <h3>Fai domande sui tuoi progetti, in italiano</h3>
+          <p>L'assistente gira su un modello Ollama locale: risponde su progetti e task senza inviare dati a un'API esterna.</p>
+        </div>
+        <div class="showcase-img">
+          <img src="assets/screenshots/25-assistente-drawer.png" alt="Pannello dell'assistente AI aperto accanto alla vista Kanban di un progetto" />
+        </div>
+      </div>
+
+      <div class="showcase-row reverse">
+        <div class="showcase-text">
+          <span class="tag">Team</span>
+          <h3>Assegna progetti a chi li segue davvero</h3>
+          <p>Ogni dipendente vede solo i progetti a cui è assegnato; i permessi seguono il ruolo (dipendente, project manager, owner).</p>
+        </div>
+        <div class="showcase-img">
+          <img src="assets/screenshots/42-assegna-progetti.png" alt="Schermata di assegnazione progetti a un dipendente" />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <section>
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Si installa sul tuo server, non nel cloud di qualcun altro</h2>
+        <p>Docker Compose porta su Postgres, backend e frontend in un comando.</p>
+      </div>
+      <div class="install-panel">
+        <div>
+          <pre class="code"><span class="comment"># valorizza POSTGRES_PASSWORD e JWT_SECRET</span>
+cp .env.example .env
+
+docker compose up -d --build
+
+<span class="comment"># frontend su http://localhost:8080
+# backend su  http://localhost:3000</span></pre>
+        </div>
+        <ul class="install-list">
+          <li><span class="num">1</span> Le migration del database si applicano da sole all'avvio del backend.</li>
+          <li><span class="num">2</span> L'assistente AI usa Ollama in esecuzione sull'host: nessuna chiave API da configurare.</li>
+          <li><span class="num">3</span> Pensato per restare dentro la rete aziendale: l'accesso da remoto passa da VPN, non da un indirizzo pubblico.</li>
+          <li><span class="num">4</span> Per il dettaglio completo del setup, Docker o manuale, vedi il README del repository.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <section>
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Requisiti minimi</h2>
+        <p>Il task manager in sé gira comodo anche su hardware modesto: è l'assistente AI locale a richiedere qualche risorsa in più.</p>
+      </div>
+      <div class="stack-grid">
+        <div class="stack-col">
+          <h3>Server applicativo</h3>
+          <p class="sub">Frontend + backend + PostgreSQL</p>
+          <ul>
+            <li><span class="name">Node.js</span><span class="why">versione 20 o superiore</span></li>
+            <li><span class="name">PostgreSQL</span><span class="why">un'istanza raggiungibile, anche su un altro host</span></li>
+            <li><span class="name">CPU / RAM</span><span class="why">un web server Node + Postgres tipico: 2 core e 2–4 GB RAM bastano</span></li>
+            <li><span class="name">Storage</span><span class="why">cresce con progetti/task nel tempo; si parte da pochi GB</span></li>
+          </ul>
+        </div>
+        <div class="stack-col">
+          <h3>Assistente AI (Ollama)</h3>
+          <p class="sub">Solo per la chat integrata — il resto dell'app funziona anche senza</p>
+          <ul>
+            <li><span class="name">qwen2.5:7b (default)</span><span class="why">~8 GB di RAM libera (o VRAM equivalente su GPU)</span></li>
+            <li><span class="name">Modelli più grandi</span><span class="why">supportabili via <code>OLLAMA_MODEL</code>, ma nei nostri test non più affidabili sulle azioni eseguite — vedi la pagina per sviluppatori</span></li>
+            <li><span class="name">Senza GPU dedicata</span><span class="why">l'inferenza gira su CPU: più lenta, ma funzionante</span></li>
+            <li><span class="name">Ollama non raggiungibile</span><span class="why">solo la chat dell'assistente non risponde; progetti, task e fatture restano operativi</span></li>
+          </ul>
+        </div>
+      </div>
+      <p class="hero-note" style="text-align:center; margin-top: 20px;">
+        Valori indicativi per la quantizzazione Q4 di default di Ollama — verifica sempre la scheda del modello scelto su
+        <a href="https://ollama.com/library" style="color: var(--bg-primary);">ollama.com</a> prima di dimensionare l'hardware.
+      </p>
+    </div>
+  </section>
+
+  <section class="tight">
+    <div class="wrap">
+      <div class="callout">
+        <span class="dot"></span>
+        <div>
+          <h3>Stato del progetto: sviluppo attivo, non ancora completo</h3>
+          <p>
+            Hodum è usato e sviluppato attivamente, ma mancano ancora funzionalità e
+            alcune parti sono destinate a cambiare. Distribuito sotto licenza
+            <strong>AGPL-3.0-or-later</strong>: puoi usarlo, modificarlo e ridistribuirlo
+            liberamente, anche a fini commerciali, a patto che ogni versione derivata
+            resti open source con la stessa licenza.
+          </p>
+        </div>
+      </div>
+      <div class="badges">
+        <span class="badge">React 19 + TypeScript</span>
+        <span class="badge">Express 5 + PostgreSQL</span>
+        <span class="badge">Socket.IO realtime</span>
+        <span class="badge">AI locale via Ollama</span>
+        <span class="badge">AGPL-3.0-or-later</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="cta-banner">
+        <h2>Vuoi guardare sotto il cofano?</h2>
+        <p>Stack tecnico, scelte architetturali e come contribuire sono nella pagina per sviluppatori.</p>
+        <div class="cta-actions">
+          <a class="btn btn-primary" href="sviluppatori.html">Pagina per sviluppatori</a>
+          <a class="btn btn-ghost" href="https://github.com/FabioLeo94/hodum">Apri il repository</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p>Hodum &middot; distribuito sotto licenza AGPL-3.0-or-later</p>
+    <ul class="footer-links">
+      <li><a href="sviluppatori.html">Per sviluppatori</a></li>
+      <li><a href="https://github.com/FabioLeo94/hodum">GitHub</a></li>
+    </ul>
+  </div>
+</footer>
+
+</body>
+</html>
