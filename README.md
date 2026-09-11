@@ -23,7 +23,7 @@ e le dipendenze Node sono già dentro le immagini. Per un setup senza Docker:
 - Node.js 20+
 - Un'istanza PostgreSQL raggiungibile
 - `pg_dump` disponibile nel PATH del server backend, stessa versione major del PostgreSQL usato (client tools ufficiali, es. pacchetto `postgresql-client`): richiesto dalla feature di backup (Gestione aziendale > Backup, owner-only), che lo invoca come processo esterno
-- Ollama in esecuzione localmente, con il modello configurato già scaricato (`ollama pull <modello>`, default `qwen2.5:14b`)
+- Ollama in esecuzione localmente, con il modello configurato già scaricato (`ollama pull <modello>`, default `qwen2.5:7b`)
 
 ## Avvio con Docker Compose (consigliato per il self-hosting)
 
